@@ -1,58 +1,20 @@
-// src/App.jsx
-
-import './App.css';
+import "./index.css";
 
 function App() {
   return (
-    <div className="app-root">
-      <header className="hero">
-        <div className="hero-content">
-          <span className="badge">Early Build · ReGeneLuxe</span>
-          <h1>ReGeneLuxe</h1>
-          <p className="hero-subtitle">
-            An AI engine that <strong>creates</strong>, <strong>automates</strong>, and <strong>optimizes</strong> your
-            video and content campaigns — so you can focus on the vision, not the busywork.
-          </p>
-
-          <div className="hero-actions">
-            <button className="primary-btn">Join the Early Access List</button>
-            <button className="ghost-btn">Watch How It Works</button>
-          </div>
-
-          <p className="hero-note">
-            Day 1 build · This is the first live skeleton of the ReGeneLuxe experience.
-          </p>
-        </div>
-      </header>
-
-      <main>
-        <section className="pillars">
-          <div className="pillar-card">
-            <h2>Create</h2>
-            <p>
-              Generate videos, scripts, captions, thumbnails and ad copy from a single brief. ReGeneLuxe becomes your
-              in-house creative studio.
-            </p>
-          </div>
-          <div className="pillar-card">
-            <h2>Automate</h2>
-            <p>
-              Turn content into full campaigns with smart schedules across platforms — without manual posting or
-              scattered tools.
-            </p>
-          </div>
-          <div className="pillar-card">
-            <h2>Optimize</h2>
-            <p>
-              See what performs, get AI recommendations, and regenerate under-performing assets with one click.
-            </p>
-          </div>
-        </section>
-      </main>
-
-      <footer className="footer">
-        <p>© {new Date().getFullYear()} ReGeneLuxe. Built by Valid · Powered by G.</p>
-      </footer>
+    <div className="min-h-screen bg-rl_bg text-rl_ink flex items-center justify-center">
+      <div className="rounded-3xl border border-black/5 bg-white/80 px-10 py-8 shadow-rl_soft">
+        <p className="text-xs font-medium uppercase tracking-[0.22em] text-rl_muted">
+          ReGeneLuxe
+        </p>
+        <h1 className="mt-3 text-3xl font-medium tracking-[-0.04em]">
+          Clean, minimal, future-forward.
+        </h1>
+        <p className="mt-3 max-w-md text-sm text-rl_muted">
+          If you can see this card centered on a soft off-white background,
+          Tailwind is working and our base theme is wired correctly.
+        </p>
+      </div>
     </div>
   );
 }
