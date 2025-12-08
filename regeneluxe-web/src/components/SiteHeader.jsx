@@ -1,4 +1,4 @@
-// regeneluxe-web/src/components/SiteHeader.jsx
+// FILE: src/components/SiteHeader.jsx
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Auth } from "../utils/auth";
@@ -9,7 +9,7 @@ export default function SiteHeader() {
   const authed = Auth.isSignedIn();
   const [showCTA, setShowCTA] = useState(true);
 
-  // ✅ Hide header on the Start (landing) page only
+  // Hide header on home page
   if (loc.pathname === "/") return null;
 
   useEffect(() => {
@@ -21,12 +21,10 @@ export default function SiteHeader() {
       window.addEventListener("scroll", onScroll, { passive: true });
       return () => window.removeEventListener("scroll", onScroll);
     }
-
     const io = new IntersectionObserver(
       (entries) => setShowCTA(!entries[0].isIntersecting),
-      { rootMargin: "0px 0px 0px 0px", threshold: 0.01 }
+      { threshold: 0.01 }
     );
-
     io.observe(hero);
     return () => io.disconnect();
   }, []);
@@ -54,8 +52,9 @@ export default function SiteHeader() {
               )}
               <button
                 onClick={() => {
+                  console.log("[Header] Sign out");
                   Auth.signOut();
-                  nav("/");
+                  nav("/", { replace: true });
                 }}
                 className="rounded-full bg-black px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-zinc-900 transition-colors"
               >
@@ -64,9 +63,10 @@ export default function SiteHeader() {
             </>
           ) : (
             <>
-              {loc.pathname !== "/get-started" && (
+              {loc.pathname !== "/start" && (
                 <Link
-                  to="/get-started"
+                  to="/start"
+                  onClick={() => console.log("[Header] CTA → /start")}
                   className={`rounded-full border border-rl_border px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] hover:bg-subtle transition-colors ${
                     showCTA ? "opacity-100" : "opacity-0 pointer-events-none"
                   }`}
@@ -77,6 +77,7 @@ export default function SiteHeader() {
               {loc.pathname !== "/login" && (
                 <Link
                   to="/login"
+                  onClick={() => console.log("[Header] Sign in → /login")}
                   className="rounded-full bg-black px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-zinc-900 transition-colors"
                 >
                   Sign in
@@ -89,4 +90,3 @@ export default function SiteHeader() {
     </header>
   );
 }
-

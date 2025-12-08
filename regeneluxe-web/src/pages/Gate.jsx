@@ -1,3 +1,4 @@
+// FILE: src/pages/Gate.jsx
 import SiteHeader from "../components/SiteHeader";
 import Hero from "../sections/Hero";
 import HowItWorks from "../sections/HowItWorks";

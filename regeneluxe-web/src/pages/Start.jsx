@@ -5,6 +5,7 @@ import SiteHeader from "../components/SiteHeader";
 import { Auth } from "../utils/auth";
 import { Onboarding } from "../utils/onboarding";
 import { Analytics } from "../utils/analytics";
+import { Drafts } from "../utils/drafts";
 import TermsModal from "../components/TermsModal";
 
 const PLATFORM_CHOICES = [
@@ -221,7 +222,63 @@ export default function Start() {
   const [customPlatform, setCustomPlatform] = useState("");
   const [showTerms, setShowTerms] = useState(false);
 
-  const setField = (k, v) => setForm((s) => ({ ...s, [k]: v }));
+  // Draft restore on mount
+  useEffect(() => {
+    try {
+      const draft = Drafts.load();
+      if (!draft) return;
+
+      const storedEmail = (draft.email || "").trim().toLowerCase();
+      const currentEmail = (Auth.user() || form.workEmail || "")
+        .trim()
+        .toLowerCase();
+
+      // If both emails exist and don't match, ignore this draft
+      if (storedEmail && currentEmail && storedEmail !== currentEmail) {
+        return;
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        ...(draft.form || {}),
+      }));
+
+      if (
+        typeof draft.step === "number" &&
+        draft.step >= 0 &&
+        draft.step < steps.length
+      ) {
+        setStep(draft.step);
+      }
+
+      Analytics.event("start_draft_restored", {
+        step: draft.step ?? 0,
+      });
+    } catch (e) {
+      Analytics.error("start_draft_restore_failed", {
+        message: e?.message,
+        name: e?.name,
+      });
+    }
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const setField = (k, v) => {
+    setForm((s) => {
+      const next = { ...s, [k]: v };
+      try {
+        const email = next.workEmail || Auth.user();
+        Drafts.save(email, next, step);
+      } catch (e) {
+        Analytics.error("start_draft_save_failed", {
+          field: k,
+          message: e?.message,
+        });
+      }
+      return next;
+    });
+  };
 
   const validateStep = () => {
     const schema = steps[step];
@@ -256,18 +313,46 @@ export default function Start() {
       Analytics.event("start_step_validation_failed", { step });
       return;
     }
-    Analytics.event("start_step_change", { from: step, to: step + 1 });
-    console.log(`[Start] step ${step} → ${step + 1}`);
-    if (step < steps.length - 1) setStep(step + 1);
+
+    const nextStep = step + 1;
+    Analytics.event("start_step_change", { from: step, to: nextStep });
+    console.log(`[Start] step ${step} → ${nextStep}`);
+
+    if (step < steps.length - 1) {
+      setStep(nextStep);
+      try {
+        Drafts.save(form.workEmail || Auth.user(), form, nextStep);
+      } catch (e) {
+        Analytics.error("start_draft_save_failed", {
+          where: "next",
+          message: e?.message,
+        });
+      }
+    }
   };
 
   const back = () => {
-    Analytics.event("start_step_back", { from: step, to: Math.max(0, step - 1) });
-    console.log(`[Start] step ${step} → ${Math.max(0, step - 1)}`);
-    setStep((s) => Math.max(0, s - 1));
+    const target = Math.max(0, step - 1);
+    Analytics.event("start_step_back", { from: step, to: target });
+    console.log(`[Start] step ${step} → ${target}`);
+
+    setStep(target);
+    try {
+      Drafts.save(form.workEmail || Auth.user(), form, target);
+    } catch (e) {
+      Analytics.error("start_draft_save_failed", {
+        where: "back",
+        message: e?.message,
+      });
+    }
   };
 
   const submit = async () => {
+    if (submitting) {
+      Analytics.event("start_submit_ignored_already_submitting", { step });
+      return;
+    }
+
     if (!validateStep()) {
       Analytics.event("start_submit_blocked_validation", { step });
       return;
@@ -294,6 +379,14 @@ export default function Start() {
       console.log("[Start] onboarding complete → /thank-you");
 
       Analytics.event("start_submit_success", { email: form.workEmail });
+
+      try {
+        Drafts.clear(form.workEmail);
+      } catch (e) {
+        Analytics.error("start_draft_clear_failed", {
+          message: e?.message,
+        });
+      }
 
       navigate("/thank-you");
     } catch (e) {

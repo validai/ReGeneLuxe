@@ -1,10 +1,26 @@
+import React, { useState } from "react";
 import FadeSection from "../components/FadeSection";
 import { Analytics } from "../utils/analytics";
 
 export default function BlueprintForm() {
+  const [submitting, setSubmitting] = useState(false);
+
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (submitting) {
+      Analytics.event("blueprint_submit_ignored_already_submitting");
+      return;
+    }
+
+    setSubmitting(true);
     Analytics.event("blueprint_submit_attempt");
+
+    // Placeholder: when real submission is wired, move setSubmitting(false)
+    // to the async completion path.
+    setTimeout(() => {
+      setSubmitting(false);
+    }, 300);
   };
 
   return (
@@ -75,9 +91,14 @@ export default function BlueprintForm() {
 
               <button
                 type="submit"
-                className="mt-2 w-full rounded-full bg-black py-2.5 text-xs font-medium uppercase tracking-[0.18em] text-white transition hover:bg-zinc-900"
+                disabled={submitting}
+                className={`mt-2 w-full rounded-full py-2.5 text-xs font-medium uppercase tracking-[0.18em] text-white transition ${
+                  submitting
+                    ? "bg-zinc-400 cursor-not-allowed"
+                    : "bg-black hover:bg-zinc-900"
+                }`}
               >
-                Begin questionnaire
+                {submitting ? "Sending…" : "Begin questionnaire"}
               </button>
 
               <p className="pt-2 text-[0.68rem] leading-relaxed text-rl_muted">

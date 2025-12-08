@@ -15,13 +15,16 @@ import Login from "./pages/Login.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import NewCampaign from "./pages/NewCampaign.jsx";
 import ThankYou from "./pages/ThankYou.jsx";
+import NotFound from "./pages/NotFound.jsx";
 import RouteLogger from "./utils/RouteLogger.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { Analytics } from "./utils/analytics";
+import { installDevTools } from "./utils/devTools";
 
-// Install global error handlers before render (browser only)
+// Install global error handlers + dev tools before render (browser only)
 if (typeof window !== "undefined") {
   Analytics.installGlobalErrorHandlers();
+  installDevTools();
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -39,8 +42,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/campaign/new" element={<NewCampaign />} />
           <Route path="/thank-you" element={<ThankYou />} />
-          {/* Fallback: any unknown path → HomePage */}
-          <Route path="*" element={<HomePage />} />
+          {/* Fallback: any unknown path → NotFound */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>

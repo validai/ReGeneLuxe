@@ -1,0 +1,50 @@
+.
+├── README.md
+├── StartPageImages
+│   └── ChatGPT Image Dec 4, 2025, 11_32_18 PM.png
+├── eslint.config.js
+├── index.html
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── project-tree.txt
+├── public
+│   └── showcase
+│       ├── result_ad_bundle.svg
+│       ├── result_automation_map.svg
+│       ├── result_email_flow.svg
+│       └── result_video_scripts.svg
+├── src
+│   ├── App.css
+│   ├── assets
+│   ├── components
+│   │   ├── FadeSection.jsx
+│   │   ├── Showcase.jsx
+│   │   ├── SiteHeader.jsx
+│   │   └── Tip.jsx
+│   ├── constants
+│   │   └── brand.js
+│   ├── index.css
+│   ├── main.jsx
+│   ├── pages
+│   │   ├── Dashboard.jsx
+│   │   ├── Gate.jsx
+│   │   ├── HomePage.jsx
+│   │   ├── Login.jsx
+│   │   ├── NewCampaign.jsx
+│   │   ├── Start.jsx
+│   │   └── ThankYou.jsx
+│   ├── sections
+│   │   ├── BluePrintForm.jsx
+│   │   ├── Hero.jsx
+│   │   ├── HowItWorks.jsx
+│   │   └── WhatItBuilds.jsx
+│   └── utils
+│       ├── RouteLogger.jsx
+│       ├── auth.js
+│       ├── http.js
+│       └── onboarding.js
+├── tailwind.config.js
+└── vite.config.js
+
+11 directories, 37 files

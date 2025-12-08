@@ -1,12 +1,11 @@
+// FILE: src/pages/HomePage.jsx
 import { useNavigate } from "react-router-dom";
 import Showcase from "../components/Showcase";
 
 export default function HomePage() {
   const nav = useNavigate();
-
   return (
     <div className="min-h-screen bg-page text-rl_ink">
-      {/* No SiteHeader on HomePage */}
       <main className="mx-auto max-w-container px-6 py-16">
         {/* Wordmark / welcome */}
         <section className="text-center">
@@ -25,22 +24,15 @@ export default function HomePage() {
             ReGeneLuxe
           </h1>
 
-          <p className="mt-2 text-[0.8rem] font-medium uppercase tracking-[0.26em] text-rl_muted">
-            The AI campaign engine for elegant growth
-          </p>
-
-          <p className="mx-auto mt-5 max-w-2xl text-[0.98rem] leading-relaxed text-rl_muted">
-            One luxe-simple blueprint becomes scripts, ads, emails, and
-            automations—crafted to your voice, consistent across channels,
-            and smarter every run.
-          </p>
         </section>
 
         {/* Path tiles */}
         <section className="mt-12 grid gap-6 md:grid-cols-2">
-          {/* New here → Gate */}
           <button
-            onClick={() => nav("/gate")}
+            onClick={() => {
+              console.log("[Home] New here → /gate");
+              nav("/gate");
+            }}
             className="glass block rounded-3xl p-6 rl-hover-lift text-left"
           >
             <p className="text-[0.78rem] uppercase tracking-[0.16em] text-rl_muted">
@@ -56,9 +48,11 @@ export default function HomePage() {
             </div>
           </button>
 
-          {/* Returning → Login */}
           <button
-            onClick={() => nav("/login")}
+            onClick={() => {
+              console.log("[Home] Returning → /login");
+              nav("/login");
+            }}
             className="glass block rounded-3xl p-6 rl-hover-lift text-left"
           >
             <p className="text-[0.78rem] uppercase tracking-[0.16em] text-rl_muted">
@@ -75,7 +69,7 @@ export default function HomePage() {
           </button>
         </section>
 
-        {/* Carousel lives ONLY on HomePage */}
+        {/* Carousel */}
         <Showcase className="mt-16" />
       </main>
     </div>

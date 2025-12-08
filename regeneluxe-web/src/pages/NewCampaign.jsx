@@ -13,5 +13,3 @@ export default function NewCampaign() {
     </div>
   );
 }
-
-console.log("%c[MOUNT] NewCampaign.jsx", "color:#ef4444;font-weight:700");

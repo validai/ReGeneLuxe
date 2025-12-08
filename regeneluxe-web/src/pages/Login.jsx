@@ -8,6 +8,7 @@ import { Analytics } from "../utils/analytics";
 
 export default function Login() {
   const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,23 +34,40 @@ export default function Login() {
 
   const submit = (e) => {
     e.preventDefault();
+
+    if (submitting) {
+      Analytics.event("login_submit_ignored_already_submitting");
+      return;
+    }
+
     if (!email) {
       Analytics.event("login_submit_empty_email");
       return;
     }
 
+    setSubmitting(true);
     Analytics.event("login_submit_attempt", { email });
 
-    Auth.signIn(email);
-    const done = Onboarding.isDone(email);
-    console.log("[Login] signed-in:", email, "onboarded?", done);
+    try {
+      Auth.signIn(email);
+      const done = Onboarding.isDone(email);
+      console.log("[Login] signed-in:", email, "onboarded?", done);
 
-    Analytics.event("login_submit_success", {
-      email,
-      onboarded: done,
-    });
+      Analytics.event("login_submit_success", {
+        email,
+        onboarded: done,
+      });
 
-    navigate(done ? "/dashboard" : "/start", { replace: true });
+      navigate(done ? "/dashboard" : "/start", { replace: true });
+    } catch (err) {
+      Analytics.error("login_submit_error", {
+        message: err?.message,
+        name: err?.name,
+      });
+      console.error("[Login] submit error", err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -73,9 +91,14 @@ export default function Login() {
           />
           <button
             type="submit"
-            className="mt-2 w-full rounded-full bg-black py-2.5 text-xs font-medium uppercase tracking-[0.18em] text-white transition-colors hover:bg-zinc-900"
+            disabled={submitting}
+            className={`mt-2 w-full rounded-full py-2.5 text-xs font-medium uppercase tracking-[0.18em] text-white transition-colors ${
+              submitting
+                ? "bg-zinc-400 cursor-not-allowed"
+                : "bg-black hover:bg-zinc-900"
+            }`}
           >
-            Sign in
+            {submitting ? "Signing in…" : "Sign in"}
           </button>
         </form>
       </main>
