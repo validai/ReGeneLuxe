@@ -101,16 +101,6 @@ export default function SiteHeader() {
     navigate("/dashboard");
   };
 
-  const goToNewCampaign = () => {
-    Analytics.event("header_nav_click", {
-      target: "/campaign/new",
-      authed,
-      onboarded,
-    });
-    // NEW CAMPAIGN: navigate("/campaign/new")
-    navigate("/campaign/new");
-  };
-
   const prefersReducedMotion =
     typeof window !== "undefined" &&
     window.matchMedia &&
@@ -182,7 +172,7 @@ export default function SiteHeader() {
           </>
         )}
 
-        {/* Signed in AND onboarded: Dashboard + New Campaign + Sign Out */}
+        {/* Signed in AND onboarded: Dashboard + Sign Out */}
         {authed && onboarded && (
           <>
             <motion.button
@@ -204,15 +194,6 @@ export default function SiteHeader() {
                   transition={{ duration: 0.3 }}
                 />
               )}
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={goToNewCampaign}
-              className="hidden sm:inline-flex rounded-full bg-rl_accent px-4 py-2 text-xs font-semibold tracking-[0.18em] text-rl_bg shadow-rl_soft hover:shadow-[0_18px_35px_rgba(15,23,42,0.12)] transition-all hover:-translate-y-[1px] active:translate-y-[1px]"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              NEW CAMPAIGN
             </motion.button>
             <motion.button
               type="button"

@@ -1,0 +1,78 @@
+.
+├── README.md
+├── StartPageImages
+│   └── ChatGPT Image Dec 4, 2025, 11_32_18 PM.png
+├── eslint.config.js
+├── index.html
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── project-tree.txt
+├── public
+│   └── showcase
+│       ├── result-image-1.png
+│       ├── result-image-2.png
+│       ├── result-image-3.png
+│       ├── result-image-4.png
+│       ├── result-image-5.png
+│       ├── result-image-6.png
+│       ├── result-image-7.png
+│       ├── result-image-8.png
+│       ├── result-image-9.png
+│       ├── result_ad_bundle.svg
+│       ├── result_automation_map.svg
+│       ├── result_email_flow.svg
+│       └── result_video_scripts.svg
+├── src
+│   ├── App.css
+│   ├── App.jsx
+│   ├── assets
+│   │   └── HomePage
+│   ├── components
+│   │   ├── BluePrintForm.jsx
+│   │   ├── BrandTitle.jsx
+│   │   ├── DebugBar.jsx
+│   │   ├── ErrorBoundary.jsx
+│   │   ├── FadeSection.jsx
+│   │   ├── Footer.jsx
+│   │   ├── Showcase.jsx
+│   │   ├── SiteHeader.jsx
+│   │   ├── TermsModal.jsx
+│   │   └── Tip.jsx
+│   ├── constants
+│   │   ├── brand.js
+│   │   └── campaignTiers.js
+│   ├── context
+│   ├── hooks
+│   ├── index.css
+│   ├── main.jsx
+│   ├── pages
+│   │   ├── Dashboard.jsx
+│   │   ├── DraftingRoom.jsx
+│   │   ├── Gate.jsx
+│   │   ├── HomePage.jsx
+│   │   ├── Login.jsx
+│   │   ├── NewCampaign.jsx
+│   │   ├── NotFound.jsx
+│   │   ├── Start.jsx
+│   │   └── ThankYou.jsx
+│   ├── sections
+│   │   ├── BluePrintForm.jsx
+│   │   ├── Hero.jsx
+│   │   ├── HowItWorks.jsx
+│   │   ├── WhatItBuilds.jsx
+│   │   └── home
+│   └── utils
+│       ├── RouteLogger.jsx
+│       ├── analytics.js
+│       ├── auth.js
+│       ├── devTools.js
+│       ├── drafts.js
+│       ├── http.js
+│       ├── motionConfig.js
+│       └── onboarding.js
+├── tailwind.config.js
+├── tree.txt
+└── vite.config.js
+
+15 directories, 61 files

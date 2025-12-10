@@ -30,6 +30,9 @@ export default {
       borderRadius: {
         "2xl": "1.5rem",
       },
+      backgroundImage: {
+        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
+      },
     },
   },
   plugins: [],

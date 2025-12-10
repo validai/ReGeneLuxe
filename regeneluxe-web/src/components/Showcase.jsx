@@ -27,8 +27,8 @@ export default function Showcase({ className = "" }) {
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Slower autoplay - 16 seconds per image
-  const AUTOPLAY_INTERVAL = 16000;
+  // Slower autoplay - 10 seconds per image
+  const AUTOPLAY_INTERVAL = 10000;
 
   // Autoplay
   useEffect(() => {
@@ -51,7 +51,7 @@ export default function Showcase({ className = "" }) {
         if (prev >= 100) {
           return 0;
         }
-        // 16000ms / 100 = 160 steps at 100ms intervals
+        // 10000ms / 100 = 100 steps at 100ms intervals
         return prev + (100 / (AUTOPLAY_INTERVAL / 100));
       });
     }, 100);
