@@ -8,6 +8,12 @@ import { Analytics } from "../utils/analytics";
 import { Drafts } from "../utils/drafts";
 import TermsModal from "../components/TermsModal";
 
+// -----------------------------
+// Static configuration
+// -----------------------------
+// PLATFORM_CHOICES is used in the "Primary channel" step to power the
+// pill-style multi-select + "Other" free-text input.
+// Keeping this centralized makes it easy to expand supported platforms later.
 const PLATFORM_CHOICES = [
   "Instagram",
   "Facebook",
@@ -37,6 +43,13 @@ const PLATFORM_CHOICES = [
   "Other",
 ];
 
+// -----------------------------
+// Multi-step wizard schema
+// -----------------------------
+// Each `step` entry defines the fields rendered on that page of the
+// onboarding flow. Validation is *step-local* (we only validate the
+// currently visible fields), which keeps the UX focused and avoids
+// blocking users on unrelated questions.
 const steps = [
   {
     key: "identity",
@@ -188,13 +201,30 @@ const steps = [
   },
 ];
 
-
+// -----------------------------
+// Start
+// -----------------------------
+// Main onboarding wizard entry point.
+//
+// Responsibilities:
+// - Enforce that users land here intentionally (from Home/Login/Dashboard).
+// - Restore any saved in-progress draft from localStorage (via Drafts).
+// - Track the current step in the 4-step flow.
+// - Validate the *current* step before moving forward.
+// - Soft-register the user (Auth.signIn) on submit if they are not yet authed.
+// - Mark onboarding complete (Onboarding.complete) and send them to /thank-you.
+// - Keep everything analytics-friendly with granular event logging.
 export default function Start() {
   console.log("[Start] mounted");
   const navigate = useNavigate();
   const authed = Auth.isSignedIn();
 
   const [step, setStep] = useState(0);
+
+  // Single object for all form fields across steps.
+  // This keeps autosave, validation, and Analytics payloads simple:
+  // - Drafts.save() always gets the same shape.
+  // - validateStep() can look at a stable `form` snapshot per step.
   const [form, setForm] = useState({
     fullName: "",
     workEmail: Auth.user() || "",
@@ -223,6 +253,11 @@ export default function Start() {
   const [showTerms, setShowTerms] = useState(false);
 
   // Draft restore on mount
+  // ----------------------
+  // If the user has a saved onboarding draft in localStorage, we restore it
+  // *only* when the stored email matches the current user (or the typed
+  // workEmail). This prevents cross-account leakage when multiple brands
+  // use the same browser.
   useEffect(() => {
     try {
       const draft = Drafts.load();
@@ -264,6 +299,10 @@ export default function Start() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Central field updater with inline autosave.
+  // Any input should call this rather than setForm directly so that:
+  // - Drafts.save() keeps a fresh copy of the wizard state.
+  // - Analytics can attribute draft-save failures to a specific field.
   const setField = (k, v) => {
     setForm((s) => {
       const next = { ...s, [k]: v };
@@ -280,6 +319,8 @@ export default function Start() {
     });
   };
 
+  // Validate ONLY the currently active step.
+  // This keeps error messaging tight and avoids overwhelming the user.
   const validateStep = () => {
     const schema = steps[step];
     const e = {};
@@ -308,6 +349,9 @@ export default function Start() {
     return Object.keys(e).length === 0;
   };
 
+  // Move forward one step if the current step passes validation.
+  // Also persists the current `step` into the Drafts store so reloads
+  // can resume at the correct page.
   const next = () => {
     if (!validateStep()) {
       Analytics.event("start_step_validation_failed", { step });
@@ -331,6 +375,8 @@ export default function Start() {
     }
   };
 
+  // Move backward a single step (never below 0).
+  // We also update the draft so that reloads respect the last viewed step.
   const back = () => {
     const target = Math.max(0, step - 1);
     Analytics.event("start_step_back", { from: step, to: target });
@@ -347,6 +393,18 @@ export default function Start() {
     }
   };
 
+  // Final submit for the onboarding flow.
+  //
+  // Guardrails:
+  // - Ignores double-clicks while `submitting` is true.
+  // - Re-runs validateStep() to avoid submitting a stale/invalid screen.
+  // - Requires a non-empty workEmail (used as the durable onboarding key).
+  //
+  // Side effects on success:
+  // - Soft-registers the user via Auth.signIn() if they were not already authed.
+  // - Marks onboarding complete for that email via Onboarding.complete().
+  // - Clears the Drafts entry for that email to prevent stale reloads.
+  // - Sends the user to /thank-you.
   const submit = async () => {
     if (submitting) {
       Analytics.event("start_submit_ignored_already_submitting", { step });
@@ -401,6 +459,9 @@ export default function Start() {
     }
   };  
 
+  // Step 3 helper: add the currently selected platform/channel
+  // into the `channels` Set. Handles the special "Other" case by
+  // pulling from the free-text `customPlatform` field.
   const addPlatform = () => {
     let platform = selectedPlatform;
     if (!platform) return;
@@ -424,6 +485,8 @@ export default function Start() {
     setSelectedPlatform("");
   };
 
+  // Step 3 helper: remove a previously selected platform from the Set.
+  // This powers the removable "chips" UI shown under "Selected sources".
   const removePlatform = (name) => {
     const current = form.channels || new Set();
     if (!current.has(name)) return;
@@ -432,21 +495,30 @@ export default function Start() {
     setField("channels", nextSet);
   };
 
+  // Field renderer for the current step.
+  //
+  // Most field types share the same text/checkbox layout, but a few have
+  // custom UI:
+  // - key === "terms": checkbox + "Read Terms & Agreements" button
+  // - type === "checkboxes": the primary-channel multi-select with pills
+  //   and an optional "Other" text input.
   const renderField = (f) => {
     const common =
-      "mt-2 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:bg-white " +
+      "mt-2 w-full rounded-lg border border-rl_border bg-rl_surface px-3 py-2 text-sm text-rl_text placeholder:text-rl_muted/60 outline-none focus:border-rl_accent focus:ring-1 focus:ring-rl_accent/70 " +
       (err[f.key]
         ? "border-red-400 bg-red-50"
-        : "border-rl_border bg-rl_accentSoft/40");
+        : "");
 
         if (f.type === "checkbox") {
-            // Special layout for the Terms checkbox
+            // Special layout for the "Terms" checkbox:
+            // we pair the checkbox with a button that opens the TermsModal,
+            // so users can quickly review the agreements without leaving the flow.
             if (f.key === "terms") {
               return (
                 <label className="mt-1 flex items-start gap-2 text-sm">
                   <input
                     type="checkbox"
-                    className="mt-1 accent-black"
+                    className="mt-1 accent-rl_accent"
                     checked={!!form[f.key]}
                     onChange={(e) => setField(f.key, e.target.checked)}
                   />
@@ -493,7 +565,16 @@ export default function Start() {
       );
     }
 
-    // Step 3: custom "Primary channels" UI
+    // Step 3: custom "Primary channel" UI
+    // -----------------------------------
+    // This replaces the default text/checkbox renderer with:
+    // - A <select> driven by PLATFORM_CHOICES
+    // - An "Add" button to push the selection into a Set
+    // - An optional "Other" text box when the user picks "Other"
+    // - A row of removable chips representing chosen sources
+    //
+    // The underlying data is still stored on `form.channels` but is
+    // manipulated via a Set to keep adds/removals idempotent.
     if (f.type === "checkboxes") {
       const selected = Array.from(form.channels || new Set());
       return (
@@ -502,7 +583,7 @@ export default function Start() {
             <select
               value={selectedPlatform}
               onChange={(e) => setSelectedPlatform(e.target.value)}
-              className="w-full rounded-full border border-rl_border bg-rl_accentSoft/40 px-4 py-2 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-black/80"
+              className="w-full rounded-lg border border-rl_border bg-rl_surface px-4 py-2 text-sm text-rl_text focus:outline-none focus:border-rl_accent focus:ring-1 focus:ring-rl_accent/70"
             >
               <option value="">Choose a platform or channel...</option>
               {PLATFORM_CHOICES.map((p) => (
@@ -519,11 +600,11 @@ export default function Start() {
                 !selectedPlatform ||
                 (selectedPlatform === "Other" && !customPlatform.trim())
               }
-              className={`inline-flex shrink-0 items-center justify-center rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wide text-white ${
+              className={`inline-flex shrink-0 items-center justify-center rounded-full px-5 py-2 text-xs font-semibold tracking-[0.18em] transition-all ${
                 !selectedPlatform ||
                 (selectedPlatform === "Other" && !customPlatform.trim())
-                  ? "bg-zinc-400 cursor-not-allowed"
-                  : "bg-black hover:bg-zinc-900"
+                  ? "bg-rl_border text-rl_muted cursor-not-allowed"
+                  : "bg-rl_accent text-rl_bg shadow-rl_soft hover:shadow-md"
               }`}
             >
               Add
@@ -537,7 +618,7 @@ export default function Start() {
                 value={customPlatform}
                 onChange={(e) => setCustomPlatform(e.target.value)}
                 placeholder="Briefly describe where you heard about us..."
-                className="w-full rounded-xl border border-rl_border bg-rl_accentSoft/40 px-4 py-2 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-black/80"
+                className="w-full rounded-lg border border-rl_border bg-rl_surface px-4 py-2 text-sm text-rl_text placeholder:text-rl_muted/60 focus:outline-none focus:border-rl_accent focus:ring-1 focus:ring-rl_accent/70"
               />
               <p className="mt-1 text-xs text-rl_muted">
                 Example: &quot;Heard on a niche marketing podcast&quot; or
@@ -551,7 +632,7 @@ export default function Start() {
               Selected sources
             </p>
             {selected.length === 0 ? (
-              <p className="mt-2 rounded-xl border border-dashed border-rl_border bg-rl_accentSoft/30 px-4 py-3 text-xs text-rl_muted">
+              <p className="mt-2 rounded-xl border border-dashed border-rl_border bg-rl_surfaceSoft/30 px-4 py-3 text-xs text-rl_muted">
                 Once you add a source, it will appear here as a removable tag.
               </p>
             ) : (
@@ -559,7 +640,7 @@ export default function Start() {
                 {selected.map((item) => (
                   <span
                     key={item}
-                    className="inline-flex items-center gap-2 rounded-full border border-rl_border bg-white px-3 py-1 text-xs text-rl_ink"
+                    className="inline-flex items-center gap-2 rounded-full border border-rl_border bg-rl_surface px-3 py-1 text-xs text-rl_text"
                   >
                     {item}
                     <button
@@ -591,23 +672,30 @@ export default function Start() {
 
   const s = steps[step];
 
+  // ------------- Render -------------
+  // Layout:
+  // - SiteHeader at the top (state-aware auth nav).
+  // - Progress dots showing how many steps and which one is active.
+  // - Step title + dynamically rendered fields for this step.
+  // - Back / Continue / Finish buttons with disabled states.
+  // - TermsModal pinned at the bottom of the component tree.
   return (
-    <div className="min-h-screen bg-page text-rl_ink">
+    <div className="min-h-screen bg-rl_bg text-rl_text">
       <SiteHeader />
-      <main className="mx-auto max-w-container px-6 pb-16 pt-12">
+      <main className="mx-auto max-w-shell px-4 md:px-6 py-10 md:py-14">
         {/* progress dots */}
         <div className="mb-6 flex items-center gap-2">
           {steps.map((_, i) => (
             <div
               key={i}
               className={`h-2 w-2 rounded-full ${
-                i <= step ? "bg-black" : "bg-rl_border"
+                i <= step ? "bg-rl_text" : "bg-rl_border"
               }`}
             />
           ))}
         </div>
 
-        <h1 className="text-2xl font-extrabold tracking-[-0.02em]">
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-rl_text">
           {s.title}
         </h1>
 
@@ -640,29 +728,29 @@ export default function Start() {
           {step > 0 && (
             <button
               onClick={back}
-              className="rounded-full border border-rl_border px-5 py-2 text-xs font-medium uppercase tracking-[0.18em]"
+              className="inline-flex items-center justify-center rounded-full border border-rl_border px-5 py-2 text-xs font-medium tracking-[0.2em] text-rl_muted hover:text-rl_text transition-colors"
             >
-              Back
+              BACK
             </button>
           )}
           {step < steps.length - 1 ? (
             <button
               onClick={next}
-              className="rounded-full bg-black px-5 py-2 text-xs font-medium uppercase tracking-[0.18em] text-white transition-colors hover:bg-zinc-900"
+              className="inline-flex items-center justify-center rounded-full bg-rl_accent px-6 py-2.5 text-xs md:text-sm font-semibold tracking-[0.18em] text-rl_bg shadow-rl_soft hover:shadow-md transition-all"
             >
-              Continue
+              CONTINUE
             </button>
           ) : (
             <button
               disabled={submitting}
               onClick={submit}
-              className={`rounded-full px-5 py-2 text-xs font-medium uppercase tracking-[0.18em] text-white ${
+              className={`inline-flex items-center justify-center rounded-full px-6 py-2.5 text-xs md:text-sm font-semibold tracking-[0.18em] transition-all ${
                 submitting
-                  ? "bg-zinc-400 cursor-not-allowed"
-                  : "bg-black hover:bg-zinc-900"
+                  ? "bg-rl_border text-rl_muted cursor-not-allowed"
+                  : "rounded-full bg-rl_accent text-rl_bg shadow-rl_soft hover:shadow-md"
               }`}
             >
-              {submitting ? "Finishing…" : "Finish onboarding"}
+              {submitting ? "FINISHING…" : "FINISH ONBOARDING"}
             </button>
           )}
         </div>

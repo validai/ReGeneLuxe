@@ -1,65 +1,78 @@
-// FILE: src/utils/drafts.js
+// MODE 3 SAFETY:
+// - Added stable normalization
+// - Storage guard
+// - Fail-soft parse
+// - Defensive draft clearing rules
 
-const KEY = "rl_start_draft_v1";
+const KEY = "rl_start_draft_v2";
 
-function hasWindow() {
-  return typeof window !== "undefined" && !!window.localStorage;
+function hasStorage() {
+  try {
+    if (typeof window === "undefined") return false;
+    const t = "__rl_test__";
+    window.localStorage.setItem(t, "1");
+    window.localStorage.removeItem(t);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-function normalizeEmail(email) {
-  const trimmed = (email || "").trim().toLowerCase();
-  return trimmed || null;
+function normalize(email) {
+  return (email || "").trim().toLowerCase();
 }
 
 export const Drafts = {
-  load() {
-    if (!hasWindow()) return null;
+  load(email) {
+    if (!hasStorage()) return null;
+    let raw;
     try {
-      const raw = window.localStorage.getItem(KEY);
-      if (!raw) return null;
+      raw = window.localStorage.getItem(KEY);
+    } catch {
+      return null;
+    }
+    if (!raw) return null;
+
+    try {
       const data = JSON.parse(raw);
-      if (!data || typeof data !== "object") return null;
+      if (typeof data !== "object") return null;
+      const stored = normalize(data.email);
+      if (stored !== normalize(email)) return null;
       return data;
-    } catch (e) {
-      console.error("[Drafts.load] error", e);
+    } catch {
       return null;
     }
   },
 
   save(email, form, step) {
-    if (!hasWindow()) return;
-    const normalized = normalizeEmail(email);
-    if (!normalized) return;
-
+    if (!hasStorage()) return;
     try {
       const payload = {
-        email: normalized,
+        email: normalize(email),
         form: form || {},
         step: typeof step === "number" ? step : 0,
-        ts: new Date().toISOString(),
       };
       window.localStorage.setItem(KEY, JSON.stringify(payload));
-    } catch (e) {
-      console.error("[Drafts.save] error", e);
+    } catch (err) {
+      console.error("[Drafts.save] error", err);
     }
   },
 
   clear(email) {
-    if (!hasWindow()) return;
+    if (!hasStorage()) return;
     try {
       const raw = window.localStorage.getItem(KEY);
       if (!raw) return;
 
       const data = JSON.parse(raw);
-      const storedEmail = normalizeEmail(data?.email);
-      const normalized = normalizeEmail(email);
+      if (!data) return;
 
-      // If we know the email and it doesn't match, keep the draft
-      if (normalized && storedEmail && normalized !== storedEmail) return;
+      const stored = normalize(data.email);
+      if (stored !== normalize(email)) return;
 
       window.localStorage.removeItem(KEY);
-    } catch (e) {
-      console.error("[Drafts.clear] error", e);
+    } catch (err) {
+      console.error("[Drafts.clear] error", err);
     }
   },
 };

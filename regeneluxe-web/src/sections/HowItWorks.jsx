@@ -1,9 +1,18 @@
 import FadeSection from "../components/FadeSection";
 
+// SAFETY UPGRADE (Mode 3):
+// - Added doc header for future extraction into a <HowItWorksStep /> component.
+// - Added aria roles for accessibility.
+// - No logic changes; file is static.
+
 export default function HowItWorks() {
   return (
     <FadeSection>
-      <section className="mt-section border-t border-rl_border pt-section">
+      <section
+        className="mt-section border-t border-rl_border pt-section"
+        role="region"
+        aria-label="How it Works"
+      >
         <p className="text-xs font-medium uppercase tracking-[0.26em] text-rl_muted">
           How ReGeneLuxe works
         </p>

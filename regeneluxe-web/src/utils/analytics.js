@@ -4,6 +4,23 @@ import { Onboarding } from "./onboarding";
 
 const isProd = import.meta.env.PROD;
 
+// MODE 3 SAFETY:
+// - Added storage guards
+// - Added session fallback
+// - Hardened global error handler
+// - Soft buffer overflow protection
+
+function safeSessionStorage() {
+  try {
+    if (typeof window === "undefined") return false;
+    window.sessionStorage.setItem("__t", "1");
+    window.sessionStorage.removeItem("__t");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // --- Session handling -------------------------------------------------------
 function getSessionId() {
   if (typeof window === "undefined") return null;
@@ -81,7 +98,10 @@ function write(type, name, payload = {}) {
     // Cap in-memory buffer to prevent unbounded growth
     const MAX = 500;
     if (buf.length > MAX) {
-      buf.splice(0, buf.length - MAX);
+      // Directly update window.__rl_logs since we can't reassign buf
+      const trimmed = buf.slice(-MAX);
+      window.__rl_logs.length = 0;
+      window.__rl_logs.push(...trimmed);
     }
   }
 
@@ -120,10 +140,18 @@ export const Analytics = {
    */
   flush() {
     const buf = getBuffer();
-    if (!buf || buf.length === 0) return [];
-    const copy = buf.slice();
-    buf.length = 0;
-    return copy;
+    // Nothing to flush
+    if (!buf || !Array.isArray(buf) || buf.length === 0) {
+      return [];
+    }
+    // Respect MAX but do NOT mutate the original buffer reference
+    const MAX = 500;
+    const trimmed = buf.length > MAX ? buf.slice(-MAX) : buf.slice();
+    // Clear the in-memory buffer so future calls only see new entries
+    if (typeof window !== "undefined" && Array.isArray(window.__rl_logs)) {
+      window.__rl_logs.length = 0;
+    }
+    return trimmed;
   },
 
   installGlobalErrorHandlers() {

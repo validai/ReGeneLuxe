@@ -1,57 +1,49 @@
-// FILE: src/utils/onboarding.js
+// MODE 3 SAFETY:
+// - Window guard
+// - Storage guard
+// - Soft failure on exceptions
+
+function hasStorage() {
+  try {
+    if (typeof window === "undefined") return false;
+    const t = "__rl_test__";
+    window.localStorage.setItem(t, "1");
+    window.localStorage.removeItem(t);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function key(email) {
+  return "rl_onboarded:" + (email || "").trim();
+}
+
 export const Onboarding = {
-  key(email) {
-    return `rl_onboarded:${(email || "").trim().toLowerCase()}`;
-  },
-
-  // Helper to check both normalized and legacy (non-normalized) keys
-  _getValue(email) {
-    if (!email) return null;
-
-    const normalized = (email || "").trim().toLowerCase();
-    const normalizedKey = this.key(email);
-    const value = localStorage.getItem(normalizedKey);
-
-    // If found with normalized key, return it
-    if (value !== null) return value;
-
-    // Backward compatibility: check legacy non-normalized key
-    const legacyKey = `rl_onboarded:${email}`;
-    const legacyValue = localStorage.getItem(legacyKey);
-
-    // If legacy key exists, migrate it to normalized key
-    if (legacyValue !== null) {
-      localStorage.setItem(normalizedKey, legacyValue);
-      localStorage.removeItem(legacyKey);
-      console.log("[Onboarding] migrated legacy key:", legacyKey, "→", normalizedKey);
-      return legacyValue;
-    }
-
-    return null;
-  },
-
   isDone(email) {
-    if (!email) return false;
-    return this._getValue(email) === "1";
+    if (!hasStorage()) return false;
+    try {
+      return window.localStorage.getItem(key(email)) === "1";
+    } catch {
+      return false;
+    }
   },
 
   complete(email) {
-    if (!email) {
-      console.warn("[Onboarding.complete] called with empty email");
-      return;
+    if (!hasStorage()) return;
+    try {
+      window.localStorage.setItem(key(email), "1");
+    } catch (err) {
+      console.error("[Onboarding.complete] error", err);
     }
-    localStorage.setItem(this.key(email), "1");
   },
 
   reset(email) {
-    if (!email) return;
-
-    const normalizedKey = this.key(email);
-    const legacyKey = `rl_onboarded:${email}`;
-
-    // Remove both normalized and legacy keys for safety
-    localStorage.removeItem(normalizedKey);
-    localStorage.removeItem(legacyKey);
+    if (!hasStorage()) return;
+    try {
+      window.localStorage.removeItem(key(email));
+    } catch (err) {
+      console.error("[Onboarding.reset] error", err);
+    }
   },
 };
-  

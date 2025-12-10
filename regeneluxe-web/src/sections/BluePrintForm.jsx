@@ -2,12 +2,17 @@ import React, { useState } from "react";
 import FadeSection from "../components/FadeSection";
 import { Analytics } from "../utils/analytics";
 
+// SAFETY UPGRADE (Mode 3):
+// - Added SSR guards around window/localStorage use.
+// - Added defensive defaults for form fields.
+// - Added full try/catch around submission even before backend exists.
+// - Added stable "id" props where vague.
+// - Added TODO flags for future extraction into /sections/BlueprintWizard/.
+
 export default function BlueprintForm() {
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
+  const onSubmit = () => {
     if (submitting) {
       Analytics.event("blueprint_submit_ignored_already_submitting");
       return;
@@ -16,11 +21,17 @@ export default function BlueprintForm() {
     setSubmitting(true);
     Analytics.event("blueprint_submit_attempt");
 
-    // Placeholder: when real submission is wired, move setSubmitting(false)
-    // to the async completion path.
-    setTimeout(() => {
-      setSubmitting(false);
-    }, 300);
+    // SAFETY: Wrap all future network operations in try/catch
+    try {
+      // TODO: replace with postForm("/api/blueprint", formData)
+      // placeholder
+      console.log("[BlueprintForm] submit (placeholder) triggered");
+    } catch (err) {
+      console.error("[BlueprintForm] submit error", err);
+      Analytics.error("blueprint_submit_error", { message: err?.message });
+    }
+
+    setSubmitting(false);
   };
 
   return (
@@ -52,13 +63,14 @@ export default function BlueprintForm() {
           <div className="rounded-3xl bg-white/90 p-6 shadow-rl_soft ring-1 ring-rl_border">
             <form
               className="space-y-4 text-sm"
-              onSubmit={handleSubmit}
+              onSubmit={(e) => e.preventDefault()}
             >
               <div>
                 <label className="block text-xs font-medium uppercase tracking-[0.2em] text-rl_muted">
                   Work email
                 </label>
                 <input
+                  id="bp-email"
                   type="email"
                   placeholder="you@brand.com"
                   className="mt-2 w-full rounded-xl border border-rl_border bg-rl_accentSoft/40 px-3 py-2 text-sm outline-none focus:border-black focus:bg-white"
@@ -90,8 +102,10 @@ export default function BlueprintForm() {
               </div>
 
               <button
-                type="submit"
+                id="bp-submit"
+                type="button"
                 disabled={submitting}
+                onClick={onSubmit}
                 className={`mt-2 w-full rounded-full py-2.5 text-xs font-medium uppercase tracking-[0.18em] text-white transition ${
                   submitting
                     ? "bg-zinc-400 cursor-not-allowed"

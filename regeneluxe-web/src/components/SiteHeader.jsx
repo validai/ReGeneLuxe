@@ -1,92 +1,254 @@
 // FILE: src/components/SiteHeader.jsx
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import { Auth } from "../utils/auth";
+import { Onboarding } from "../utils/onboarding";
+import { Drafts } from "../utils/drafts";
+import { Analytics } from "../utils/analytics";
+import { fadeInVariant } from "../utils/motionConfig";
+import BrandTitle from "./BrandTitle";
 
 export default function SiteHeader() {
-  const nav = useNavigate();
-  const loc = useLocation();
-  const authed = Auth.isSignedIn();
-  const [showCTA, setShowCTA] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [scrolled, setScrolled] = useState(false);
 
-  // Hide header on home page
-  if (loc.pathname === "/") return null;
+  const authed = Auth.isSignedIn();
+  const email = Auth.user();
+  const onboarded = email ? Onboarding.isDone(email) : false;
 
   useEffect(() => {
-    const hero = document.getElementById("hero-top");
-    const onScroll = () => setShowCTA(window.scrollY > 160);
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 16);
+    };
 
-    if (!hero) {
-      onScroll();
-      window.addEventListener("scroll", onScroll, { passive: true });
-      return () => window.removeEventListener("scroll", onScroll);
-    }
-    const io = new IntersectionObserver(
-      (entries) => setShowCTA(!entries[0].isIntersecting),
-      { threshold: 0.01 }
-    );
-    io.observe(hero);
-    return () => io.disconnect();
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  return (
-    <header className="sticky top-0 z-20 border-b border-rl_border bg-rl_bg/90 backdrop-blur">
-      <div className="mx-auto flex max-w-container items-center justify-between px-6 py-4">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="h-7 w-7 rounded-full bg-gradient-to-br from-black to-gray-500" />
-          <span className="text-xs font-medium tracking-[0.24em] uppercase">
-            ReGeneLuxe
-          </span>
-        </Link>
+  const handleLogoClick = (e) => {
+    e.preventDefault();
+    Analytics.event("header_logo_click");
+    navigate("/");
+  };
 
-        <div className="flex items-center gap-2">
-          {authed ? (
-            <>
-              {loc.pathname !== "/dashboard" && (
-                <Link
-                  to="/dashboard"
-                  className="rounded-full border border-rl_border px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] hover:bg-subtle transition-colors"
-                >
-                  Dashboard
-                </Link>
+  const handleSignOut = () => {
+    try {
+      const currentEmail = Auth.user();
+
+      Analytics.event("header_sign_out_clicked", {
+        email: currentEmail || null,
+        onboarded: currentEmail ? Onboarding.isDone(currentEmail) : false,
+      });
+
+      // We intentionally DO NOT clear onboarding here.
+      // Onboarding is a durable state that survives sign-outs.
+      if (currentEmail) {
+        try {
+          Drafts.clear(currentEmail);
+        } catch (draftErr) {
+          Analytics.error("header_sign_out_draft_clear_error", {
+            message: draftErr?.message,
+            name: draftErr?.name,
+          });
+        }
+      }
+
+      Auth.signOut();
+
+      Analytics.event("header_sign_out_completed");
+
+      navigate("/", { replace: true });
+    } catch (e) {
+      Analytics.error("header_sign_out_error", {
+        message: e?.message,
+        name: e?.name,
+      });
+      navigate("/", { replace: true });
+    }
+  };
+
+  const user = authed ? { email } : null;
+
+  const goToStart = () => {
+    Analytics.event("header_nav_click", {
+      target: "/start",
+      authed,
+      onboarded,
+    });
+    // START QUESTIONNAIRE: navigate(user ? "/start" : "/login")
+    navigate(user ? "/start" : "/login");
+  };
+
+  const goToLogin = () => {
+    Analytics.event("header_nav_click", {
+      target: "/login",
+      authed,
+      onboarded,
+    });
+    // SIGN IN: navigate(user ? "/dashboard" : "/login")
+    navigate(user ? "/dashboard" : "/login");
+  };
+
+  const goToDashboard = () => {
+    Analytics.event("header_nav_click", {
+      target: "/dashboard",
+      authed,
+      onboarded,
+    });
+    // DASHBOARD: navigate("/dashboard")
+    navigate("/dashboard");
+  };
+
+  const goToNewCampaign = () => {
+    Analytics.event("header_nav_click", {
+      target: "/campaign/new",
+      authed,
+      onboarded,
+    });
+    // NEW CAMPAIGN: navigate("/campaign/new")
+    navigate("/campaign/new");
+  };
+
+  const prefersReducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const headerContent = (
+    <div className={`mx-auto max-w-shell px-4 sm:px-6 lg:px-8 flex items-center justify-between transition-all duration-300 ${
+      scrolled ? "h-14" : "h-16"
+    }`}>
+      {/* Brand / Logo */}
+      <button
+        type="button"
+        onClick={handleLogoClick}
+        className="group flex items-center gap-2"
+      >
+        <BrandTitle
+          variant="header"
+          className="tracking-[0.25em] text-xs sm:text-sm text-rl_muted"
+        />
+      </button>
+
+      {/* Right-side actions */}
+      <div className="flex items-center gap-4">
+        {/* If NOT signed in: show Start + Sign In */}
+        {!authed && (
+          <>
+            <motion.button
+              type="button"
+              onClick={goToStart}
+              className="hidden text-xs font-medium tracking-[0.2em] text-rl_muted hover:text-rl_text transition-colors sm:inline-flex relative"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              START QUESTIONNAIRE
+            </motion.button>
+            <motion.button
+              type="button"
+              onClick={goToLogin}
+              className="rounded-full bg-rl_accent px-4 py-2 text-xs font-semibold tracking-[0.18em] text-rl_bg shadow-rl_soft hover:shadow-[0_18px_35px_rgba(15,23,42,0.12)] transition-all hover:-translate-y-[1px] active:translate-y-[1px]"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              SIGN IN
+            </motion.button>
+          </>
+        )}
+
+        {/* Signed in but NOT onboarded: continue onboarding + Sign Out */}
+        {authed && !onboarded && (
+          <>
+            <motion.button
+              type="button"
+              onClick={goToStart}
+              className="hidden text-xs font-medium tracking-[0.2em] text-rl_muted hover:text-rl_text transition-colors sm:inline-flex"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              CONTINUE ONBOARDING
+            </motion.button>
+            <motion.button
+              type="button"
+              onClick={handleSignOut}
+              className="text-xs font-medium tracking-[0.2em] text-rl_muted hover:text-rl_text transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              SIGN OUT
+            </motion.button>
+          </>
+        )}
+
+        {/* Signed in AND onboarded: Dashboard + New Campaign + Sign Out */}
+        {authed && onboarded && (
+          <>
+            <motion.button
+              type="button"
+              onClick={goToDashboard}
+              className="hidden text-xs font-medium tracking-[0.2em] sm:inline-flex relative"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <span className={location.pathname === "/dashboard" ? "text-rl_text font-semibold" : "text-rl_muted hover:text-rl_text transition-colors"}>
+                DASHBOARD
+              </span>
+              {location.pathname === "/dashboard" && (
+                <motion.span
+                  className="absolute bottom-0 left-0 right-0 h-[1px] bg-rl_accent"
+                  layoutId="header-underline"
+                  initial={{ width: 0 }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 0.3 }}
+                />
               )}
-              <button
-                onClick={() => {
-                  console.log("[Header] Sign out");
-                  Auth.signOut();
-                  nav("/", { replace: true });
-                }}
-                className="rounded-full bg-black px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-zinc-900 transition-colors"
-              >
-                Sign out
-              </button>
-            </>
-          ) : (
-            <>
-              {loc.pathname !== "/start" && (
-                <Link
-                  to="/start"
-                  onClick={() => console.log("[Header] CTA → /start")}
-                  className={`rounded-full border border-rl_border px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] hover:bg-subtle transition-colors ${
-                    showCTA ? "opacity-100" : "opacity-0 pointer-events-none"
-                  }`}
-                >
-                  Get started
-                </Link>
-              )}
-              {loc.pathname !== "/login" && (
-                <Link
-                  to="/login"
-                  onClick={() => console.log("[Header] Sign in → /login")}
-                  className="rounded-full bg-black px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-zinc-900 transition-colors"
-                >
-                  Sign in
-                </Link>
-              )}
-            </>
-          )}
-        </div>
+            </motion.button>
+            <motion.button
+              type="button"
+              onClick={goToNewCampaign}
+              className="hidden sm:inline-flex rounded-full bg-rl_accent px-4 py-2 text-xs font-semibold tracking-[0.18em] text-rl_bg shadow-rl_soft hover:shadow-[0_18px_35px_rgba(15,23,42,0.12)] transition-all hover:-translate-y-[1px] active:translate-y-[1px]"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              NEW CAMPAIGN
+            </motion.button>
+            <motion.button
+              type="button"
+              onClick={handleSignOut}
+              className="text-xs font-medium tracking-[0.2em] text-rl_muted hover:text-rl_text transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              SIGN OUT
+            </motion.button>
+          </>
+        )}
       </div>
-    </header>
+    </div>
+  );
+
+  if (prefersReducedMotion) {
+    return (
+      <header className={`sticky top-0 z-40 border-b border-rl_border bg-rl_surface/95 backdrop-blur ${
+        scrolled ? "shadow-[0_12px_30px_rgba(15,23,42,0.06)]" : ""
+      }`}>
+        {headerContent}
+      </header>
+    );
+  }
+
+  return (
+    <motion.header
+      className={`sticky top-0 z-40 border-b border-rl_border backdrop-blur ${
+        scrolled ? "bg-rl_surface/98 shadow-[0_12px_30px_rgba(15,23,42,0.06)]" : "bg-rl_surface/95"
+      }`}
+      variants={fadeInVariant}
+      initial="hidden"
+      animate="visible"
+    >
+      {headerContent}
+    </motion.header>
   );
 }

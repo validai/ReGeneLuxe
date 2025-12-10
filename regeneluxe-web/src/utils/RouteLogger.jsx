@@ -12,12 +12,15 @@ export default function RouteLogger() {
   const location = useLocation();
 
   useEffect(() => {
+    // Guard against SSR/blocked window objects
+    if (typeof window === "undefined") return;
+
     try {
       const path =
         (location && location.pathname ? location.pathname : "") +
         (location && location.search ? location.search : "");
       if (!path) return;
-      Analytics.page(path);
+      Analytics.page("route", { path });
     } catch (e) {
       Analytics.error("route_logger_error", {
         message: e?.message,

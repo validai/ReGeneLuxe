@@ -4,12 +4,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        rl_bg: "#f5f2ec", // warm, minimal off-white background
-        rl_ink: "#0f172a", // main text (deep slate)
-        rl_muted: "#6b7280", // secondary text
-        rl_border: "rgba(15, 23, 42, 0.08)", // subtle borders
-        rl_accent: "#111827", // CTA / highlights (near black)
-        rl_accentSoft: "#e5e7eb", // soft accent background
+        rl_bg: "#F1EDE6",
+        rl_surface: "#FFFFFF",
+        rl_surfaceSoft: "#EBE3DB",
+        rl_border: "#D1C7BD",
+        rl_text: "#2B2B2B",
+        rl_muted: "#7A6B5B",
+        rl_accent: "#CBAD8D",
       },
       fontFamily: {
         sans: [
@@ -21,16 +22,13 @@ export default {
         ],
       },
       boxShadow: {
-        rl_soft: "0 28px 80px rgba(15, 23, 42, 0.18)", // luxe floating card shadow
+        rl_soft: "0 8px 32px rgba(43,43,43,0.08)",
       },
       maxWidth: {
-        container: "1120px",
+        shell: "1120px",
       },
       borderRadius: {
-        xl2: "1.5rem",
-      },
-      spacing: {
-        section: "6.5rem",
+        "2xl": "1.5rem",
       },
     },
   },

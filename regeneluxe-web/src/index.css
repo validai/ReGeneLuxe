@@ -8,7 +8,7 @@
 }
 
 body {
-  @apply font-sans bg-rl_bg text-rl_ink antialiased;
+  @apply font-sans bg-rl_bg text-rl_text antialiased;
 }
 
 #root {
