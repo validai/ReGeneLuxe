@@ -1,19 +1,24 @@
 // FILE: src/components/Showcase.jsx
 // Minimal, dependency-free carousel with fade.
-// Uses /public/showcase/*.svg files in public/showcase/
+// Uses /public/showcase/*.png files in public/showcase/
 
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const FALLBACKS = [
-  "/showcase/result_video_snippets.svg",
-  "/showcase/result_ad_bundle.svg",
-  "/showcase/result_email_flow.svg",
-  "/showcase/result_automation_map.svg",
+const IMAGES = [
+  "/showcase/result-image-1.png",
+  "/showcase/result-image-2.png",
+  "/showcase/result-image-3.png",
+  "/showcase/result-image-4.png",
+  "/showcase/result-image-5.png",
+  "/showcase/result-image-6.png",
+  "/showcase/result-image-7.png",
+  "/showcase/result-image-8.png",
+  "/showcase/result-image-9.png",
 ];
 
 export default function Showcase({ className = "" }) {
-  const [images] = useState(FALLBACKS);
+  const [images] = useState(IMAGES);
   const [idx, setIdx] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -22,13 +27,16 @@ export default function Showcase({ className = "" }) {
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // Slower autoplay - 16 seconds per image
+  const AUTOPLAY_INTERVAL = 16000;
+
   // Autoplay
   useEffect(() => {
     if (!images || images.length === 0) return undefined;
 
     const id = setInterval(
       () => setIdx((n) => ((n + 1) % images.length + images.length) % images.length),
-      3600
+      AUTOPLAY_INTERVAL
     );
     return () => clearInterval(id);
   }, [images]);
@@ -43,7 +51,8 @@ export default function Showcase({ className = "" }) {
         if (prev >= 100) {
           return 0;
         }
-        return prev + (100 / 36); // 3600ms / 100 = 36 steps
+        // 16000ms / 100 = 160 steps at 100ms intervals
+        return prev + (100 / (AUTOPLAY_INTERVAL / 100));
       });
     }, 100);
 
@@ -72,25 +81,24 @@ export default function Showcase({ className = "" }) {
 
       <div className="mt-4 relative rounded-2xl border border-rl_border overflow-hidden bg-rl_surface shadow-rl_soft">
         <div className="relative aspect-[16/9]">
-          <AnimatePresence mode="wait">
-            {images.map((src, i) => (
-              i === idx && (
-                <motion.img
-                  key={`sc-${i}`}
-                  src={src}
-                  alt="ReGeneLuxe showcase"
-                  className="absolute inset-0 h-full w-full object-cover"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  loading="lazy"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-              )
-            ))}
+          <AnimatePresence>
+            <motion.img
+              key={images[idx]}
+              src={images[idx]}
+              alt={`ReGeneLuxe campaign output mock ${idx + 1}`}
+              className="absolute inset-0 h-full w-full object-cover"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{
+                duration: 1.2,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              loading="lazy"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
           </AnimatePresence>
         </div>
 
