@@ -66,7 +66,7 @@ export default function SocialProofStrip() {
               {/* Column 3: Tagline */}
               <div className="flex items-center">
                 <p className="text-sm text-rl_muted italic">
-                  Designed for teams tired of chaotic ad accounts.
+                  Built to outperform agencies. Powered by elite AI orchestration.
                 </p>
               </div>
             </div>

@@ -6,6 +6,7 @@ import { Auth } from "../utils/auth";
 import { Onboarding } from "../utils/onboarding";
 import { Drafts } from "../utils/drafts";
 import { Analytics } from "../utils/analytics";
+import { EVENTS } from "../utils/analyticsEvents";
 import { fadeInVariant } from "../utils/motionConfig";
 import BrandTitle from "./BrandTitle";
 
@@ -72,20 +73,18 @@ export default function SiteHeader() {
   const user = authed ? { email } : null;
 
   const goToStart = () => {
-    Analytics.event("header_nav_click", {
-      target: "/start",
-      authed,
-      onboarded,
+    Analytics.track(EVENTS.CTA_CLICK, {
+      label: "Start questionnaire",
+      source: "top_nav",
     });
     // START QUESTIONNAIRE: navigate(user ? "/start" : "/login")
     navigate(user ? "/start" : "/login");
   };
 
   const goToLogin = () => {
-    Analytics.event("header_nav_click", {
-      target: "/login",
-      authed,
-      onboarded,
+    Analytics.track(EVENTS.CTA_CLICK, {
+      label: "Sign in",
+      source: "top_nav",
     });
     // SIGN IN: navigate(user ? "/dashboard" : "/login")
     navigate(user ? "/dashboard" : "/login");

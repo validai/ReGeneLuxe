@@ -125,6 +125,11 @@ export const Analytics = {
     write("event", name, payload);
   },
 
+  track(name, payload = {}) {
+    // Alias for event() to match common analytics API patterns
+    write("event", name, payload);
+  },
+
   error(name, payload = {}) {
     write("error", name, payload);
   },

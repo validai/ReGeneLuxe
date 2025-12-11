@@ -1,10 +1,9 @@
-// FILE: src/components/Footer.jsx
+// FILE: src/components/layout/AppFooter.jsx
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
-import FadeSection from "./FadeSection";
-import BrandTitle from "./BrandTitle";
-import { fadeUpVariant, baseTransition } from "../utils/motionConfig";
+import FadeSection from "../FadeSection";
+import BrandTitle from "../BrandTitle";
+import { baseTransition } from "../../utils/motionConfig";
 
 // Social Icons as SVG Components
 const InstagramIcon = ({ className }) => (
@@ -25,8 +24,7 @@ const YoutubeIcon = ({ className }) => (
   </svg>
 );
 
-export default function Footer() {
-  const navigate = useNavigate();
+export default function AppFooter() {
 
   const prefersReducedMotion =
     typeof window !== "undefined" &&
@@ -44,54 +42,6 @@ export default function Footer() {
 
   return (
     <footer className="relative mt-24">
-      {/* Cinematic CTA Block Above Footer */}
-      <FadeSection>
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 mb-16">
-          <div className="relative overflow-hidden rounded-3xl border border-rl_accent/30 bg-gradient-to-br from-rl_surface/95 via-rl_surface/90 to-rl_surfaceSoft/80 backdrop-blur-md px-8 py-12 shadow-[0_20px_60px_rgba(203,173,141,0.15)]">
-            {/* Soft spotlight gradient */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-rl_accent/5 via-transparent to-transparent pointer-events-none" />
-            
-            <div className="relative z-10 text-center">
-              <motion.h3
-                className="text-2xl sm:text-3xl md:text-4xl font-light tracking-tight text-rl_text mb-6"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ ...baseTransition, delay: 0.1 }}
-              >
-                Launch with confidence. Your next campaign deserves elite treatment.
-              </motion.h3>
-              
-              <div className="flex flex-wrap items-center justify-center gap-4">
-                <motion.button
-                  onClick={() => navigate("/gate")}
-                  className="relative overflow-hidden rounded-full bg-rl_accent px-8 py-3 text-sm font-semibold tracking-[0.18em] text-rl_bg shadow-rl_soft hover:shadow-[0_18px_35px_rgba(203,173,141,0.25)] transition-all hover:-translate-y-0.5"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <span className="relative z-10">START QUESTIONNAIRE</span>
-                  {/* Gold shimmer on hover */}
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                    initial={{ x: "-100%" }}
-                    whileHover={{ x: "100%" }}
-                    transition={{ duration: 0.6 }}
-                  />
-                </motion.button>
-                
-                <motion.button
-                  onClick={() => navigate("/campaign/new")}
-                  className="rounded-full border border-rl_accent/40 bg-rl_surface/60 backdrop-blur px-6 py-3 text-sm font-medium tracking-[0.18em] text-rl_text hover:bg-rl_surface/80 transition-all hover:-translate-y-0.5"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  VIEW PACKAGES
-                </motion.button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </FadeSection>
-
       {/* Floating Luxury Footer Shell */}
       <FadeSection>
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

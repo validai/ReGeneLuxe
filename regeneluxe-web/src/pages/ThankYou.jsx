@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import SiteHeader from "../components/SiteHeader";
 import FadeSection from "../components/FadeSection";
 import { Auth } from "../utils/auth";
 import { Onboarding } from "../utils/onboarding";
@@ -13,9 +12,7 @@ const ThankYou = () => {
   console.log("[ThankYou] mounted");
 
   return (
-    <div className="min-h-screen bg-rl_bg text-rl_text">
-      <SiteHeader />
-      <main className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8 py-12 flex items-center justify-center">
+    <div className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8 py-12 flex items-center justify-center">
         <FadeSection className="mx-4 max-w-lg w-full">
           <div className="rounded-2xl border border-rl_border bg-rl_surface px-8 py-10 text-center shadow-rl_soft">
             <p className="text-[0.7rem] font-medium uppercase tracking-[0.25em] text-rl_muted">
@@ -54,7 +51,6 @@ const ThankYou = () => {
             </div>
           </div>
         </FadeSection>
-      </main>
     </div>
   );
 };

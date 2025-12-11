@@ -1,6 +1,8 @@
 // FILE: src/sections/Hero.jsx
 import { useNavigate } from "react-router-dom";
 import FadeSection from "../components/FadeSection";
+import { Analytics } from "../utils/analytics";
+import { EVENTS } from "../utils/analyticsEvents";
 
 // SAFETY UPGRADE (Mode 3):
 // - No logic here, but added future-scale guardrails & doc header.
@@ -10,16 +12,25 @@ import FadeSection from "../components/FadeSection";
 export default function Hero() {
   const nav = useNavigate();
 
+  const handleBeginQuestionnaireClick = () => {
+    Analytics.track(EVENTS.CTA_CLICK, {
+      label: "Begin questionnaire",
+      source: "gate_hero",
+    });
+    console.log("[Hero] CTA → /start");
+    nav("/start");
+  };
+
   return (
     <FadeSection>
       <section
         id="hero-top"
         role="region"
         aria-label="Hero section"
-        className="grid gap-12 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:items-center md:pt-6"
+        className="max-w-5xl mx-auto px-6 py-12"
       >
         {/* Hero copy */}
-        <div>
+        <div className="max-w-2xl">
           <p className="text-xs font-medium uppercase tracking-[0.26em] text-rl_muted">
             AI-powered campaign generator
           </p>
@@ -40,10 +51,7 @@ export default function Hero() {
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <button
-              onClick={() => {
-                console.log("[Hero] CTA → /start");
-                nav("/start");
-              }}
+              onClick={handleBeginQuestionnaireClick}
               className="rounded-full bg-rl_accent px-6 py-2.5 text-xs md:text-sm font-semibold tracking-[0.18em] text-rl_bg shadow-rl_soft hover:shadow-md transition-all"
             >
               BEGIN QUESTIONNAIRE
@@ -52,39 +60,6 @@ export default function Hero() {
             <span className="text-xs text-rl_muted">
               ~3–5 minutes to verify. No credit card.
             </span>
-          </div>
-        </div>
-
-        {/* Preview card */}
-        <div className="hidden md:block">
-          <div className="rounded-2xl border border-rl_border bg-rl_surface p-5 shadow-rl_soft/70">
-            <p className="text-[0.65rem] font-medium uppercase tracking-[0.22em] text-rl_muted">
-              Preview
-            </p>
-            <h2 className="mt-3 text-lg font-medium tracking-[-0.02em] text-rl_text">
-              Your next campaign, assembled.
-            </h2>
-
-            <div className="mt-5 space-y-3 text-xs">
-              <div className="flex items-center justify-between rounded-xl bg-rl_surfaceSoft px-4 py-3">
-                <span className="text-rl_text">Vertical video sequence</span>
-                <span className="rounded-full bg-rl_text px-2.5 py-1 text-[0.6rem] font-medium text-rl_bg">
-                  5 scenes
-                </span>
-              </div>
-              <div className="flex items-center justify-between rounded-xl bg-rl_surfaceSoft px-4 py-3">
-                <span className="text-rl_text">Ad copy bundle</span>
-                <span className="text-[0.65rem] text-rl_muted">
-                  Meta, TikTok, YouTube
-                </span>
-              </div>
-              <div className="flex items-center justify-between rounded-xl bg-rl_surfaceSoft px-4 py-3">
-                <span className="text-rl_text">Automation &amp; follow-up</span>
-                <span className="text-[0.65rem] text-rl_muted">
-                  Email + DM flows
-                </span>
-              </div>
-            </div>
           </div>
         </div>
       </section>

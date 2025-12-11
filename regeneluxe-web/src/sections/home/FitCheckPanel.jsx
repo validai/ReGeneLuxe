@@ -7,7 +7,7 @@ const fitItems = [
   { text: "You treat campaigns like assets, not band-aids." },
   { text: "You're tired of random tests with no story behind them." },
   {
-    text: "You have offers that already work, but want presidential polish.",
+    text: "You have offers that already work, but want signature polish.",
     helper: "We amplify what's working, not rebuild from scratch.",
   },
   { text: "You value brand safety, compliance, and long-term trust." },

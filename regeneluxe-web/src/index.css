@@ -5,6 +5,21 @@
 /* ReGeneLuxe base reset */
 :root {
   color-scheme: light;
+  
+  /* Dashboard dark theme variables */
+  --dash-bg: #18181b;
+  --dash-surface: #1f1f23;
+  --dash-surface-alt: #111827;
+  --dash-border: #27272f;
+  --dash-text: #f4f4f5;
+  --dash-muted: #9ca3af;
+
+  --accent: #d6b48c;
+  --accent-soft: rgba(214, 180, 140, 0.15);
+
+  --success: #22c55e;
+  --warning: #facc15;
+  --error: #f97373;
 }
 
 body {
@@ -13,4 +28,8 @@ body {
 
 #root {
   @apply min-h-screen;
+}
+
+.field-select {
+  @apply w-full bg-[var(--dash-bg)] border border-[var(--dash-border)] rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--accent)];
 }

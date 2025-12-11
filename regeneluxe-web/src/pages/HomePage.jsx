@@ -3,10 +3,8 @@ import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Showcase from "../components/Showcase";
-import SiteHeader from "../components/SiteHeader";
 import BrandTitle from "../components/BrandTitle";
 import FadeSection from "../components/FadeSection";
-import Footer from "../components/Footer";
 import SocialProofStrip from "../sections/home/SocialProofStrip";
 import ProcessTimeline from "../sections/home/ProcessTimeline";
 import BeforeAfterStrip from "../sections/home/BeforeAfterStrip";
@@ -53,9 +51,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-rl_bg text-rl_text">
-      <SiteHeader />
-      <main>
+    <>
         {/* Hero Section with Background Image */}
         <motion.section
           className="relative w-full min-h-screen flex items-center justify-center overflow-hidden"
@@ -88,17 +84,14 @@ export default function HomePage() {
                 variants={prefersReducedMotion ? undefined : heroItemVariants}
                 className="text-lg sm:text-xl md:text-2xl font-light text-rl_text"
               >
-                Hyper-personalised campaign drafting, packaged like a luxury
-                service instead of a chaotic ad account.
+                The most powerful selling engine for creators, brands, and entrepreneurs.
               </motion.h2>
 
               <motion.p
                 variants={prefersReducedMotion ? undefined : heroItemVariants}
                 className="text-sm md:text-[0.95rem] text-rl_text/90 max-w-xl"
               >
-                ReGeneLuxe turns your context into a structured campaign
-                blueprint that our AI and strategists can execute, test, and
-                refine – without you drowning in dashboards.
+                ReGeneLuxe transforms your idea into a high-converting, multi-format campaign — automatically. You bring the product. We create the engine that sells it.
               </motion.p>
 
               <motion.div
@@ -158,8 +151,6 @@ export default function HomePage() {
 
         {/* Founder Note */}
         <FounderNote />
-      </main>
-      <Footer />
-    </div>
+    </>
   );
 }

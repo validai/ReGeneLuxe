@@ -2,29 +2,49 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import SiteHeader from "../components/SiteHeader";
 import FadeSection from "../components/FadeSection";
 import { CAMPAIGN_TIERS } from "../constants/campaignTiers";
 import { scaleCardVariant, baseTransition } from "../utils/motionConfig";
 import { Auth } from "../utils/auth";
 import { Onboarding } from "../utils/onboarding";
+import { Analytics } from "../utils/analytics";
+import { EVENTS } from "../utils/analyticsEvents";
 
 export default function NewCampaign() {
   const navigate = useNavigate();
   const [selectedTierId, setSelectedTierId] = useState(null);
   // Route guards in App.jsx handle all redirects
 
+  useEffect(() => {
+    Analytics.track(EVENTS.CAMPAIGN_NEW_VIEW, {});
+  }, []);
+
   const handleGoToDraftingRoom = () => {
-    if (!selectedTierId) return;
-    navigate(`/drafting-room?tier=${selectedTierId}`);
+    if (!selectedTierId) {
+      Analytics.track(EVENTS.CAMPAIGN_CREATION_FAILED, {
+        message: "No tier selected",
+      });
+      return;
+    }
+
+    try {
+      const selectedTier = CAMPAIGN_TIERS.find(t => t.id === selectedTierId);
+      Analytics.track(EVENTS.CAMPAIGN_CREATED, {
+        tierId: selectedTierId,
+        tierLabel: selectedTier?.label || null,
+      });
+      navigate(`/drafting-room?tier=${selectedTierId}`);
+    } catch (error) {
+      Analytics.track(EVENTS.CAMPAIGN_CREATION_FAILED, {
+        message: error?.message,
+      });
+    }
   };
 
   const selectedTier = CAMPAIGN_TIERS.find(t => t.id === selectedTierId);
 
   return (
-    <div className="min-h-screen bg-rl_bg text-rl_text">
-      <SiteHeader />
-      <main className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8 py-12 space-y-10">
+    <div className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8 py-12 space-y-10">
         <FadeSection>
           <header>
             <p className="text-[0.7rem] font-medium uppercase tracking-[0.25em] text-rl_muted">
@@ -35,7 +55,7 @@ export default function NewCampaign() {
             </h1>
             <p className="mt-2 text-sm text-rl_muted max-w-2xl">
               Choose how far you want ReGeneLuxe to take you. From a single
-              flagship video to a presidential-grade, multi-quarter campaign lab.
+              flagship video to an elite, multi-quarter campaign lab. Built to outperform agencies. Powered by elite AI orchestration.
             </p>
           </header>
         </FadeSection>
@@ -133,7 +153,6 @@ export default function NewCampaign() {
             </motion.button>
           </footer>
         </FadeSection>
-      </main>
     </div>
   );
 }

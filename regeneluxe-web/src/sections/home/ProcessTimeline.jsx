@@ -1,69 +1,41 @@
 // FILE: src/sections/home/ProcessTimeline.jsx
-import { motion } from "framer-motion";
 import FadeSection from "../../components/FadeSection";
-import { baseTransition } from "../../utils/motionConfig";
 
 const steps = [
   {
-    number: "01",
-    title: "Presidential Questionnaire",
-    description: "We turn your messy context into a structured intake your team actually enjoys filling out.",
+    icon: "📝",
+    label: "Intake",
+    title: "Signature Questionnaire",
+    description:
+      "We turn your messy context into a structured intake your team actually enjoys filling out.",
   },
   {
-    number: "02",
+    icon: "🧠",
+    label: "Blueprint",
     title: "Drafting Room Blueprint",
-    description: "Our AI + strategist engine designs a presidential-grade campaign architecture.",
+    description:
+      "Our AI + strategist engine designs a precision-built campaign architecture powered by elite AI orchestration.",
   },
   {
-    number: "03",
+    icon: "🗺",
+    label: "Channel Map",
     title: "Asset & Channel Map",
-    description: "We map messages, angles, and assets across your paid + owned channels.",
+    description:
+      "We map messages, angles, and assets across your paid + owned channels.",
   },
   {
-    number: "04",
+    icon: "🚀",
+    label: "Launch & Iterate",
     title: "Hand-off & Iteration",
-    description: "You walk away with a tested plan, not just pretty slides.",
+    description:
+      "You walk away with a tested plan, not just pretty slides — and a system you can keep refining.",
   },
 ];
 
 export default function ProcessTimeline() {
-  const prefersReducedMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.15,
-        delayChildren: 0.1,
-      },
-    },
-  };
-
-  const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: baseTransition,
-    },
-  };
-
-  const hoverVariants = {
-    rest: { y: 0, boxShadow: "0 8px 32px rgba(43,43,43,0.08)" },
-    hover: {
-      y: -4,
-      boxShadow: "0 12px 40px rgba(203,173,141,0.15)",
-      transition: { duration: 0.3 },
-    },
-  };
-
   return (
     <FadeSection>
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-16">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-12">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-rl_muted mb-2">
             How It Works
@@ -73,51 +45,42 @@ export default function ProcessTimeline() {
           </h2>
         </div>
 
-        <motion.div
-          className="relative"
-          variants={prefersReducedMotion ? undefined : containerVariants}
-          initial={prefersReducedMotion ? undefined : "hidden"}
-          whileInView={prefersReducedMotion ? undefined : "visible"}
-          viewport={{ once: true, margin: "-10%" }}
-        >
-          {/* Connecting line on desktop */}
-          <div className="hidden lg:block absolute top-12 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-rl_accent/30 to-transparent" />
+        <div className="mt-8 max-w-5xl mx-auto px-6">
+          <div className="rounded-3xl bg-white/90 border border-[#e7ddcf] shadow-sm px-6 py-7 md:px-10 md:py-9">
+            <div className="grid gap-8 md:grid-cols-4">
+              {steps.map((step, index) => (
+                <div key={step.title} className="relative flex flex-col">
+                  {/* connector line on desktop between icons */}
+                  {index < steps.length - 1 && (
+                    <span className="hidden md:block absolute top-6 left-6 right-[-1.5rem] h-px bg-[#e7ddcf]" />
+                  )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-4">
-            {steps.map((step, index) => (
-              <motion.div
-                key={step.number}
-                className="relative"
-                variants={prefersReducedMotion ? undefined : cardVariants}
-              >
-                <motion.div
-                  className="rounded-2xl border border-rl_border bg-rl_surface px-6 py-6 h-full"
-                  whileHover={
-                    prefersReducedMotion
-                      ? {}
-                      : {
-                          y: -4,
-                          boxShadow: "0 12px 40px rgba(203,173,141,0.15)",
-                          transition: { duration: 0.3 },
-                        }
-                  }
-                >
-                  {/* Step number in gold circle */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-rl_accent/20 border border-rl_accent/40">
-                      <span className="text-xs font-semibold text-rl_accent">{step.number}</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f3e7d6] text-xl">
+                      <span>{step.icon}</span>
                     </div>
-                    <div className="h-[1px] flex-1 bg-rl_border hidden lg:block" />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-semibold tracking-[0.24em] uppercase text-[#b09779]">
+                        {step.label}
+                      </span>
+                      <span className="text-xs text-[#9a8570]">
+                        Step {index + 1}
+                      </span>
+                    </div>
                   </div>
 
-                  <h3 className="text-base font-semibold text-rl_text mb-2">{step.title}</h3>
-                  <p className="text-sm text-rl_muted leading-relaxed">{step.description}</p>
-                </motion.div>
-              </motion.div>
-            ))}
+                  <h3 className="mt-4 text-sm font-semibold text-[#2f251a]">
+                    {step.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-[#5b4a3a] leading-relaxed">
+                    {step.description}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </section>
     </FadeSection>
   );
 }

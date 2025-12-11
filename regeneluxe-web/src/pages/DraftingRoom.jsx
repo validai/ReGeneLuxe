@@ -2,13 +2,16 @@
 import { useMemo, useEffect } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import SiteHeader from "../components/SiteHeader";
 import FadeSection from "../components/FadeSection";
 import { CAMPAIGN_TIERS } from "../constants/campaignTiers";
 import BluePrintForm from "../components/BluePrintForm";
 import { fadeUpVariant, baseTransition } from "../utils/motionConfig";
 import { Auth } from "../utils/auth";
 import { Onboarding } from "../utils/onboarding";
+import {
+  getActiveCampaignId,
+  attachBlueprintToCampaign,
+} from "../utils/campaignStore";
 
 function useQuery() {
   const { search } = useLocation();
@@ -19,10 +22,28 @@ export default function DraftingRoom() {
   const query = useQuery();
   const navigate = useNavigate();
   const tierId = query.get("tier") || "regular";
+  const activeCampaignId = getActiveCampaignId();
   // Route guards in App.jsx handle all redirects
 
   const tier =
     CAMPAIGN_TIERS.find(t => t.id === tierId) ?? CAMPAIGN_TIERS.find(t => t.id === "regular");
+
+  const handleBlueprintSubmit = ({ tierId, campaignName, blueprintData }) => {
+    if (!activeCampaignId) {
+      console.warn("No active campaign when submitting blueprint");
+      return;
+    }
+
+    const updated = attachBlueprintToCampaign(activeCampaignId, {
+      tierId,
+      campaignName,
+      blueprintData,
+    });
+
+    if (!updated) return;
+
+    navigate("/dashboard");
+  };
 
   const prefersReducedMotion =
     typeof window !== "undefined" &&
@@ -39,9 +60,7 @@ export default function DraftingRoom() {
   };
 
   return (
-    <div className="min-h-screen bg-rl_bg text-rl_text">
-      <SiteHeader />
-      <main className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8 py-12 space-y-10">
+    <div className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8 py-12 space-y-10">
         <FadeSection>
           <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
@@ -55,7 +74,7 @@ export default function DraftingRoom() {
               <p className="mt-2 max-w-xl text-sm text-rl_muted">
                 This is where we turn your context into a precise, AI-ready
                 campaign blueprint. The more honest and detailed you are, the more
-                "presidential" your outcomes.
+                high-impact your outcomes.
               </p>
             </div>
 
@@ -81,7 +100,7 @@ export default function DraftingRoom() {
         >
           {/* Form Panel */}
           <div className="rounded-2xl border border-rl_border bg-rl_surface px-4 py-5 shadow-rl_soft/70">
-            <BluePrintForm tier={tier} />
+            <BluePrintForm tier={tier} onSubmit={handleBlueprintSubmit} />
           </div>
 
           {/* Tier Summary Panel */}
@@ -127,7 +146,6 @@ export default function DraftingRoom() {
             </div>
           </div>
         </motion.div>
-      </main>
     </div>
   );
 }

@@ -1,12 +1,14 @@
 // FILE: src/pages/Start.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import SiteHeader from "../components/SiteHeader";
 import { Auth } from "../utils/auth";
 import { Onboarding } from "../utils/onboarding";
 import { Analytics } from "../utils/analytics";
+import { EVENTS } from "../utils/analyticsEvents";
 import { Drafts } from "../utils/drafts";
+import { createCampaignFromOnboarding } from "../utils/campaignStore";
 import TermsModal from "../components/TermsModal";
+import RotatingSlogan from "../components/RotatingSlogan";
 
 // -----------------------------
 // Static configuration
@@ -252,6 +254,14 @@ export default function Start() {
   const [customPlatform, setCustomPlatform] = useState("");
   const [showTerms, setShowTerms] = useState(false);
 
+  // Track step views
+  useEffect(() => {
+    Analytics.track(EVENTS.ONBOARDING_STEP_VIEW, {
+      stepIndex: step,
+      stepKey: steps?.[step]?.id || null,
+    });
+  }, [step]);
+
   // Draft restore on mount
   // ----------------------
   // If the user has a saved onboarding draft in localStorage, we restore it
@@ -358,6 +368,12 @@ export default function Start() {
       return;
     }
 
+    // Track step completion
+    Analytics.track(EVENTS.ONBOARDING_STEP_COMPLETED, {
+      stepIndex: step,
+      stepKey: steps?.[step]?.id || null,
+    });
+
     const nextStep = step + 1;
     Analytics.event("start_step_change", { from: step, to: nextStep });
     console.log(`[Start] step ${step} → ${nextStep}`);
@@ -434,9 +450,45 @@ export default function Start() {
       }
 
       Onboarding.complete(form.workEmail);
-      console.log("[Start] onboarding complete → /thank-you");
 
-      Analytics.event("start_submit_success", { email: form.workEmail });
+      // Build onboarding payload for campaign creation
+      const onboardingPayload = {
+        fullName: form.fullName,
+        workEmail: form.workEmail,
+        company: form.company,
+        brandName: form.company,
+        website: form.website,
+        campaignName: form.campaignName,
+        offer: form.offer,
+        objective: form.objective,
+        primaryObjective: form.objective,
+        idealCustomer: form.idealCustomer,
+        geo: form.geo,
+        regions: form.geo ? [form.geo] : [],
+        channels: Array.from(form.channels || []),
+        budget: form.budget,
+        mediaBudget: form.budget,
+        timeline: form.timeline,
+        caseProof: form.caseProof,
+        age16: form.age16,
+        terms: form.terms,
+        marketing: form.marketing,
+        heardAbout: form.heardAbout,
+      };
+
+      // Create campaign from onboarding data
+      const campaign = createCampaignFromOnboarding(onboardingPayload);
+      console.log("[Start] campaign created:", campaign.id);
+
+      Analytics.event("start_submit_success", {
+        email: form.workEmail,
+        campaignId: campaign.id,
+      });
+      Analytics.track(EVENTS.ONBOARDING_SUBMIT, {
+        success: true,
+        errorsCount: 0,
+        campaignId: campaign.id,
+      });
 
       try {
         Drafts.clear(form.workEmail);
@@ -446,11 +498,15 @@ export default function Start() {
         });
       }
 
-      navigate("/thank-you");
+      navigate("/campaign/new");
     } catch (e) {
       Analytics.error("start_submit_error", {
         message: e?.message,
         name: e?.name,
+      });
+      Analytics.track(EVENTS.ONBOARDING_SUBMIT, {
+        success: false,
+        errorsCount: Object.keys(err).length,
       });
       console.error("[Start] submit error", e);
       setFailed("Could not finalize onboarding. Please try again.");
@@ -520,13 +576,22 @@ export default function Start() {
                     type="checkbox"
                     className="mt-1 accent-rl_accent"
                     checked={!!form[f.key]}
-                    onChange={(e) => setField(f.key, e.target.checked)}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      setField(f.key, isChecked);
+                      if (isChecked && f.key === "terms") {
+                        Analytics.track(EVENTS.ONBOARDING_TERMS_ACCEPTED, {});
+                      }
+                    }}
                   />
                   <span className="flex flex-wrap items-center gap-2">
                     <span>{f.label}</span>
                     <button
                       type="button"
-                      onClick={() => setShowTerms(true)}
+                      onClick={() => {
+                        Analytics.track(EVENTS.ONBOARDING_TERMS_OPENED, {});
+                        setShowTerms(true);
+                      }}
                       className="text-xs font-semibold text-amber-500 underline underline-offset-2 hover:text-amber-600"
                     >
                       Read Terms &amp; Agreements
@@ -674,15 +739,15 @@ export default function Start() {
 
   // ------------- Render -------------
   // Layout:
-  // - SiteHeader at the top (state-aware auth nav).
   // - Progress dots showing how many steps and which one is active.
   // - Step title + dynamically rendered fields for this step.
   // - Back / Continue / Finish buttons with disabled states.
   // - TermsModal pinned at the bottom of the component tree.
   return (
-    <div className="min-h-screen bg-rl_bg text-rl_text">
-      <SiteHeader />
+    <>
       <main className="mx-auto max-w-shell px-4 md:px-6 py-10 md:py-14">
+        <RotatingSlogan />
+        
         {/* progress dots */}
         <div className="mb-6 flex items-center gap-2">
           {steps.map((_, i) => (
@@ -755,12 +820,16 @@ export default function Start() {
           )}
         </div>
 
+        {/* error text */}
         {failed && (
           <p className="mt-3 text-sm text-red-600">{failed}</p>
         )}
       </main>
 
-      <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
-    </div>
+      <TermsModal
+        isOpen={showTerms}
+        onClose={() => setShowTerms(false)}
+      />
+    </>
   );
 }

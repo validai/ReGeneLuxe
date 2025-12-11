@@ -9,6 +9,7 @@ import NewCampaign from "./pages/NewCampaign.jsx";
 import DraftingRoom from "./pages/DraftingRoom.jsx";
 import ThankYou from "./pages/ThankYou.jsx";
 import NotFound from "./pages/NotFound.jsx";
+import AppShell from "./components/layout/AppShell.jsx";
 
 // Central auth/onboarding utilities
 import { Auth } from "./utils/auth.js";
@@ -52,16 +53,18 @@ function RouteGuard({ children }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<RouteGuard><HomePage /></RouteGuard>} />
-      <Route path="/gate" element={<Gate />} />
-      <Route path="/login" element={<RouteGuard><Login /></RouteGuard>} />
-      <Route path="/start" element={<RouteGuard><Start /></RouteGuard>} />
-      <Route path="/dashboard" element={<RouteGuard><Dashboard /></RouteGuard>} />
-      <Route path="/campaign/new" element={<RouteGuard><NewCampaign /></RouteGuard>} />
-      <Route path="/drafting-room" element={<RouteGuard><DraftingRoom /></RouteGuard>} />
-      <Route path="/thank-you" element={<RouteGuard><ThankYou /></RouteGuard>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <AppShell>
+      <Routes>
+        <Route path="/" element={<RouteGuard><HomePage /></RouteGuard>} />
+        <Route path="/gate" element={<Gate />} />
+        <Route path="/login" element={<RouteGuard><Login /></RouteGuard>} />
+        <Route path="/start" element={<RouteGuard><Start /></RouteGuard>} />
+        <Route path="/dashboard" element={<RouteGuard><Dashboard /></RouteGuard>} />
+        <Route path="/campaign/new" element={<RouteGuard><NewCampaign /></RouteGuard>} />
+        <Route path="/drafting-room" element={<RouteGuard><DraftingRoom /></RouteGuard>} />
+        <Route path="/thank-you" element={<RouteGuard><ThankYou /></RouteGuard>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </AppShell>
   );
 }

@@ -1,7 +1,6 @@
 // FILE: src/pages/Login.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import SiteHeader from "../components/SiteHeader.jsx";
 import FadeSection from "../components/FadeSection";
 import { Auth } from "../utils/auth";
 import { Onboarding } from "../utils/onboarding";
@@ -58,9 +57,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-rl_bg text-rl_text">
-      <SiteHeader />
-      <main className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8 py-12 space-y-10">
+    <div className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8 py-12 space-y-10">
         <FadeSection>
           <div>
             <p className="text-[0.7rem] font-medium uppercase tracking-[0.25em] text-rl_muted">
@@ -98,7 +95,6 @@ export default function Login() {
             </button>
           </form>
         </FadeSection>
-      </main>
     </div>
   );
 }
