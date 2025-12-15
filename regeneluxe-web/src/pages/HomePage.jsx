@@ -6,8 +6,7 @@ import Showcase from "../components/Showcase";
 import BrandTitle from "../components/BrandTitle";
 import FadeSection from "../components/FadeSection";
 import SocialProofStrip from "../sections/home/SocialProofStrip";
-import ProcessTimeline from "../sections/home/ProcessTimeline";
-import BeforeAfterStrip from "../sections/home/BeforeAfterStrip";
+import HowItWorks from "../sections/HowItWorks";
 import FitCheckPanel from "../sections/home/FitCheckPanel";
 import FounderNote from "../sections/home/FounderNote";
 import { scaleCardVariant, baseTransition } from "../utils/motionConfig";
@@ -140,11 +139,8 @@ export default function HomePage() {
           </FadeSection>
         </div>
 
-        {/* Process Timeline */}
-        <ProcessTimeline />
-
-        {/* Before/After Strip */}
-        <BeforeAfterStrip />
+        {/* How It Works */}
+        <HowItWorks />
 
         {/* Fit Check Panel */}
         <FitCheckPanel />

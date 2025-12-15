@@ -28,10 +28,7 @@ export default function FounderNote() {
             </p>
 
             <p className="text-sm md:text-base text-rl_text leading-relaxed">
-              ReGeneLuxe exists for operators who want elite clarity before they pour
-              more spend into the machine. We've seen too many great offers buried under chaotic
-              execution. You bring the product. We create the engine that sells it. This is your space to slow down, design the story properly, and then go
-              loud with confidence.
+              ReGeneLuxe is for operators who want real clarity before they pour more money into the machine. Too many strong offers get lost in messy execution. You bring the product; we build the system that sells it. This is your space to slow down, shape the story, and then launch with confidence.
             </p>
 
             <div className="pt-4 border-t border-rl_border/30">
