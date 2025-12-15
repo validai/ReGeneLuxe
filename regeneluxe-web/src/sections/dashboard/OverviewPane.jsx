@@ -1,4 +1,4 @@
-// src/sections/mission/OverviewPane.jsx
+// src/sections/dashboard/OverviewPane.jsx
 import AnalyticsOverview from "../../components/dashboard/widgets/AnalyticsOverview";
 import CampaignHealthCard from "../../components/dashboard/widgets/CampaignHealthCard";
 import CountdownCard from "../../components/dashboard/widgets/CountdownCard";
@@ -7,7 +7,7 @@ import TimelineFlowView from "../../components/dashboard/widgets/TimelineFlowVie
 
 export default function OverviewPane() {
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Row 1: Three cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <AnalyticsOverview />

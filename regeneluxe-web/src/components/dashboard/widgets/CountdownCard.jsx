@@ -1,12 +1,12 @@
 // src/components/dashboard/widgets/CountdownCard.jsx
 export default function CountdownCard() {
   return (
-    <div className="bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-xl p-6 flex flex-col justify-between">
+    <div className="rl-panel-roomy flex flex-col justify-between">
       <div>
-        <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--dash-muted)]">
+        <p className="text-[10px] uppercase tracking-[0.22em] text-rl_muted">
           Flight plan
         </p>
-        <h3 className="text-sm font-semibold mt-1">Schedule & pacing</h3>
+        <h3 className="text-sm font-semibold mt-1 text-rl_text">Schedule & pacing</h3>
       </div>
 
       <div className="mt-4 grid gap-3 text-xs">
@@ -22,8 +22,8 @@ export default function CountdownCard() {
 function Row({ label, value }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[var(--dash-muted)]">{label}</span>
-      <span className="font-semibold">{value}</span>
+      <span className="text-rl_muted">{label}</span>
+      <span className="font-semibold text-rl_text">{value}</span>
     </div>
   );
 }

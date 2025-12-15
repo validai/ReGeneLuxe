@@ -4,11 +4,12 @@ import { nivoDarkTheme } from "../../../styles/nivoTheme";
 
 export default function EngagementHeatmap({ data }) {
   return (
-    <div className="bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-xl p-6 h-96">
-      <h3 className="text-sm font-semibold mb-3">
+    <div className="rl-panel-roomy">
+      <h3 className="text-sm font-semibold mb-3 text-rl_text">
         Engagement by day & hour (all channels)
       </h3>
-      <ResponsiveHeatMap
+      <div className="overflow-hidden rounded-2xl bg-[#050609] h-96 mt-2">
+        <ResponsiveHeatMap
         data={data}
         theme={nivoDarkTheme}
         margin={{ top: 30, right: 60, bottom: 50, left: 60 }}
@@ -24,7 +25,8 @@ export default function EngagementHeatmap({ data }) {
         }}
         cellBorderColor="var(--dash-bg)"
         cellOpacity={0.95}
-      />
+        />
+      </div>
     </div>
   );
 }

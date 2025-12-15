@@ -8,13 +8,13 @@ export default function TopStatusBar() {
   const spendToday = "$1,420";
 
   return (
-    <header className="h-16 bg-[var(--dash-surface)] border-b border-[var(--dash-border)] flex items-center justify-between px-8">
+    <header className="h-16 bg-transparent flex items-center justify-between">
       <div className="flex items-center gap-6">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--dash-muted)]">
+          <p className="text-[10px] uppercase tracking-[0.22em] text-rl_muted">
             Active campaign
           </p>
-          <h2 className="text-sm font-semibold tracking-wide">
+          <h2 className="text-sm font-semibold tracking-wide text-rl_text">
             Q1 Launch – Signature Blueprint
           </h2>
         </div>
@@ -24,7 +24,7 @@ export default function TopStatusBar() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--success)] opacity-60" />
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--success)]" />
           </span>
-          <span className="uppercase tracking-[0.18em] text-[var(--dash-muted)] flex items-center gap-1">
+          <span className="uppercase tracking-[0.18em] text-rl_muted flex items-center gap-1">
             <FiActivity className="text-[var(--success)]" />
             {status}
           </span>
@@ -32,16 +32,16 @@ export default function TopStatusBar() {
       </div>
 
       <div className="flex items-center gap-6 text-xs">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 text-rl_text">
           <FiClock />
           <span>
             Ends in <span className="font-semibold">{countdown}</span>
           </span>
         </div>
-        <div className="h-8 w-px bg-[var(--dash-border)]" />
+        <div className="h-8 w-px bg-rl_border/40" />
         <div className="text-xs">
-          <p className="text-[var(--dash-muted)]">Today&apos;s spend</p>
-          <p className="font-semibold">{spendToday}</p>
+          <p className="text-rl_muted">Today&apos;s spend</p>
+          <p className="font-semibold text-rl_text">{spendToday}</p>
         </div>
       </div>
     </header>

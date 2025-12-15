@@ -4,9 +4,10 @@ import { nivoDarkTheme } from "../../../styles/nivoTheme";
 
 export default function DonutROI({ data, title }) {
   return (
-    <div className="bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-xl p-6 h-72">
-      <h3 className="text-sm font-semibold mb-3">{title}</h3>
-      <ResponsivePie
+    <div className="rl-panel-roomy">
+      <h3 className="text-sm font-semibold mb-3 text-rl_text">{title}</h3>
+      <div className="overflow-hidden rounded-2xl bg-[#050609] h-72 mt-2">
+        <ResponsivePie
         data={data}
         theme={nivoDarkTheme}
         innerRadius={0.7}
@@ -16,8 +17,9 @@ export default function DonutROI({ data, title }) {
         colors={{ scheme: "set2" }}
         enableArcLinkLabels={false}
         arcLabelsSkipAngle={10}
-        arcLabelsTextColor="var(--dash-text)"
-      />
+        arcLabelsTextColor="#f4f4f5"
+        />
+      </div>
     </div>
   );
 }

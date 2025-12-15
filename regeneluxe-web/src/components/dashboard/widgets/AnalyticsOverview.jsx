@@ -10,11 +10,11 @@ export default function AnalyticsOverview() {
   const blendedCpa = Number(metrics.blendedCpa || 0);
 
   return (
-    <div className="bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-xl p-6">
-      <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--dash-muted)]">
+    <div className="rl-panel-roomy">
+      <p className="text-[10px] uppercase tracking-[0.22em] text-rl_muted">
         At a glance
       </p>
-      <h3 className="text-sm font-semibold mt-1">Key performance metrics</h3>
+      <h3 className="text-sm font-semibold mt-1 text-rl_text">Key performance metrics</h3>
 
       <div className="grid grid-cols-3 gap-3 mt-4">
         <Metric label="Views (28d)" value={views28d.toLocaleString()} />
@@ -27,9 +27,9 @@ export default function AnalyticsOverview() {
 
 function Metric({ label, value }) {
   return (
-    <div className="bg-[var(--dash-bg)] rounded-lg border border-[var(--dash-border)] p-4">
-      <p className="text-[11px] text-[var(--dash-muted)]">{label}</p>
-      <p className="text-xl font-semibold mt-1">{value}</p>
+    <div className="bg-rl_surfaceSoft rounded-lg border border-rl_border/30 p-4">
+      <p className="text-[11px] text-rl_muted">{label}</p>
+      <p className="text-xl font-semibold mt-1 text-rl_text">{value}</p>
     </div>
   );
 }

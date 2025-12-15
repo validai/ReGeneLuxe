@@ -1,11 +1,11 @@
 // src/components/dashboard/widgets/AudienceTuner.jsx
 export default function AudienceTuner() {
   return (
-    <div className="bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-xl p-6">
-      <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--dash-muted)]">
+    <div className="rl-panel-roomy">
+      <p className="text-[10px] uppercase tracking-[0.22em] text-rl_muted">
         Controls
       </p>
-      <h3 className="text-sm font-semibold mt-1">Audience & placement tuner</h3>
+      <h3 className="text-sm font-semibold mt-1 text-rl_text">Audience & placement tuner</h3>
 
       <div className="mt-4 grid gap-3 text-xs">
         <Field label="Primary region">
@@ -36,7 +36,7 @@ export default function AudienceTuner() {
 
         <Field label="Age band focus">
           <input type="range" min="0" max="100" className="w-full" />
-          <p className="mt-1 text-[10px] text-[var(--dash-muted)]">
+          <p className="mt-1 text-[10px] text-rl_muted">
             Currently favouring 25–44. We&apos;ll rebalance if performance shifts.
           </p>
         </Field>
@@ -48,7 +48,7 @@ export default function AudienceTuner() {
 function Field({ label, children }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[11px] text-[var(--dash-muted)]">{label}</p>
+      <p className="text-[11px] text-rl_muted">{label}</p>
       {children}
     </div>
   );

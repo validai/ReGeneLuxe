@@ -5,10 +5,13 @@ import AppFooter from "./AppFooter";
 
 export default function AppShell({ children }) {
   const location = useLocation();
-  const isDashboard = location.pathname === "/dashboard";
+  const isEngineRoute = location.pathname.startsWith("/dashboard") || 
+                        location.pathname === "/analytics" ||
+                        location.pathname === "/audience" ||
+                        location.pathname === "/settings";
 
-  // Dashboard has its own full-screen layout, so hide header/footer
-  if (isDashboard) {
+  // ReGeneLuxe Engine routes have their own layout with SiteHeader
+  if (isEngineRoute) {
     return <>{children}</>;
   }
 

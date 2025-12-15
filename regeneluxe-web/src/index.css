@@ -6,16 +6,19 @@
 :root {
   color-scheme: light;
   
-  /* Dashboard dark theme variables */
-  --dash-bg: #18181b;
-  --dash-surface: #1f1f23;
-  --dash-surface-alt: #111827;
-  --dash-border: #27272f;
-  --dash-text: #f4f4f5;
-  --dash-muted: #9ca3af;
+  /* RGL Engine theme variables - harmonized with global brand */
+  --dash-bg: #F1EDE6; /* rl_bg */
+  --dash-sidebar-bg: rgba(235, 227, 219, 0.6); /* rl_surfaceSoft with transparency */
+  --dash-surface: #FFFFFF; /* rl_surface */
+  --dash-surface-alt: #EBE3DB; /* rl_surfaceSoft */
+  --dash-border: #D1C7BD; /* rl_border */
+  --dash-border-strong: #D1C7BD; /* rl_border */
+  --dash-text: #2B2B2B; /* rl_text */
+  --dash-text-muted: #7A6B5B; /* rl_muted */
+  --dash-muted: #7A6B5B; /* alias for backward compatibility */
 
-  --accent: #d6b48c;
-  --accent-soft: rgba(214, 180, 140, 0.15);
+  --accent: #CBAD8D; /* rl_accent */
+  --accent-soft: rgba(203, 173, 141, 0.15);
 
   --success: #22c55e;
   --warning: #facc15;
@@ -31,5 +34,18 @@ body {
 }
 
 .field-select {
-  @apply w-full bg-[var(--dash-bg)] border border-[var(--dash-border)] rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--accent)];
+  @apply w-full bg-rl_bg border border-rl_border rounded-lg px-3 py-2 text-xs text-rl_text focus:outline-none focus:ring-1 focus:ring-rl_accent/70 focus:border-rl_accent;
+}
+
+/* ReGeneLuxe shared dashboard panel */
+.rl-panel {
+  @apply rounded-3xl border border-rl_border/30 bg-rl_surface shadow-rl_soft;
+}
+
+.rl-panel-tight {
+  @apply rl-panel p-4 sm:p-5;
+}
+
+.rl-panel-roomy {
+  @apply rl-panel p-5 sm:p-6;
 }

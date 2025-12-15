@@ -1,4 +1,5 @@
 // src/components/dashboard/MissionLayout/DashboardShell.jsx
+import SiteHeader from "../../SiteHeader";
 import SidebarNav from "./SidebarNav";
 import TopStatusBar from "./TopStatusBar";
 import RightAICommander from "./RightAICommander";
@@ -11,21 +12,26 @@ export default function DashboardShell({
   children,
 }) {
   return (
-    <div className="fixed inset-0 flex w-full bg-[var(--dash-bg)] text-[var(--dash-text)] overflow-hidden z-50">
-      {/* LEFT SIDEBAR */}
-      <SidebarNav activeView={activeView} setActiveView={onViewChange} />
+    <div className="min-h-screen flex flex-col bg-rl_bg text-rl_text">
+      {/* SiteHeader at the top */}
+      <SiteHeader />
 
-      {/* MAIN COLUMN */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <TopStatusBar />
+      {/* RGL Engine content area */}
+      <div className="flex flex-1 overflow-hidden bg-rl_bg">
+        {/* LEFT SIDEBAR */}
+        <SidebarNav activeView={activeView} setActiveView={onViewChange} />
 
-        <main className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
-          {children}
+        {/* MAIN COLUMN */}
+        <main className="flex-1 min-h-[calc(100vh-64px)] overflow-y-auto">
+          <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+            <TopStatusBar />
+            {children}
+          </div>
         </main>
-      </div>
 
-      {/* RIGHT AI PANEL */}
-      <RightAICommander />
+        {/* RIGHT AI PANEL */}
+        <RightAICommander />
+      </div>
     </div>
   );
 }

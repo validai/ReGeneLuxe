@@ -6,22 +6,22 @@ export default function CampaignHealthCard() {
   const healthScore = Number(campaign?.metrics?.healthScore || 0);
 
   return (
-    <div className="bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-xl p-6">
-      <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--dash-muted)]">
+    <div className="rl-panel-roomy">
+      <p className="text-[10px] uppercase tracking-[0.22em] text-rl_muted">
         Health
       </p>
-      <h3 className="text-sm font-semibold mt-1">Campaign health score</h3>
+      <h3 className="text-sm font-semibold mt-1 text-rl_text">Campaign health score</h3>
 
       <div className="flex items-center gap-4 mt-4">
         <div className="relative h-20 w-20">
-          <div className="absolute inset-0 rounded-full bg-[var(--dash-bg)] border border-[var(--dash-border)]" />
+          <div className="absolute inset-0 rounded-full bg-rl_surfaceSoft border border-rl_border/30" />
           <div className="absolute inset-1 rounded-full bg-gradient-to-br from-[var(--accent-soft)] to-transparent flex items-center justify-center">
-            <span className="text-2xl font-semibold">{healthScore}</span>
+            <span className="text-2xl font-semibold text-rl_text">{healthScore}</span>
           </div>
         </div>
 
         <div className="text-xs space-y-2">
-          <p className="text-[var(--dash-muted)]">
+          <p className="text-rl_muted">
             This score blends spend pacing, conversion rate, fatigue warnings,
             and creative freshness.
           </p>

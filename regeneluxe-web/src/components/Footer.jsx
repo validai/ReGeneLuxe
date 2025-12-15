@@ -107,13 +107,17 @@ export default function Footer() {
                   whileHover={{ scale: 1.02 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <BrandTitle variant="header" className="text-sm mb-2" />
-                  <p className="text-xs font-medium tracking-[0.2em] text-rl_accent uppercase mb-2">
-                    Luxury Campaign Architecture
-                  </p>
-                  <p className="text-sm text-rl_muted leading-relaxed">
-                    Transform your marketing context into structured, AI-ready campaign blueprints with precision-built clarity. ReGeneLuxe transforms your idea into a high-converting, multi-format campaign — automatically.
-                  </p>
+                  <div>
+                    <p className="text-xs tracking-[0.3em] uppercase text-neutral-500">
+                      ReGeneLuxe
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-neutral-900">
+                      Luxury campaign drafting &amp; automation
+                    </p>
+                    <p className="mt-4 text-sm leading-relaxed text-neutral-700 max-w-xs">
+                      We turn your raw marketing notes into structured, AI-ready blueprints. Your ideas become a high-converting, multi-format campaign you can run again and again.
+                    </p>
+                  </div>
                 </motion.div>
               </div>
 
@@ -128,7 +132,6 @@ export default function Footer() {
                     { label: "Pricing Packages", path: "/campaign/new" },
                     { label: "Drafting Room", path: "/drafting-room" },
                     { label: "Blueprint Examples", path: "#", placeholder: true },
-                    { label: "Brand Safety & Compliance", path: "#", placeholder: true },
                   ].map((item) => (
                     <li key={item.label}>
                       <motion.div
@@ -171,8 +174,6 @@ export default function Footer() {
                     { label: "Case Studies", path: "#", placeholder: true },
                     { label: "Blog / Insights", path: "#", placeholder: true },
                     { label: "Creator Playbooks", path: "#", placeholder: true },
-                    { label: "Data & Privacy", path: "#" },
-                    { label: "Terms & Agreements", path: "#" },
                     { label: "Contact", path: "#" },
                   ].map((item) => (
                     <li key={item.label}>
@@ -261,14 +262,14 @@ export default function Footer() {
               transition={{ ...baseTransition, delay: 0.5 }}
             >
               <p className="text-[10px] uppercase tracking-[0.3em] text-rl_muted/70">
-                Powered by ReGeneLuxe Engine v1.2 — Emotion-Driven AI Architecture
+                Powered by ReGeneLuxe Engine v1.2 — emotion-driven AI architecture
               </p>
             </motion.div>
 
             {/* Premium Legal Row */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-rl_border/30">
               <p className="text-xs text-rl_muted/70">
-                © 2025 ReGeneLuxe — Luxury Campaign Drafting & Automation
+                © 2025 ReGeneLuxe. All rights reserved.
               </p>
               <div className="flex items-center gap-4">
                 {["Privacy", "Terms", "Security", "Compliance"].map((label) => (

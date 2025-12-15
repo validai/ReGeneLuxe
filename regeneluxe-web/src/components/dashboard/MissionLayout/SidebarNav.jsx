@@ -18,15 +18,17 @@ export default function SidebarNav({ activeView, setActiveView }) {
   };
 
   return (
-    <aside className="w-60 bg-[var(--dash-surface)] border-r border-[var(--dash-border)] flex flex-col py-6">
-      <div className="px-6 pb-6">
-        <p className="text-xs tracking-[0.3em] text-[var(--dash-muted)] uppercase">
-          Regeneluxe
-        </p>
-        {/* Intentionally no secondary label here – dashboard should feel calmer */}
+    <aside className="w-60 border-r border-rl_border/30 bg-rl_surfaceSoft/80 backdrop-blur-sm flex flex-col justify-between">
+      <div className="px-4 pt-5 pb-4">
+        <div className="text-[10px] tracking-[0.28em] text-rl_muted uppercase">
+          REGENELUXE
+        </div>
+        <div className="mt-1 text-xs font-medium tracking-[0.24em] text-rl_text uppercase">
+          RGL Engine
+        </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3">
+      <nav className="flex-1 space-y-1 px-4">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeView === item.id;
@@ -36,10 +38,10 @@ export default function SidebarNav({ activeView, setActiveView }) {
               type="button"
               onClick={() => handleViewChange(item.id)}
               className={[
-                "w-full flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm transition",
+                "w-full flex items-center gap-2 rounded-xl px-4 py-2 text-xs transition-colors",
                 isActive
-                  ? "bg-[var(--dash-bg)] text-[var(--accent)] border border-[var(--dash-border)]"
-                  : "text-[var(--dash-muted)] hover:bg-[var(--dash-border)]",
+                  ? "border border-rl_border/50 bg-rl_surface text-rl_accent font-medium"
+                  : "text-rl_muted hover:bg-rl_surfaceSoft hover:text-rl_text",
               ].join(" ")}
             >
               <Icon className="text-lg" />
@@ -49,9 +51,7 @@ export default function SidebarNav({ activeView, setActiveView }) {
         })}
       </nav>
 
-      <div className="px-6 pt-4 text-[10px] text-[var(--dash-muted)] uppercase tracking-[0.16em]">
-        Campaign cockpit
-      </div>
+      <div className="pb-4" />
     </aside>
   );
 }

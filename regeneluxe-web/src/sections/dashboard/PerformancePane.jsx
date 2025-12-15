@@ -1,4 +1,4 @@
-// src/sections/mission/PerformancePane.jsx
+// src/sections/dashboard/PerformancePane.jsx
 import PerformanceChart from "../../components/dashboard/widgets/PerformanceChart";
 import DonutROI from "../../components/dashboard/widgets/DonutROI";
 import ConversionBar from "../../components/dashboard/widgets/ConversionBar";
@@ -75,7 +75,7 @@ const heatmapData = [
 
 export default function PerformancePane() {
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Top: Line chart (2/3) + Donut (1/3) */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2">

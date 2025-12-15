@@ -22,10 +22,10 @@ const signals = [
 
 export default function SignalsEngine() {
   return (
-    <div className="bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-xl p-6">
+    <div className="rl-panel-roomy">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold">Signals engine</h3>
-        <p className="text-[10px] text-[var(--dash-muted)]">
+        <h3 className="text-sm font-semibold text-rl_text">Signals engine</h3>
+        <p className="text-[10px] text-rl_muted">
           Automated health alerts from your stack
         </p>
       </div>
@@ -34,12 +34,12 @@ export default function SignalsEngine() {
         {signals.map((s) => (
           <li
             key={s.id}
-            className="flex items-start gap-3 bg-[var(--dash-bg)] border border-[var(--dash-border)] rounded-lg px-3 py-2.5"
+            className="flex items-start gap-3 bg-rl_surfaceSoft border border-rl_border/30 rounded-lg px-3 py-2.5"
           >
             <SeverityBadge level={s.severity} />
             <div>
-              <p className="font-semibold">{s.title}</p>
-              <p className="text-[var(--dash-muted)] mt-0.5">{s.detail}</p>
+              <p className="font-semibold text-rl_text">{s.title}</p>
+              <p className="text-rl_muted mt-0.5">{s.detail}</p>
             </div>
           </li>
         ))}

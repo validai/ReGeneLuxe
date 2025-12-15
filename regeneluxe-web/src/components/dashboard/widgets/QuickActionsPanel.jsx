@@ -3,8 +3,8 @@ import { FiPauseCircle, FiPlayCircle, FiCopy, FiRefreshCcw } from "react-icons/f
 
 export default function QuickActionsPanel() {
   return (
-    <div className="bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-xl p-6">
-      <h3 className="text-sm font-semibold mb-3">Quick actions</h3>
+    <div className="rl-panel-roomy">
+      <h3 className="text-sm font-semibold mb-3 text-rl_text">Quick actions</h3>
       <div className="grid grid-cols-2 gap-3 text-xs">
         <ActionButton icon={FiPauseCircle} label="Pause campaign" />
         <ActionButton icon={FiPlayCircle} label="Resume campaign" />
@@ -17,7 +17,7 @@ export default function QuickActionsPanel() {
 
 function ActionButton({ icon: Icon, label }) {
   return (
-    <button className="flex items-center gap-2 rounded-lg bg-[var(--dash-bg)] border border-[var(--dash-border)] px-3 py-2 hover:border-[var(--accent)] hover:text-[var(--accent)] transition">
+    <button className="flex items-center gap-2 rounded-lg bg-rl_surfaceSoft border border-rl_border/30 px-3 py-2 text-rl_text hover:border-rl_accent hover:text-rl_accent transition">
       <Icon className="text-base" />
       <span>{label}</span>
     </button>

@@ -4,9 +4,10 @@ import { nivoDarkTheme } from "../../../styles/nivoTheme";
 
 export default function ConversionBar({ data }) {
   return (
-    <div className="bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-xl p-6 h-72">
-      <h3 className="text-sm font-semibold mb-3">Conversion mix by channel</h3>
-      <ResponsiveBar
+    <div className="rl-panel-roomy">
+      <h3 className="text-sm font-semibold mb-3 text-rl_text">Conversion mix by channel</h3>
+      <div className="overflow-hidden rounded-2xl bg-[#050609] h-72 mt-2">
+        <ResponsiveBar
         data={data}
         keys={["meta", "tiktok", "youtube", "search"]}
         indexBy="label"
@@ -23,7 +24,8 @@ export default function ConversionBar({ data }) {
           tickPadding: 5,
         }}
         enableLabel={false}
-      />
+        />
+      </div>
     </div>
   );
 }

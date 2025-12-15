@@ -4,9 +4,10 @@ import { nivoDarkTheme } from "../../../styles/nivoTheme";
 
 export default function EmotionRadar({ data }) {
   return (
-    <div className="bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-xl p-6 h-80">
-      <h3 className="text-sm font-semibold mb-3">Creative "feel" scan</h3>
-      <ResponsiveRadar
+    <div className="rl-panel-roomy">
+      <h3 className="text-sm font-semibold mb-3 text-rl_text">Creative "feel" scan</h3>
+      <div className="overflow-hidden rounded-2xl bg-[#050609] h-80 mt-2">
+        <ResponsiveRadar
         data={data}
         keys={["score"]}
         indexBy="emotion"
@@ -24,7 +25,8 @@ export default function EmotionRadar({ data }) {
         dotBorderWidth={1}
         colors={["#d6b48c"]}
         fillOpacity={0.3}
-      />
+        />
+      </div>
     </div>
   );
 }

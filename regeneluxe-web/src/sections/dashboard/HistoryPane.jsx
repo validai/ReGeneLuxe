@@ -1,4 +1,4 @@
-// src/sections/mission/HistoryPane.jsx
+// src/sections/dashboard/HistoryPane.jsx
 import PastCampaignsCard from "../../components/dashboard/widgets/PastCampaignsCard";
 import SignalsEngine from "../../components/dashboard/widgets/SignalsEngine";
 import EngagementHeatmap from "../../components/dashboard/widgets/EngagementHeatmap";
@@ -38,8 +38,8 @@ const heatmapData = [
 export default function HistoryPane() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--dash-muted)] mb-2">
-        Mission Control · History
+      <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--dash-text-muted)] mb-2">
+        RGL Engine · History
       </p>
 
       {/* Top row: Past benchmarks (2/3) + Signals log (1/3) */}

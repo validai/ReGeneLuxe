@@ -9,14 +9,14 @@ export default function RightAICommander() {
     <aside
       className={`${
         open ? "w-96" : "w-11"
-      } bg-[var(--dash-surface)] border-l border-[var(--dash-border)] transition-all duration-300 flex flex-col`}
+      } bg-rl_surface border-l border-rl_border/30 transition-all duration-300 flex flex-col`}
     >
       <button
         onClick={() => setOpen((v) => !v)}
-        className="p-2 hover:bg-[var(--dash-border)] transition flex items-center justify-center"
+        className="p-2 hover:bg-rl_surfaceSoft transition flex items-center justify-center"
       >
         <FiChevronLeft
-          className={`text-lg text-[var(--dash-muted)] transition-transform ${
+          className={`text-lg text-rl_muted transition-transform ${
             open ? "" : "rotate-180"
           }`}
         />
@@ -25,25 +25,25 @@ export default function RightAICommander() {
       {open && (
         <div className="flex flex-col flex-1 p-4 space-y-4">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--dash-muted)]">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-rl_muted">
               AI Commander
             </p>
-            <h3 className="text-sm font-semibold mt-1">
+            <h3 className="text-sm font-semibold mt-1 text-rl_text">
               Campaign tuning assistant
             </h3>
-            <p className="text-xs text-[var(--dash-muted)] mt-1">
+            <p className="text-xs text-rl_muted mt-1">
               Ask ReGeneLuxe to diagnose drops, suggest angles, or design new
               tests. This is where you co-pilot the campaign.
             </p>
           </div>
 
-          <div className="flex-1 bg-[var(--dash-bg)] rounded-lg border border-[var(--dash-border)] p-3 overflow-y-auto text-xs space-y-2">
-            <div className="text-[var(--dash-muted)] italic">
+          <div className="flex-1 bg-rl_bg rounded-lg border border-rl_border/30 p-3 overflow-y-auto text-xs space-y-2">
+            <div className="text-rl_muted italic">
               AI conversation feed will appear here. For now this is a visual
               placeholder.
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-dashed border-[var(--dash-border)]">
+            <div className="space-y-2 pt-2 border-t border-dashed border-rl_border/30">
               <QuickChip text="Why did CTR drop this week?" />
               <QuickChip text="Suggest 3 new hooks for TikTok" />
               <QuickChip text="Find fatigue in my audiences" />
@@ -55,12 +55,12 @@ export default function RightAICommander() {
             onSubmit={(e) => e.preventDefault()}
           >
             <input
-              className="flex-1 bg-[var(--dash-bg)] border border-[var(--dash-border)] rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              className="flex-1 bg-rl_bg border border-rl_border rounded-lg px-3 py-2 text-xs text-rl_text focus:outline-none focus:ring-1 focus:ring-rl_accent/70 focus:border-rl_accent"
               placeholder="Ask ReGeneLuxe AI anything about this campaign…"
             />
             <button
               type="submit"
-              className="p-2 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--dash-bg)] transition"
+              className="p-2 rounded-lg bg-[var(--accent-soft)] text-rl_accent hover:bg-rl_accent hover:text-rl_bg transition"
             >
               <FiSend />
             </button>
@@ -73,7 +73,7 @@ export default function RightAICommander() {
 
 function QuickChip({ text }) {
   return (
-    <button className="px-3 py-1.5 rounded-full bg-[var(--dash-surface-alt)] border border-[var(--dash-border)] text-[10px] text-[var(--dash-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition">
+    <button className="px-3 py-1.5 rounded-full bg-rl_surfaceSoft border border-rl_border/30 text-[10px] text-rl_muted hover:border-rl_accent hover:text-rl_accent transition">
       {text}
     </button>
   );
