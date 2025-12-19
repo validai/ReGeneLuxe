@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const steps = [
   {
@@ -79,6 +80,12 @@ const fadeUp = {
 };
 
 export default function HowItWorks() {
+  const navigate = useNavigate();
+
+  const goToQuestionnaire = () => {
+    navigate("/gate");
+  };
+
   return (
     <section className="relative py-20 sm:py-24 bg-[#f4eee7]">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -96,6 +103,9 @@ export default function HowItWorks() {
           <h2 className="text-2xl sm:text-3xl lg:text-[2.1rem] font-semibold tracking-tight text-neutral-900">
             How ReGeneLuxe works in four moves
           </h2>
+          <p className="mt-2 text-sm text-neutral-700">
+            From intake to launch in four clear steps — so your team always knows what happens next.
+          </p>
         </motion.div>
 
         {/* Four moves */}
@@ -117,6 +127,20 @@ export default function HowItWorks() {
             </div>
           </motion.div>
         </motion.div>
+
+        {/* Inline CTA after four moves */}
+        <div className="mt-6 text-center">
+          <p className="text-sm text-neutral-700">
+            Step 1 starts with your Signature Questionnaire. You bring the context; we build the engine.
+          </p>
+          <button
+            type="button"
+            onClick={goToQuestionnaire}
+            className="mt-3 px-5 py-2 rounded-full bg-[#c5955a] text-sm font-semibold text-white hover:bg-[#d2a46a] transition-colors"
+          >
+            Take the Signature Questionnaire →
+          </button>
+        </div>
 
         {/* Shift with ReGeneLuxe */}
         <motion.div
@@ -179,6 +203,20 @@ export default function HowItWorks() {
             ))}
           </div>
         </motion.div>
+
+        {/* Inline CTA after shift card */}
+        <div className="mt-6 text-center">
+          <p className="text-sm text-neutral-700">
+            These shifts begin once we understand your current setup.
+          </p>
+          <button
+            type="button"
+            onClick={goToQuestionnaire}
+            className="mt-2 px-5 py-2 rounded-full border border-neutral-900/10 bg-white text-sm font-medium text-neutral-900 hover:bg-neutral-900 hover:text-white transition-colors"
+          >
+            Start the questionnaire and see your before/after map →
+          </button>
+        </div>
       </div>
     </section>
   );

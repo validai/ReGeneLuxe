@@ -75,11 +75,14 @@ export default function Showcase({ className = "" }) {
 
   return (
     <section className={className}>
-      <p className="text-[0.72rem] font-medium uppercase tracking-[0.26em] text-rl_muted">
+      <p className="text-[0.7rem] tracking-[0.3em] uppercase text-neutral-500 mb-4">
         A glimpse of the output
       </p>
+      <p className="text-sm text-neutral-700 mb-6">
+        A look at the kind of systems and campaigns ReGeneLuxe builds for your team.
+      </p>
 
-      <div className="mt-4 relative rounded-2xl border border-rl_border overflow-hidden bg-rl_surface shadow-rl_soft">
+      <div className="relative rounded-3xl overflow-hidden shadow-[0_22px_60px_rgba(15,10,5,0.35)] border border-black/10 bg-black">
         <div className="relative aspect-[16/9]">
           <AnimatePresence>
             <motion.img
@@ -100,55 +103,39 @@ export default function Showcase({ className = "" }) {
               }}
             />
           </AnimatePresence>
+
+          {/* Controls */}
+          <button
+            type="button"
+            onClick={prev}
+            className="absolute left-4 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 backdrop-blur-sm transition-colors"
+            aria-label="Previous"
+          >
+            ◀
+          </button>
+          <button
+            type="button"
+            onClick={next}
+            className="absolute right-4 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 backdrop-blur-sm transition-colors"
+            aria-label="Next"
+          >
+            ▶
+          </button>
         </div>
 
-        {/* Controls */}
-        <motion.button
-          type="button"
-          onClick={prev}
-          className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-rl_surface px-3 py-1 text-xs border border-rl_border hover:bg-rl_surfaceSoft transition-colors"
-          aria-label="Previous"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-        >
-          ◀
-        </motion.button>
-        <motion.button
-          type="button"
-          onClick={next}
-          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-rl_surface px-3 py-1 text-xs border border-rl_border hover:bg-rl_surfaceSoft transition-colors"
-          aria-label="Next"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-        >
-          ▶
-        </motion.button>
-
-        {/* Progress bar */}
-        {!prefersReducedMotion && (
-          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-rl_border overflow-hidden">
-            <motion.div
-              className="h-full bg-rl_accent"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.1, ease: "linear" }}
-            />
-          </div>
-        )}
-
-        {/* Dots */}
-        <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2">
+        {/* Progress bar dots */}
+        <div className="mt-4 flex items-center justify-center gap-2 pb-4">
           {images.map((_, i) => (
-            <motion.button
+            <button
               key={i}
               type="button"
               onClick={() => setIdx(i)}
-              className={`h-1.5 w-5 rounded-full ${
-                i === idx ? "bg-rl_text" : "bg-rl_border"
+              className={`h-1.5 rounded-full transition-all duration-200 ${
+                i === idx
+                  ? "w-8 bg-neutral-900"
+                  : "w-3 bg-neutral-400/60 hover:bg-neutral-600"
               }`}
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
-              transition={{ duration: 0.2 }}
+              aria-label={`Go to slide ${i + 1}`}
             />
           ))}
         </div>

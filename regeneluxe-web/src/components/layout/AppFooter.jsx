@@ -41,209 +41,156 @@ export default function AppFooter() {
   };
 
   return (
-    <footer className="relative mt-24">
-      {/* Floating Luxury Footer Shell */}
+    <footer className="mt-16">
       <FadeSection>
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* Soft radial gradient behind footer */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-rl_accent/5 via-transparent to-transparent rounded-3xl pointer-events-none" />
-          
-          <div className="relative rounded-3xl border border-rl_accent/20 bg-gradient-to-br from-rl_surface/80 via-rl_surface/70 to-rl_surfaceSoft/60 backdrop-blur-md px-8 py-12 shadow-[0_24px_80px_rgba(203,173,141,0.12)]">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="rounded-3xl bg-gradient-to-t from-[#f3e7d9] via-[#faf3ea] to-[#fdf8f0] dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-900 shadow-[0_22px_60px_rgba(15,10,5,0.20)] border border-white/60 dark:border-neutral-800 pt-10 pb-8 sm:pt-12 sm:pb-10">
             {/* Four-Column Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-12">
-              {/* Column A — Brand */}
-              <div className="space-y-4">
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <BrandTitle variant="header" className="text-sm mb-2" />
-                  <p className="text-xs font-medium tracking-[0.2em] text-rl_accent uppercase mb-2">
-                    Luxury Campaign Architecture
-                  </p>
-                  <p className="text-sm text-rl_muted leading-relaxed">
-                    Transform your marketing context into structured, AI-ready campaign blueprints with precision-built clarity. ReGeneLuxe transforms your idea into a high-converting, multi-format campaign — automatically.
-                  </p>
-                </motion.div>
-              </div>
-
-              {/* Column B — Platform */}
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-[0.25em] text-rl_muted mb-4">
-                  Platform
-                </h4>
-                <ul className="space-y-2.5">
-                  {[
-                    { label: "How It Works", path: "/gate" },
-                    { label: "Pricing Packages", path: "/campaign/new" },
-                    { label: "Drafting Room", path: "/drafting-room" },
-                    { label: "Blueprint Examples", path: "#", placeholder: true },
-                    { label: "Brand Safety & Compliance", path: "#", placeholder: true },
-                  ].map((item) => (
-                    <li key={item.label}>
-                      <motion.div
-                        variants={prefersReducedMotion ? undefined : linkHoverVariants}
-                        initial={prefersReducedMotion ? undefined : "rest"}
-                        whileHover={prefersReducedMotion ? undefined : "hover"}
-                        className="relative inline-block"
-                      >
-                        {item.placeholder ? (
-                          <span className="text-sm text-rl_muted/60 cursor-not-allowed">
-                            {item.label}
-                          </span>
-                        ) : (
-                          <Link
-                            to={item.path}
-                            className="text-sm text-rl_muted hover:text-rl_text transition-colors relative group"
-                          >
-                            {item.label}
-                            <motion.span
-                              className="absolute bottom-0 left-0 h-[1px] bg-rl_accent"
-                              initial={{ width: 0 }}
-                              whileHover={{ width: "100%" }}
-                              transition={{ duration: 0.3 }}
-                            />
-                          </Link>
-                        )}
-                      </motion.div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Column C — Resources */}
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-[0.25em] text-rl_muted mb-4">
-                  Resources
-                </h4>
-                <ul className="space-y-2.5">
-                  {[
-                    { label: "Case Studies", path: "#", placeholder: true },
-                    { label: "Blog / Insights", path: "#", placeholder: true },
-                    { label: "Creator Playbooks", path: "#", placeholder: true },
-                    { label: "Data & Privacy", path: "#" },
-                    { label: "Terms & Agreements", path: "#" },
-                    { label: "Contact", path: "#" },
-                  ].map((item) => (
-                    <li key={item.label}>
-                      <motion.div
-                        variants={prefersReducedMotion ? undefined : linkHoverVariants}
-                        initial={prefersReducedMotion ? undefined : "rest"}
-                        whileHover={prefersReducedMotion ? undefined : "hover"}
-                        className="relative inline-block"
-                      >
-                        {item.placeholder ? (
-                          <span className="text-sm text-rl_muted/60 cursor-not-allowed">
-                            {item.label}
-                          </span>
-                        ) : (
-                          <Link
-                            to={item.path}
-                            className="text-sm text-rl_muted hover:text-rl_text transition-colors relative group"
-                          >
-                            {item.label}
-                            <motion.span
-                              className="absolute bottom-0 left-0 h-[1px] bg-rl_accent"
-                              initial={{ width: 0 }}
-                              whileHover={{ width: "100%" }}
-                              transition={{ duration: 0.3 }}
-                            />
-                          </Link>
-                        )}
-                      </motion.div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Column D — Social & Trust */}
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-[0.25em] text-rl_muted mb-4">
-                  Connect
-                </h4>
-                <div className="space-y-4">
-                  {/* Social Icons */}
-                  <div className="flex items-center gap-3">
-                    {[
-                      { Icon: InstagramIcon, href: "#", label: "Instagram" },
-                      { Icon: LinkedinIcon, href: "#", label: "LinkedIn" },
-                      { Icon: YoutubeIcon, href: "#", label: "YouTube" },
-                    ].map(({ Icon, href, label }) => (
-                      <motion.a
-                        key={label}
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-full border border-rl_border/40 bg-rl_surface/60 hover:bg-rl_surface transition-colors"
-                        whileHover={{
-                          scale: 1.1,
-                          boxShadow: "0 0 10px rgba(203,173,141,0.3)",
-                        }}
-                        whileTap={{ scale: 0.95 }}
-                        aria-label={label}
-                      >
-                        <Icon className="w-4 h-4 text-rl_muted hover:text-rl_accent transition-colors" />
-                      </motion.a>
-                    ))}
+            <div className="px-6 sm:px-8 lg:px-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12">
+                {/* Column A — Brand */}
+                <div>
+                  <div>
+                    <p className="text-xs tracking-[0.3em] uppercase text-neutral-500 dark:text-neutral-400">
+                      ReGeneLuxe
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+                      Luxury campaign drafting &amp; automation
+                    </p>
+                    <p className="mt-4 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300 max-w-xs">
+                      We turn your raw marketing notes into structured, AI-ready blueprints. Your ideas become a high-converting, multi-format campaign you can run again and again.
+                    </p>
                   </div>
+                </div>
 
-                  {/* Trust Badges */}
-                  <div className="space-y-2 pt-2">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-rl_muted">
-                      GDPR Compliant
-                    </p>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-rl_muted">
-                      PCI-Safe via Stripe
-                    </p>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-rl_accent font-medium">
-                      AI-Driven. Human-Directed.
-                    </p>
+                {/* Column B — Platform */}
+                <div className="lg:border-l lg:border-white/40 lg:dark:border-neutral-800 lg:pl-10">
+                  <h4 className="text-xs tracking-[0.3em] uppercase text-neutral-500 dark:text-neutral-400 mb-3">
+                    Platform
+                  </h4>
+                  <ul className="space-y-2.5">
+                    {[
+                      { label: "How It Works", path: "/gate" },
+                      { label: "Pricing Packages", path: "/campaign/new" },
+                      { label: "Drafting Room", path: "/drafting-room" },
+                      { label: "Blueprint Examples", path: "#", placeholder: true },
+                    ].map((item) => (
+                      <li key={item.label}>
+                        {item.placeholder ? (
+                          <span className="text-sm text-neutral-500 dark:text-neutral-500 cursor-not-allowed">
+                            {item.label}
+                          </span>
+                        ) : (
+                          <Link
+                            to={item.path}
+                            className="text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors duration-150"
+                          >
+                            {item.label}
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Column C — Resources */}
+                <div className="lg:border-l lg:border-white/40 lg:dark:border-neutral-800 lg:pl-10">
+                  <h4 className="text-xs tracking-[0.3em] uppercase text-neutral-500 dark:text-neutral-400 mb-3">
+                    Resources
+                  </h4>
+                  <ul className="space-y-2.5">
+                    {[
+                      { label: "Case Studies", path: "#", placeholder: true },
+                      { label: "Blog / Insights", path: "#", placeholder: true },
+                      { label: "Creator Playbooks", path: "#", placeholder: true },
+                      { label: "Contact", path: "#" },
+                    ].map((item) => (
+                      <li key={item.label}>
+                        {item.placeholder ? (
+                          <span className="text-sm text-neutral-500 dark:text-neutral-500 cursor-not-allowed">
+                            {item.label}
+                          </span>
+                        ) : (
+                          <Link
+                            to={item.path}
+                            className="text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors duration-150"
+                          >
+                            {item.label}
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Column D — Social & Trust */}
+                <div className="lg:border-l lg:border-white/40 lg:dark:border-neutral-800 lg:pl-10">
+                  <h4 className="text-xs tracking-[0.3em] uppercase text-neutral-500 dark:text-neutral-400 mb-3">
+                    Connect
+                  </h4>
+                  <div className="space-y-4">
+                    {/* Social Icons */}
+                    <div className="flex items-center gap-3">
+                      {[
+                        { Icon: InstagramIcon, href: "#", label: "Instagram" },
+                        { Icon: LinkedinIcon, href: "#", label: "LinkedIn" },
+                        { Icon: YoutubeIcon, href: "#", label: "YouTube" },
+                      ].map(({ Icon, href, label }) => (
+                        <a
+                          key={label}
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/70 dark:border-neutral-700 bg-white/80 dark:bg-neutral-900/80 text-neutral-800 dark:text-neutral-100 hover:bg-white hover:text-neutral-900 dark:hover:bg-neutral-800 transition-colors duration-150"
+                          aria-label={label}
+                        >
+                          <Icon className="w-4 h-4" />
+                        </a>
+                      ))}
+                    </div>
+
+                    {/* Trust Badges */}
+                    <div className="mt-4">
+                      <p className="text-[0.7rem] tracking-[0.22em] uppercase text-neutral-500 dark:text-neutral-400">
+                        GDPR compliant
+                      </p>
+                      <p className="mt-1 text-[0.7rem] tracking-[0.22em] uppercase text-neutral-500 dark:text-neutral-400">
+                        PCI-safe via Stripe
+                      </p>
+                      <p className="mt-1 text-[0.7rem] tracking-[0.22em] uppercase text-neutral-500 dark:text-neutral-400">
+                        AI-driven. Human-directed.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* AI Signature Touch */}
-            <motion.div
-              className="text-center py-4 border-t border-rl_border/30"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ ...baseTransition, delay: 0.5 }}
-            >
-              <p className="text-[10px] uppercase tracking-[0.3em] text-rl_muted/70">
-                Powered by ReGeneLuxe Engine v1.2 — Emotion-Driven AI Architecture
+            {/* Powered by line */}
+            <div className="mt-8 border-t border-white/60 dark:border-neutral-800 pt-4 px-6 sm:px-8 lg:px-10">
+              <p className="text-[0.7rem] tracking-[0.22em] uppercase text-neutral-500 dark:text-neutral-400 text-center">
+                Powered by ReGeneLuxe Engine v1.2 — emotion-driven AI architecture.
               </p>
-            </motion.div>
+            </div>
 
             {/* Premium Legal Row */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-rl_border/30">
-              <p className="text-xs text-rl_muted/70">
-                © 2025 ReGeneLuxe — Luxury Campaign Drafting & Automation
-              </p>
-              <div className="flex items-center gap-4">
-                {["Privacy", "Terms", "Security", "Compliance"].map((label) => (
-                  <Link
-                    key={label}
-                    to="#"
-                    className="text-xs text-rl_muted/70 hover:text-rl_text transition-colors"
-                  >
-                    {label}
-                  </Link>
-                ))}
+            <div className="mt-4 border-t border-white/60 dark:border-neutral-800 pt-4 px-6 sm:px-8 lg:px-10">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-xs text-neutral-500 dark:text-neutral-400">
+                <p>© 2025 ReGeneLuxe. All rights reserved.</p>
+                <div className="flex flex-wrap gap-x-5 gap-y-1">
+                  {["Privacy", "Terms", "Security", "Compliance"].map((label) => (
+                    <Link
+                      key={label}
+                      to="#"
+                      className="hover:text-neutral-900 dark:hover:text-white transition-colors duration-150"
+                    >
+                      {label}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Future-Proof Modules (Hidden) */}
-            <div className="hidden">
-              {/* Mini blueprint preview */}
-              <div id="footer-blueprint-preview" />
-              {/* Newsletter block */}
-              <div id="footer-newsletter" />
-              {/* AI assistant bubble */}
-              <div id="footer-ai-assistant" />
-              {/* Multilingual toggle */}
-              <div id="footer-lang-toggle" />
-            </div>
           </div>
         </div>
       </FadeSection>

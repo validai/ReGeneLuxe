@@ -23,39 +23,47 @@ export default function SocialProofStrip() {
   const currentSlogan = SLOGANS[index];
 
   return (
-    <section className="w-full bg-rl_bg px-4 pb-12 pt-4 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-6xl rounded-3xl border border-rl_border/40 bg-rl_surface/95 px-5 py-5 shadow-rl_soft sm:px-7 sm:py-6 lg:px-8 lg:py-7">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+    <section className="py-16 bg-[#f4eee7]">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-6 lg:grid-cols-3">
           {/* LEFT CARD – Trusted by operators */}
-          <div className="h-full">
-            <div className="h-full rounded-2xl border border-rl_border/40 bg-rl_surfaceSoft/80 px-4 py-4 sm:px-5 sm:py-5 shadow-sm">
-              <p className="mb-3 text-[0.7rem] font-semibold tracking-[0.22em] text-rl_muted uppercase">
-                Trusted by operators from
-              </p>
-              <ul className="space-y-3 text-[0.95rem] font-medium leading-relaxed text-rl_text">
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-rl_accent" />
-                  <span>DTC brands running serious paid social.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-rl_accent/80" />
-                  <span>Course creators and infoproduct founders.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-rl_accent/70" />
-                  <span>Lean agencies who need a smarter engine.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-rl_accent/60" />
-                  <span>Solo operators stitching channels together.</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+            className="h-full rounded-3xl bg-[#faf5ee] shadow-[0_18px_45px_rgba(15,10,5,0.16)] border border-[#f0e2d2] px-6 py-6 sm:px-7 sm:py-7"
+          >
+            <p className="text-[0.7rem] tracking-[0.3em] uppercase text-neutral-500 mb-4">
+              Trusted by operators from
+            </p>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-2">
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-rl_accent" />
+                <span className="text-sm text-neutral-800 leading-relaxed">DTC brands running serious paid social.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-rl_accent/80" />
+                <span className="text-sm text-neutral-800 leading-relaxed">Course creators and infoproduct founders.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-rl_accent/70" />
+                <span className="text-sm text-neutral-800 leading-relaxed">Lean agencies who need a smarter engine.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-rl_accent/60" />
+                <span className="text-sm text-neutral-800 leading-relaxed">Solo operators stitching channels together.</span>
+              </li>
+            </ul>
+          </motion.div>
 
           {/* MIDDLE – Rotating slogans with background image */}
-          <div
-            className="relative h-full rounded-2xl overflow-hidden flex items-start justify-center px-8 py-20 bg-cover bg-center bg-no-repeat"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.45, ease: "easeOut", delay: 0.05 }}
+            className="relative h-full rounded-3xl overflow-hidden flex items-start justify-center px-8 py-20 bg-cover bg-center bg-no-repeat shadow-[0_18px_45px_rgba(15,10,5,0.16)]"
             style={{
               backgroundImage: "url('/Futuristic AI Advertising Holograms Visual 2.png')",
             }}
@@ -84,14 +92,19 @@ export default function SocialProofStrip() {
                 </AnimatePresence>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* RIGHT CARD – Typical lift we design for */}
-          <div className="h-full">
-            <div className="h-full rounded-2xl border border-rl_border/40 bg-rl_surfaceSoft/80 px-4 py-4 sm:px-5 sm:py-5 shadow-sm">
-              <p className="mb-3 text-[0.7rem] font-semibold tracking-[0.22em] text-rl_muted uppercase text-left">
-                Typical lift we design for
-              </p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.45, ease: "easeOut", delay: 0.1 }}
+            className="h-full rounded-3xl bg-[#faf5ee] shadow-[0_18px_45px_rgba(15,10,5,0.16)] border border-[#f0e2d2] px-6 py-6 sm:px-7 sm:py-7"
+          >
+            <p className="text-[0.7rem] tracking-[0.3em] uppercase text-neutral-500 mb-4">
+              Typical lift we design for
+            </p>
 
               <div className="space-y-3">
                 {/* ROAS */}
@@ -151,9 +164,7 @@ export default function SocialProofStrip() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-          {/* END RIGHT CARD */}
+            </motion.div>
         </div>
       </div>
     </section>
