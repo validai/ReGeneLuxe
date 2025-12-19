@@ -307,6 +307,7 @@ function WhatYouGetSection({ goToQuestionnaire }) {
 // Pattern Orbit Component
 function PatternOrbit() {
   const [isRunning, setIsRunning] = React.useState(false);
+  const [hoveredIndex, setHoveredIndex] = React.useState(null);
   const stageRef = React.useRef(null);
   const [computedRadius, setComputedRadius] = React.useState(210);
   const [cardSize, setCardSize] = React.useState(150);
@@ -318,33 +319,33 @@ function PatternOrbit() {
 
   const PATTERN_ORBIT_ITEMS = [
     {
-      id: "campaigns-no-story",
-      text: "Campaigns that run, but don't ladder up to a clear story.",
-      bgImage: "/Homepage Cards/Campaigns that run Card.png",
-    },
-    {
       id: "launches-slack",
-      text: "Launches planned in Slack threads and screenshots instead of one source of truth.",
+      text: "Launch plans buried in Slack threads.",
       bgImage: "/Homepage Cards/Launches planned in Slack Card.png",
     },
     {
+      id: "campaigns-no-story",
+      text: "Campaigns run, but never ladder up.",
+      bgImage: "/Homepage Cards/Campaigns that run Card.png",
+    },
+    {
       id: "winning-ads-no-spine",
-      text: "Winning ads that can't be scaled because there's no campaign spine.",
+      text: "Winning ads that can't be scaled.",
       bgImage: "/Homepage Cards/Winning ads Card.png",
     },
     {
       id: "teams-no-guardrails",
-      text: "Teams building assets without shared messaging or guardrails.",
+      text: "Teams building assets in silos.",
       bgImage: "/Homepage Cards/Teams building assets Card.png",
     },
     {
       id: "leadership-clarity",
-      text: "Leadership asking for clarity on the plan and not getting a straight answer.",
+      text: "Leadership asking: \"What's the plan?\"",
       bgImage: "/Homepage Cards/Leadership asking for clarity Card.png",
     },
     {
       id: "growth-stuck",
-      text: "Growth stuck at week-to-week tactics with no long-term architecture.",
+      text: "Growth stuck in week-to-week tactics.",
       bgImage: "/Homepage Cards/Growth stuck at week Card.png",
     },
   ];
@@ -530,35 +531,59 @@ function PatternOrbit() {
                       willChange: "transform",
                     }}
                   >
-                    {/* Orbit card */}
+                    {/* Inner wrapper for lift/scale effect (doesn't interfere with orbit transforms) */}
                     <div
-                      tabIndex={0}
-                      role="button"
-                      aria-label={item.text}
-                      className="group relative w-[150px] h-[150px] md:w-[165px] md:h-[165px] rounded-full overflow-hidden select-none antialiased focus:outline-none focus-visible:ring-2 focus-visible:ring-black/30 transition-transform duration-200 hover:scale-[1.05] focus:scale-[1.05]"
-                      style={{
-                        backgroundImage: `url('${item.bgImage}')`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                        backgroundRepeat: "no-repeat",
-                        boxShadow: "0 12px 30px rgba(0,0,0,0.18)",
-                        outline: "1px solid rgba(255,255,255,0.08)",
-                      }}
-                      onPointerEnter={() => setIsRunning(true)}
-                      onPointerLeave={() => {
-                        if (!stageRef.current?.matches(":hover") && !stageRef.current?.contains(document.activeElement)) {
-                          setIsRunning(false);
-                        }
-                      }}
-                      onFocus={() => setIsRunning(true)}
-                      onBlur={(e) => {
-                        if (!e.currentTarget.contains(e.relatedTarget)) {
+                      className={`transition-all duration-300 ease-out ${
+                        hoveredIndex === index
+                          ? "opacity-100 scale-[1.03] -translate-y-[2px]"
+                          : hoveredIndex !== null
+                          ? "opacity-75 saturate-75"
+                          : "opacity-100"
+                      }`}
+                    >
+                      {/* Orbit card */}
+                      <div
+                        tabIndex={0}
+                        role="button"
+                        aria-label={item.text}
+                        className={`group relative w-[150px] h-[150px] md:w-[165px] md:h-[165px] rounded-full overflow-hidden box-border text-center break-words leading-snug px-3 py-2 text-[12.5px] bg-white/5 backdrop-blur-sm select-none antialiased whitespace-normal focus:outline-none focus-visible:ring-2 focus-visible:ring-black/30 transition-all duration-300 ease-out ${
+                          hoveredIndex === index
+                            ? "ring-white/20 shadow-[0_10px_40px_rgba(0,0,0,0.25)]"
+                            : "ring-1 ring-white/10"
+                        }`}
+                        style={{
+                          backgroundImage: `url('${item.bgImage}')`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                          backgroundRepeat: "no-repeat",
+                          boxShadow: hoveredIndex === index
+                            ? "0 10px 40px rgba(0,0,0,0.25)"
+                            : "0 12px 30px rgba(0,0,0,0.18)",
+                          outline: "1px solid rgba(255,255,255,0.08)",
+                        }}
+                        onMouseEnter={() => {
+                          setIsRunning(true);
+                          setHoveredIndex(index);
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredIndex(null);
                           if (!stageRef.current?.matches(":hover") && !stageRef.current?.contains(document.activeElement)) {
                             setIsRunning(false);
                           }
-                        }
-                      }}
-                    >
+                        }}
+                        onFocus={() => {
+                          setIsRunning(true);
+                          setHoveredIndex(index);
+                        }}
+                        onBlur={(e) => {
+                          setHoveredIndex(null);
+                          if (!e.currentTarget.contains(e.relatedTarget)) {
+                            if (!stageRef.current?.matches(":hover") && !stageRef.current?.contains(document.activeElement)) {
+                              setIsRunning(false);
+                            }
+                          }
+                        }}
+                      >
                       {/* Subtle vignette overlay (keeps images crisp, improves text contrast) */}
                       <div
                         className="absolute inset-0"
@@ -568,20 +593,22 @@ function PatternOrbit() {
                         }}
                       />
 
-                      {/* Text content (no transforms, full text visible) */}
+                      {/* Text content (no transforms, natural wrapping) */}
                       <div
-                        className="relative z-10 h-full w-full flex items-center justify-center text-center px-6 py-5 md:px-7 md:py-6 max-w-[90%]"
+                        className="relative z-10 h-full w-full flex items-center justify-center transform-none rotate-0 skew-x-0 skew-y-0"
                         style={{ transform: "none" }}
                       >
-                        <p
-                          className="text-white font-semibold text-[13px] md:text-[14px] leading-snug tracking-tight max-w-[90%] mx-auto"
+                        <div
+                          className="orbit-node-label whitespace-normal break-words text-center leading-snug transform-none rotate-0 skew-x-0 skew-y-0 text-white font-semibold text-[12.5px]"
                           style={{ 
                             textShadow: "0 2px 12px rgba(0,0,0,0.80)",
+                            transform: "none",
                           }}
                         >
                           {item.text}
-                        </p>
+                        </div>
                       </div>
+                    </div>
                     </div>
                   </div>
                 </div>
@@ -593,7 +620,11 @@ function PatternOrbit() {
         {/* Center white haze circle (locked to center; never drifts) */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none w-[150px] h-[150px] md:w-[165px] md:h-[165px]">
           <div
-            className="w-full h-full rounded-full flex items-center justify-center shadow-[0_20px_60px_rgba(0,0,0,0.12)] backdrop-blur-md ring-1 ring-black/5"
+            className={`w-full h-full rounded-full flex items-center justify-center backdrop-blur-md ring-1 ring-black/5 transition-all duration-300 ease-out ${
+              hoveredIndex !== null
+                ? "shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_12px_40px_rgba(0,0,0,0.10)]"
+                : "shadow-[0_20px_60px_rgba(0,0,0,0.12)]"
+            }`}
             style={{
               background:
                 "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.96), rgba(255,255,255,0.72) 55%, rgba(255,255,255,0.35) 78%, rgba(255,255,255,0.0) 100%)",

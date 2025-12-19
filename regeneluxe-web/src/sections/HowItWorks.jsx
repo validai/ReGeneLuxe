@@ -6,8 +6,8 @@ const steps = [
     id: 1,
     label: "INTAKE",
     step: "Step 1",
-    title: "Signature Questionnaire",
-    body: "We turn your messy context into a structured intake your team actually enjoys filling out.",
+    title: "Signature Intake",
+    body: "We translate your context, constraints, and goals into a clear starting point — so every decision that follows has direction.",
     iconEmoji: "📝",
   },
   {
@@ -15,7 +15,7 @@ const steps = [
     label: "BLUEPRINT",
     step: "Step 2",
     title: "Drafting Room Blueprint",
-    body: "Our AI + strategist engine designs a precision-built campaign architecture powered by elite AI orchestration.",
+    body: "Our AI + strategist engine designs a precise campaign structure, defining angles and variants before anything is launched.",
     iconEmoji: "🧠",
   },
   {
@@ -23,15 +23,15 @@ const steps = [
     label: "CHANNEL MAP",
     step: "Step 3",
     title: "Asset & Channel Map",
-    body: "We map messages, angles, and assets across your paid + owned channels.",
+    body: "Messages and assets are mapped across your paid and owned channels, keeping execution aligned instead of scattered.",
     iconEmoji: "🛰️",
   },
   {
     id: 4,
     label: "LAUNCH & ITERATE",
     step: "Step 4",
-    title: "Hand-off & Iteration",
-    body: "You walk away with a tested plan, not just pretty slides — and a system you can keep refining.",
+    title: "Launch & Iteration",
+    body: "You leave with a tested plan and a clear iteration loop your team can refine over time.",
     iconEmoji: "🚀",
   },
 ];
@@ -39,28 +39,28 @@ const steps = [
 const shifts = [
   {
     before: "Random tests with no clear campaign plan",
-    after: "One main campaign blueprint everyone uses",
-    result: "Your tests build on each other instead of starting from scratch every time.",
+    after: "One shared campaign blueprint",
+    result: "Testing builds on itself instead of restarting every launch.",
   },
   {
     before: "Ideas scattered across Slack, Notion, and screenshots",
-    after: "Story and assets lined up in one shared system",
-    result: "Your team always knows where to look and works from the same story.",
+    after: "Story and assets live in one shared system",
+    result: "Teams know where to look and work from the same story.",
   },
   {
     before: "Rushing every launch at the last minute",
-    after: "Launch calendar planned out by quarter",
-    result: "You get more time to test, fix issues, and improve performance.",
+    after: "Launch calendars planned by quarter",
+    result: "More time to test, fix issues, and improve performance.",
   },
   {
     before: "Hard to explain the plan to leadership",
-    after: "Clear, executive-ready decks and docs",
-    result: "Leaders understand the plan quickly and approve budgets faster.",
+    after: "Executive-ready decks and docs",
+    result: "Faster approvals and clearer decisions.",
   },
   {
-    before: "Content quality changes from team to team or project to project",
-    after: "Clear creative guidelines everyone can follow",
-    result: "You get steady, professional-looking content no matter who makes it.",
+    before: "Inconsistent quality across teams or projects",
+    after: "Clear creative guidelines everyone follows",
+    result: "Professional output no matter who executes.",
   },
 ];
 
@@ -97,13 +97,13 @@ export default function HowItWorks() {
           variants={fadeUp}
           className="text-center mb-12 sm:mb-14"
         >
-          <p className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-3">
+          <p className="text-[11px] tracking-[0.35em] uppercase text-black/50 mb-3">
             How it works
           </p>
           <h2 className="text-2xl sm:text-3xl lg:text-[2.1rem] font-semibold tracking-tight text-neutral-900">
             How ReGeneLuxe works in four moves
           </h2>
-          <p className="mt-2 text-sm text-neutral-700">
+          <p className="mt-2 text-sm text-black/70 max-w-[720px] mx-auto leading-relaxed">
             From intake to launch in four clear steps — so your team always knows what happens next.
           </p>
         </motion.div>
@@ -121,8 +121,8 @@ export default function HowItWorks() {
             className="rounded-3xl bg-[#faf5ee] shadow-[0_18px_45px_rgba(15,10,5,0.12)] border border-[#f0e2d2] px-4 py-6 sm:px-8 sm:py-8"
           >
             <div className="grid gap-8 sm:gap-10 md:grid-cols-2 lg:grid-cols-4">
-              {steps.map((step) => (
-                <StepCard key={step.id} step={step} />
+              {steps.map((step, index) => (
+                <StepCard key={step.id} step={step} index={index} />
               ))}
             </div>
           </motion.div>
@@ -131,7 +131,7 @@ export default function HowItWorks() {
         {/* Inline CTA after four moves */}
         <div className="mt-6 text-center">
           <p className="text-sm text-neutral-700">
-            Step 1 starts with your Signature Questionnaire. You bring the context; we build the engine.
+            Step 1 starts with your Signature Intake. You bring the context; we build the engine.
           </p>
           <button
             type="button"
@@ -150,9 +150,9 @@ export default function HowItWorks() {
           viewport={{ once: true, amount: 0.2 }}
           className="rounded-3xl bg-[#faf5ee] shadow-[0_18px_45px_rgba(15,10,5,0.09)] border border-[#f0e2d2] px-6 py-10 sm:px-10 sm:py-12"
         >
-          <p className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-8 text-center">
-            The shift with <span className="font-semibold">ReGeneLuxe</span>
-          </p>
+          <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-neutral-900 mb-8 text-center">
+            What changes once ReGeneLuxe is in place
+          </h3>
 
           {/* Column headers */}
           <div className="grid grid-cols-[1.1fr_auto_1.1fr_1.1fr] gap-x-4 sm:gap-x-8 mb-6 text-center">
@@ -172,11 +172,12 @@ export default function HowItWorks() {
           </div>
 
           {/* Rows */}
-          <div className="space-y-4 sm:space-y-5">
+          <div className="space-y-6 sm:space-y-7">
             {shifts.map((item, index) => (
               <div
                 key={index}
-                className="grid grid-cols-[1.1fr_auto_1.1fr_1.1fr] gap-x-4 sm:gap-x-8 items-start text-sm"
+                tabIndex={0}
+                className="grid grid-cols-[1.1fr_auto_1.1fr_1.1fr] gap-x-4 sm:gap-x-8 items-start text-sm rounded-xl p-3 -m-3 transition-colors duration-200 ease-out hover:bg-black/[0.02] focus-within:bg-black/[0.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 focus-visible:ring-offset-2"
               >
                 {/* Before */}
                 <p className="text-neutral-700 leading-relaxed">
@@ -185,7 +186,7 @@ export default function HowItWorks() {
 
                 {/* Arrow */}
                 <div className="flex justify-center pt-1">
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-neutral-300 text-base font-semibold text-neutral-500">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300/60 text-sm font-semibold text-black/40">
                     →
                   </span>
                 </div>
@@ -196,7 +197,7 @@ export default function HowItWorks() {
                 </p>
 
                 {/* Result */}
-                <p className="text-neutral-800 leading-relaxed">
+                <p className="text-black/70 leading-relaxed">
                   {item.result}
                 </p>
               </div>
@@ -222,9 +223,14 @@ export default function HowItWorks() {
   );
 }
 
-function StepCard({ step }) {
+function StepCard({ step, index }) {
+  // Standardized card surface styling - all steps use identical styling
+  const cardSurfaceClasses = "bg-black/[0.03] ring-1 ring-black/[0.06]";
+
   return (
-    <div className="flex flex-col h-full">
+    <div
+      className={`flex flex-col h-full rounded-2xl p-6 transition-all duration-300 ease-out hover:-translate-y-[1px] hover:ring-black/[0.12] focus-within:-translate-y-[1px] focus-within:ring-black/[0.12] ${cardSurfaceClasses}`}
+    >
       <div className="flex items-center gap-3 mb-4">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm text-lg">
           <span aria-hidden>{step.iconEmoji}</span>
@@ -238,7 +244,7 @@ function StepCard({ step }) {
           </span>
         </div>
       </div>
-      <h3 className="text-sm sm:text-base font-semibold text-neutral-900 mb-2">
+      <h3 className="text-sm sm:text-base font-semibold text-neutral-900 mb-3">
         {step.title}
       </h3>
       <p className="text-xs sm:text-sm leading-relaxed text-neutral-700">
