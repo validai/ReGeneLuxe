@@ -2,27 +2,72 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ReGeneLuxe base reset */
-:root {
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+  /* Surfaces */
+  --rl-bg: 16 15 14;
+  --rl-surface: 24 22 20;
+  --rl-surface-raised: 32 29 26;
+  --rl-surface-soft: 38 34 30;
+  --rl-surface-hover: 44 39 34;
+  --rl-surface-active: 52 46 40;
+  /* Borders & text */
+  --rl-border: 52 46 40;
+  --rl-border-strong: 72 64 55;
+  --rl-text: 244 238 230;
+  --rl-text-secondary: 196 180 160;
+  --rl-muted: 148 132 114;
+  /* Accent & status */
+  --rl-accent: 203 173 141;
+  --rl-accent-hover: 218 190 158;
+  --rl-danger: 196 92 74;
+  --rl-ok: 111 158 122;
+  --rl-warning: 196 148 74;
+  --rl-info: 120 148 168;
+  --rl-focus: 203 173 141;
+  /* Legacy aliases */
+  --accent: #CBAD8D;
+  --accent-soft: rgba(203, 173, 141, 0.16);
+  --success: #6F9E7A;
+  --error: #C45C4A;
+  /* Layout */
+  --rl-sidebar: 15rem;
+  --rl-sidebar-collapsed: 4.25rem;
+  --rl-radius: 0.75rem;
+  --rl-radius-pill: 9999px;
+}
+
+[data-theme="light"] {
   color-scheme: light;
-  
-  /* RGL Engine theme variables - harmonized with global brand */
-  --dash-bg: #F1EDE6; /* rl_bg */
-  --dash-sidebar-bg: rgba(235, 227, 219, 0.6); /* rl_surfaceSoft with transparency */
-  --dash-surface: #FFFFFF; /* rl_surface */
-  --dash-surface-alt: #EBE3DB; /* rl_surfaceSoft */
-  --dash-border: #D1C7BD; /* rl_border */
-  --dash-border-strong: #D1C7BD; /* rl_border */
-  --dash-text: #2B2B2B; /* rl_text */
-  --dash-text-muted: #7A6B5B; /* rl_muted */
-  --dash-muted: #7A6B5B; /* alias for backward compatibility */
+  --rl-bg: 243 237 228;
+  --rl-surface: 255 252 247;
+  --rl-surface-raised: 255 255 255;
+  --rl-surface-soft: 237 228 214;
+  --rl-surface-hover: 232 222 206;
+  --rl-surface-active: 224 212 194;
+  --rl-border: 212 196 174;
+  --rl-border-strong: 180 160 132;
+  --rl-text: 28 25 22;
+  --rl-text-secondary: 72 64 55;
+  --rl-muted: 110 98 86;
+  --rl-accent: 138 109 75;
+  --rl-accent-hover: 112 88 58;
+  --rl-danger: 169 68 56;
+  --rl-ok: 63 111 76;
+  --rl-warning: 150 108 40;
+  --rl-info: 70 100 120;
+  --rl-focus: 138 109 75;
+}
 
-  --accent: #CBAD8D; /* rl_accent */
-  --accent-soft: rgba(203, 173, 141, 0.15);
-
-  --success: #22c55e;
-  --warning: #facc15;
-  --error: #f97373;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 body {
@@ -33,19 +78,84 @@ body {
   @apply min-h-screen;
 }
 
-.field-select {
-  @apply w-full bg-rl_bg border border-rl_border rounded-lg px-3 py-2 text-xs text-rl_text focus:outline-none focus:ring-1 focus:ring-rl_accent/70 focus:border-rl_accent;
+.field-select,
+.rl-input {
+  @apply w-full rounded-lg border border-rl_border bg-rl_bg px-3 py-2 text-sm text-rl_text placeholder:text-rl_muted/60 focus:border-rl_accent focus:outline-none focus:ring-1 focus:ring-rl_accent/60;
 }
 
-/* ReGeneLuxe shared dashboard panel */
 .rl-panel {
-  @apply rounded-3xl border border-rl_border/30 bg-rl_surface shadow-rl_soft;
+  @apply rounded-xl border border-rl_border bg-rl_surface;
 }
 
-.rl-panel-tight {
-  @apply rl-panel p-4 sm:p-5;
+.rl-panel-raised {
+  @apply rounded-xl border border-rl_border bg-rl_surfaceRaised;
 }
 
-.rl-panel-roomy {
-  @apply rl-panel p-5 sm:p-6;
+.rl-btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full bg-rl_accent px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-rl_bg transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/50;
 }
+
+.rl-press {
+  @apply transition-transform duration-150 active:scale-[0.98];
+}
+
+@keyframes rl-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.rl-fade-in {
+  animation: rl-fade-in 160ms ease-out;
+}
+
+.rl-btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-full border border-rl_border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-rl_muted transition-colors hover:border-rl_borderStrong hover:text-rl_text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/40;
+}
+
+.rl-btn-danger {
+  @apply inline-flex items-center justify-center gap-2 rounded-full bg-rl_danger px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-rl_bg transition-opacity hover:opacity-90;
+}
+
+.rl-btn-icon {
+  @apply inline-flex h-9 w-9 items-center justify-center rounded-full border border-rl_border text-rl_muted transition-colors hover:border-rl_borderStrong hover:text-rl_text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/40;
+}
+
+.rl-label {
+  @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-rl_muted;
+}
+
+.rl-meta {
+  @apply text-xs text-rl_muted;
+}
+
+.rl-section-title {
+  @apply text-sm font-semibold tracking-tight text-rl_text;
+}
+
+@keyframes rl-sheet-in {
+  from { transform: translateX(12px); opacity: 0.85; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-in {
+  animation: rl-sheet-in 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .rl-fade-in {
+    animation: none;
+  }
+
+  .rl-btn,
+  .rl-press {
+    transition: none;
+    transform: none;
+  }
+
+  .rl-btn:active,
+  .rl-press:active {
+    transform: none;
+  }
+}
+

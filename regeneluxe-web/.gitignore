@@ -10,7 +10,10 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.next
+out
 *.local
+*.tsbuildinfo
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +25,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local runtime secrets — never commit
+server/.secrets.json
+.regeneluxe/
