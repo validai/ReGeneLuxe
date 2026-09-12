@@ -19,7 +19,7 @@ const STATIC_ACTIONS = [
   { id: "all-accounts", label: "All accounts", hint: "Filter", run: () => setWorkingAccountId("") },
 ];
 
-/** Shared palette UI — `navigate` is (path: string) => void (react-router or Next). */
+/** Shared palette UI — `navigate` is (path: string) => void. */
 function CommandPaletteView({ open, onClose, navigate }) {
   const { campaigns, accounts, content } = useAppData();
   const [query, setQuery] = useState("");
@@ -171,8 +171,7 @@ function CommandPaletteWithRouter(props) {
 }
 
 /**
- * Dual-run: pass `navigate={(path) => ...}` for Next (`router.push`),
- * or omit and use react-router `useNavigate` under Vite / SpaBridge.
+ * Pass `navigate={(path) => ...}` to inject a navigator; otherwise uses shared `@/nav`.
  */
 export default function CommandPalette({ open, onClose, navigate }) {
   if (typeof navigate === "function") {

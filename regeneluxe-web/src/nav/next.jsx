@@ -2,7 +2,7 @@
 
 import NextLink from "next/link";
 import { usePathname, useRouter, useParams, useSearchParams as useNextSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 /** Next.js App Router implementation of shared navigation. */
 export function Link({ to, href, children, className, ...rest }) {
@@ -28,15 +28,14 @@ export function NavLink({ to, href, children, className, end, title, ...rest }) 
 
 export function useAppNavigate() {
   const router = useRouter();
-  return (to, options) => {
+  return useCallback((to, options) => {
     if (typeof to === "number") {
       if (to < 0) router.back();
       return;
     }
-    const replace = options?.replace;
-    if (replace) router.replace(to);
+    if (options?.replace) router.replace(to);
     else router.push(to);
-  };
+  }, [router]);
 }
 
 export function useAppParams() {
@@ -45,16 +44,19 @@ export function useAppParams() {
 
 export function useAppSearchParams() {
   const params = useNextSearchParams();
-  return useMemo(() => {
-    const setParams = (next, opts) => {
-      const url = new URLSearchParams(typeof next === "function" ? next(params) : next);
-      const qs = url.toString();
-      const path = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
-      if (opts?.replace) window.history.replaceState(null, "", path);
-      else window.history.pushState(null, "", path);
-    };
-    return [params, setParams];
-  }, [params]);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const setParams = useCallback((next, opts) => {
+    const current = new URLSearchParams(params.toString());
+    const url = new URLSearchParams(typeof next === "function" ? next(current) : next);
+    const qs = url.toString();
+    const path = `${pathname}${qs ? `?${qs}` : ""}`;
+    if (opts?.replace) router.replace(path);
+    else router.push(path);
+  }, [params, pathname, router]);
+
+  return useMemo(() => [params, setParams], [params, setParams]);
 }
 
 export const RUNTIME = "next";

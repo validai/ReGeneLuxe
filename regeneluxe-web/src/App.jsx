@@ -1,3 +1,7 @@
+/**
+ * Test-only SPA route tree (Vitest + MemoryRouter).
+ * Product runtime uses native App Router pages under `app/(workspace)/`.
+ */
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import AppShell from "./components/app/AppShell.jsx";

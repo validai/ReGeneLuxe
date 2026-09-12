@@ -1,7 +1,6 @@
 /**
- * Default shared navigation = Vite/react-router.
- * Next App Router peel can switch this file to re-export ./next.jsx
- * once ClientSpa no longer wraps BrowserRouter.
+ * Product navigation = Next.js App Router.
+ * Vitest rewrites the `@/nav` import to the react-router adapter for MemoryRouter tests.
  */
 export {
   Link,
@@ -10,4 +9,4 @@ export {
   useAppParams,
   useAppSearchParams,
   RUNTIME,
-} from "./vite.jsx";
+} from "./next.jsx";

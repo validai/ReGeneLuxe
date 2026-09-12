@@ -3,22 +3,22 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const navNext = path.join(root, "src/nav/next.jsx");
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   turbopack: {
     root,
-    resolveAlias: {
-      "regeneluxe-nav": navNext,
-    },
   },
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      "regeneluxe-nav": navNext,
-    };
-    return config;
+  async redirects() {
+    return [
+      { source: "/dashboard", destination: "/", permanent: false },
+      { source: "/start", destination: "/campaigns", permanent: false },
+      { source: "/drafting-room", destination: "/content", permanent: false },
+      { source: "/campaign/new", destination: "/campaigns", permanent: false },
+      { source: "/login", destination: "/", permanent: false },
+      { source: "/gate", destination: "/", permanent: false },
+      { source: "/thank-you", destination: "/", permanent: false },
+    ];
   },
 };
 

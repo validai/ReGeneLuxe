@@ -10,8 +10,8 @@ import { getSidebarCollapsed, setSidebarCollapsed } from "../../data/uiPrefs.js"
 import { getRuntimeStatus } from "../../data/runtimeClient.js";
 
 /**
- * Next App Router shell (Sprint 87 scaffolding).
- * Vite continues to use AppShell.jsx + react-router NavLink.
+ * Native App Router shell — used by WorkspaceProviders.
+ * Vitest screen harness still uses AppShell.jsx + react-router.
  */
 
 function NavGlyph({ name }) {

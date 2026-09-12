@@ -1,8 +1,9 @@
-# Modern Rails — complete (cutover approved)
+# Modern Rails — native App Router
 
 **Canonical:** Next.js on `http://127.0.0.1:5174/`  
 **Health:** `framework: "next"`  
-**Vite product runtime:** retired (Vitest may still use Vite tooling)
+**SPA bridge:** removed  
+**Vite product runtime:** retired (Vitest may still use Vite + react-router for screen tests)
 
 ## Commands
 
@@ -17,6 +18,9 @@
 
 Do not verify against `:3200`, `:5175`, or a standalone `:8787`.
 
-## Sprint status (user 85–104)
+## Architecture
 
-See `RECOVERY_MATRIX.md`. Cutover and hardening complete; SPA bridge preserves Stack A UI inside App Router while Route Handlers own `/api`.
+- Native routes under `app/(workspace)/` — see `ROUTE_PARITY.md`
+- Persistent shell via `WorkspaceProviders` + `AppShellNext`
+- Same-origin `/api/*` Route Handlers
+- Client data seam: `src/data/access.ts` + repositories / `useAppData` (localStorage today)
