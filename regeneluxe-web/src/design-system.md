@@ -1,8 +1,10 @@
 # ReGeneLuxe design system inventory
 
-Canonical language for the Vite SPA. Do not invent page-specific colors or button styles.
+Canonical language for the app shell. Do not invent page-specific colors or button styles.
 
 ## Semantic tokens (`src/index.css` + `tailwind.config.js`)
+
+Cool-neutral scale (no tan). Dark is authoritative; light remaps via `[data-theme="light"]`.
 
 | Token | Role |
 |-------|------|
@@ -12,21 +14,29 @@ Canonical language for the Vite SPA. Do not invent page-specific colors or butto
 | `rl_surfaceHover` / `rl_surfaceActive` | Hover / selected (level 3) |
 | `rl_border` / `rl_borderStrong` | Dividers |
 | `rl_text` / `rl_textSecondary` / `rl_muted` | Text hierarchy |
-| `rl_accent` / `rl_accentHover` | Primary action, active nav, focus |
+| `rl_accent` / `rl_accentHover` | Primary action, active nav inset bar, focus |
 | `rl_ok` / `rl_warning` / `rl_danger` / `rl_info` | Status |
 | `rl_focus` | Focus ring |
-
-Dark is authoritative. Light theme remaps the same semantics via `[data-theme="light"]`.
 
 ## Typography
 
 | Role | Implementation |
 |------|----------------|
-| Display / page title | `font-display` (Fraunces) via `PageHeader` |
+| Display / page title | `font-display` — Space Grotesk (`font-semibold tracking-tight`) |
+| Body / UI | `font-sans` — Geist Sans |
 | Section / label | `.rl-label` |
-| Body | `font-sans` (IBM Plex Sans) |
 | Meta | `.rl-meta` |
 | Section title | `.rl-section-title` |
+
+Loaded in `app/layout.tsx` via `next/font` (Space_Grotesk) + `geist/font/sans`.
+
+## Icons
+
+Phosphor Icons **bold**, monochrome (`currentColor`) via `src/components/app/Icon.jsx` / `NavIcon`. Prefer icons over Unicode glyphs in chrome (close, back, nav).
+
+## Mark / favicon
+
+Geometric **R** monogram (thick stem + top/mid crossbars). Assets: `public/icon.svg`, `icon-light.svg`, `icon-dark.svg`; Next `app/icon.tsx` + `app/apple-icon.tsx`; `public/site.webmanifest`.
 
 ## Buttons (CSS utilities — no per-page variants)
 
@@ -39,7 +49,7 @@ Dark is authoritative. Light theme remaps the same semantics via `[data-theme="l
 
 | Component | Use |
 |-----------|-----|
-| `AppShell` | Global nav, Create, account, collapse |
+| `AppShell` / `AppShellNext` | Global nav, Create, account, collapse |
 | `PageShell` / `PageHeader` | Page frame |
 | `FilterBar` | Shared filters + clear |
 | `SegmentedControl` / `Tabs` | View switching |
@@ -59,4 +69,4 @@ Dashboard · Calendar · Content · Campaigns · Inbox · Analytics · Accounts 
 
 ## Accent discipline
 
-Gold/tan accent for primary action, active nav, selection, and key recommendations only — not every border or heading.
+Neutral accent for primary action, active nav inset, selection, and key recommendations only — not every border or heading. Do not introduce a colorful accent palette.

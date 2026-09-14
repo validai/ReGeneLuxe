@@ -1,6 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
+  content: [
+    "./index.html",
+    "./src/**/*.{js,jsx,ts,tsx}",
+    "./app/**/*.{js,jsx,ts,tsx}",
+  ],
   theme: {
     extend: {
       colors: {
@@ -23,23 +27,12 @@ export default {
         rl_info: "rgb(var(--rl-info) / <alpha-value>)",
       },
       fontFamily: {
-        sans: [
-          "IBM Plex Sans",
-          "Segoe UI",
-          "Helvetica Neue",
-          "Arial",
-          "sans-serif",
-        ],
-        display: [
-          "Fraunces",
-          "IBM Plex Sans",
-          "Georgia",
-          "serif",
-        ],
+        sans: ["var(--font-geist-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-space-grotesk)", "var(--font-geist-sans)", "ui-sans-serif", "sans-serif"],
       },
       boxShadow: {
-        rl_soft: "0 12px 40px rgba(0,0,0,0.28)",
-        rl_sheet: "0 0 0 1px rgb(var(--rl-border) / 0.6), -24px 0 48px rgba(0,0,0,0.35)",
+        rl_soft: "0 16px 48px rgba(0,0,0,0.45)",
+        rl_sheet: "0 0 0 1px rgb(var(--rl-border) / 0.7), -20px 0 48px rgba(0,0,0,0.4)",
       },
       maxWidth: {
         shell: "1280px",
@@ -52,6 +45,9 @@ export default {
       },
       transitionDuration: {
         rl: "160ms",
+      },
+      fontSize: {
+        "page-title": ["2rem", { lineHeight: "1.15", letterSpacing: "-0.03em", fontWeight: "700" }],
       },
     },
   },

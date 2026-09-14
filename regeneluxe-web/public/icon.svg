@@ -1,0 +1,12 @@
+<!--
+  ReGeneLuxe mark — geometric R monogram.
+  Default: black R on transparent (for light chrome / generic use).
+  White-on-black: see icon-dark.svg. Black-on-white: see icon-light.svg.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" role="img" aria-label="ReGeneLuxe">
+  <path
+    fill="#0c0e12"
+    fill-rule="evenodd"
+    d="M8 6h11.5c3.2 0 5.5 2.2 5.5 5.1 0 2.3-1.3 4.1-3.4 4.8L26 26h-4.2l-4.2-9.2H12V26H8V6zm4 3.2v7.2h7.1c1.7 0 2.8-1.1 2.8-2.7s-1.1-2.7-2.8-2.7H12z"
+  />
+</svg>

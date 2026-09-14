@@ -33,7 +33,7 @@ export default function ConfirmDialog({
     >
       <button type="button" className="absolute inset-0 cursor-default" aria-label="Dismiss" onClick={onCancel} />
       <div className="relative w-full max-w-md rounded-2xl border border-rl_border bg-rl_surface p-6 shadow-rl_soft">
-        <h2 id="confirm-title" className="font-display text-xl tracking-tight text-rl_text">
+        <h2 id="confirm-title" className="font-display text-xl font-semibold tracking-tight text-rl_text">
           {title}
         </h2>
         {body && <p className="mt-2 text-sm text-rl_muted">{body}</p>}

@@ -4,116 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import BrandTitle from "../BrandTitle.jsx";
+import { NavIcon } from "./Icon.jsx";
 import { useAppData } from "../../hooks/useAppData.js";
 import { setWorkingAccountId, accountOptionLabel } from "../../data/workingContext.js";
 import { getSidebarCollapsed, setSidebarCollapsed } from "../../data/uiPrefs.js";
 import { getRuntimeStatus } from "../../data/runtimeClient.js";
 
 /**
- * Native App Router shell — used by WorkspaceProviders.
- * Vitest screen harness still uses AppShell.jsx + react-router.
+ * Native App Router shell — structure preserved; visual language refreshed.
  */
-
-function NavGlyph({ name }) {
-  const common = {
-    width: 16,
-    height: 16,
-    viewBox: "0 0 16 16",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.5,
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    "aria-hidden": true,
-    className: "shrink-0 opacity-80",
-  };
-
-  switch (name) {
-    case "dash":
-      return (
-        <svg {...common}>
-          <rect x="2.5" y="2.5" width="4.5" height="4.5" rx="0.75" />
-          <rect x="9" y="2.5" width="4.5" height="4.5" rx="0.75" />
-          <rect x="2.5" y="9" width="4.5" height="4.5" rx="0.75" />
-          <rect x="9" y="9" width="4.5" height="4.5" rx="0.75" />
-        </svg>
-      );
-    case "cal":
-      return (
-        <svg {...common}>
-          <rect x="2.5" y="3.5" width="11" height="10" rx="1" />
-          <path d="M2.5 6.5h11M5.5 2.5v2M10.5 2.5v2" />
-        </svg>
-      );
-    case "content":
-      return (
-        <svg {...common}>
-          <path d="M3.5 3.5h9v9h-9z" />
-          <path d="M5.5 6.5h5M5.5 9h3.5" />
-        </svg>
-      );
-    case "camp":
-      return (
-        <svg {...common}>
-          <path d="M3 12.5 8 3.5l5 9H3z" />
-        </svg>
-      );
-    case "inbox":
-      return (
-        <svg {...common}>
-          <path d="M2.5 4.5h11v7h-11z" />
-          <path d="M2.5 9.5h3l1.25 1.5h2.5L10.5 9.5h3" />
-        </svg>
-      );
-    case "analytics":
-      return (
-        <svg {...common}>
-          <path d="M3 12.5V8.5M6.5 12.5V5.5M10 12.5V7.5M13.5 12.5V3.5" />
-        </svg>
-      );
-    case "accounts":
-      return (
-        <svg {...common}>
-          <circle cx="8" cy="5.5" r="2.25" />
-          <path d="M3.5 13c.75-2.5 2.5-3.75 4.5-3.75S11.75 10.5 12.5 13" />
-        </svg>
-      );
-    case "queue":
-      return (
-        <svg {...common}>
-          <path d="M3.5 4.5h9M3.5 8h9M3.5 11.5h6" />
-        </svg>
-      );
-    case "search":
-      return (
-        <svg {...common}>
-          <circle cx="7" cy="7" r="3.25" />
-          <path d="M9.5 9.5 13 13" />
-        </svg>
-      );
-    case "settings":
-      return (
-        <svg {...common}>
-          <circle cx="8" cy="8" r="2.25" />
-          <path d="M8 2.5v1.5M8 12v1.5M2.5 8H4M12 8h1.5M4.2 4.2l1.1 1.1M10.7 10.7l1.1 1.1M11.8 4.2l-1.1 1.1M5.3 10.7l-1.1 1.1" />
-        </svg>
-      );
-    case "expand":
-      return (
-        <svg {...common}>
-          <path d="M6 3.5 10.5 8 6 12.5" />
-        </svg>
-      );
-    case "collapse":
-      return (
-        <svg {...common}>
-          <path d="M10 3.5 5.5 8 10 12.5" />
-        </svg>
-      );
-    default:
-      return <span className="w-4 text-center text-[10px] uppercase tracking-wide opacity-80" aria-hidden>{name.slice(0, 2)}</span>;
-  }
-}
 
 const LINKS = [
   { to: "/", label: "Dashboard", end: true, icon: "dash" },
@@ -132,10 +31,10 @@ function linkActive(pathname, to, end) {
 
 function navClass(isActive, collapsed, extra = "") {
   return [
-    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-rl",
+    "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium tracking-tight transition-colors duration-rl",
     collapsed ? "justify-center" : "",
     isActive
-      ? "bg-rl_surfaceActive text-rl_text"
+      ? "bg-rl_surfaceActive text-rl_text shadow-[inset_3px_0_0_0_rgb(var(--rl-accent))]"
       : "text-rl_muted hover:bg-rl_surfaceHover hover:text-rl_text",
     extra,
   ]
@@ -183,7 +82,7 @@ export default function AppShellNext({ children, onOpenCommand }) {
         <div className={`flex items-center gap-2 border-b border-rl_border px-3 py-4 ${collapsed ? "justify-center" : ""}`}>
           <Link href="/" className="min-w-0 truncate" title="ReGeneLuxe">
             {collapsed ? (
-              <span className="font-display text-lg text-rl_accent">R</span>
+              <span className="font-display text-xl font-bold tracking-tight text-rl_text" aria-label="ReGeneLuxe">R</span>
             ) : (
               <BrandTitle variant="header" />
             )}
@@ -196,8 +95,14 @@ export default function AppShellNext({ children, onOpenCommand }) {
             className={`rl-btn w-full ${collapsed ? "px-0" : ""}`}
             onClick={() => router.push("/content/new")}
             title="Create"
+            aria-label="Create"
           >
-            {collapsed ? "+" : "+ Create"}
+            {collapsed ? <NavIcon name="create" size={20} /> : (
+              <>
+                <NavIcon name="create" size={18} />
+                Create
+              </>
+            )}
           </button>
         </div>
 
@@ -236,11 +141,8 @@ export default function AppShellNext({ children, onOpenCommand }) {
                 aria-current={isActive ? "page" : undefined}
                 className={navClass(isActive, collapsed)}
               >
-                <NavGlyph name={link.icon} />
-                {!collapsed && <span className="font-medium tracking-tight">{link.label}</span>}
-                {!collapsed && isActive && (
-                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-rl_accent" aria-hidden />
-                )}
+                <NavIcon name={link.icon} size={20} className={isActive ? "text-rl_text" : "text-current"} />
+                {!collapsed && <span>{link.label}</span>}
               </Link>
             );
           })}
@@ -254,17 +156,17 @@ export default function AppShellNext({ children, onOpenCommand }) {
             aria-current={linkActive(pathname, "/queue") ? "page" : undefined}
             className={navClass(linkActive(pathname, "/queue"), collapsed, "py-2")}
           >
-            <NavGlyph name="queue" />
+            <NavIcon name="queue" size={20} />
             {!collapsed && <span>Queue</span>}
           </Link>
           <button
             type="button"
-            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-rl_muted hover:bg-rl_surfaceHover hover:text-rl_text ${collapsed ? "justify-center" : ""}`}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-rl_muted transition-colors duration-rl hover:bg-rl_surfaceHover hover:text-rl_text ${collapsed ? "justify-center" : ""}`}
             onClick={onOpenCommand}
             title="Search (⌘K)"
             aria-label="Search"
           >
-            <NavGlyph name="search" />
+            <NavIcon name="search" size={20} />
             {!collapsed && <span>Search</span>}
           </button>
           <Link
@@ -274,22 +176,22 @@ export default function AppShellNext({ children, onOpenCommand }) {
             aria-current={linkActive(pathname, "/settings") ? "page" : undefined}
             className={navClass(linkActive(pathname, "/settings"), collapsed, "py-2")}
           >
-            <NavGlyph name="settings" />
+            <NavIcon name="settings" size={20} />
             {!collapsed && <span>Settings</span>}
           </Link>
           <button
             type="button"
-            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs text-rl_muted hover:text-rl_text ${collapsed ? "justify-center" : ""}`}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium text-rl_muted transition-colors duration-rl hover:bg-rl_surfaceHover hover:text-rl_text ${collapsed ? "justify-center" : ""}`}
             onClick={toggleCollapsed}
             aria-pressed={collapsed}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <NavGlyph name={collapsed ? "expand" : "collapse"} />
+            <NavIcon name={collapsed ? "expand" : "collapse"} size={20} />
             {!collapsed && (
               <span className="flex w-full items-center justify-between">
                 <span>Collapse</span>
-                <span className="text-[10px] uppercase tracking-[0.14em]">{runtimeLabel}</span>
+                <span className="text-[10px] uppercase tracking-[0.14em] text-rl_muted">{runtimeLabel}</span>
               </span>
             )}
           </button>
@@ -300,8 +202,13 @@ export default function AppShellNext({ children, onOpenCommand }) {
         <div className="flex items-center justify-between gap-2 px-3 py-3">
           <Link href="/"><BrandTitle variant="header" /></Link>
           <div className="flex items-center gap-2">
-            <button type="button" className="rl-btn-ghost px-3 py-1.5" onClick={onOpenCommand} aria-label="Search">Search</button>
-            <button type="button" className="rl-btn px-3 py-1.5" onClick={() => router.push("/content/new")}>+ Create</button>
+            <button type="button" className="rl-btn-icon" onClick={onOpenCommand} aria-label="Search">
+              <NavIcon name="search" size={18} />
+            </button>
+            <button type="button" className="rl-btn px-3 py-2" onClick={() => router.push("/content/new")} aria-label="Create">
+              <NavIcon name="create" size={16} />
+              Create
+            </button>
           </div>
         </div>
         {accounts.length > 0 && (
@@ -330,18 +237,18 @@ export default function AppShellNext({ children, onOpenCommand }) {
               <Link
                 key={link.to}
                 href={link.to}
-                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] ${
-                  isActive ? "bg-rl_accent text-rl_bg" : "text-rl_muted"
+                className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors duration-rl ${
+                  isActive ? "bg-rl_accent text-rl_bg" : "text-rl_muted hover:text-rl_text"
                 }`}
               >
                 {link.label}
               </Link>
             );
           })}
-          <Link href="/queue" className="whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-rl_muted">
+          <Link href="/queue" className="whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-rl_muted">
             Queue
           </Link>
-          <Link href="/settings" className="whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-rl_muted">
+          <Link href="/settings" className="whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-rl_muted">
             Settings
           </Link>
         </nav>

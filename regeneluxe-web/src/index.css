@@ -2,62 +2,100 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Semantic color rails — temporary cool neutrals.
+  Final brand accent palette is NOT chosen here; swap --accent-* centrally later.
+*/
+
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  /* Surfaces */
-  --rl-bg: 16 15 14;
-  --rl-surface: 24 22 20;
-  --rl-surface-raised: 32 29 26;
-  --rl-surface-soft: 38 34 30;
-  --rl-surface-hover: 44 39 34;
-  --rl-surface-active: 52 46 40;
-  /* Borders & text */
-  --rl-border: 52 46 40;
-  --rl-border-strong: 72 64 55;
-  --rl-text: 244 238 230;
-  --rl-text-secondary: 196 180 160;
-  --rl-muted: 148 132 114;
-  /* Accent & status */
-  --rl-accent: 203 173 141;
-  --rl-accent-hover: 218 190 158;
-  --rl-danger: 196 92 74;
-  --rl-ok: 111 158 122;
-  --rl-warning: 196 148 74;
-  --rl-info: 120 148 168;
-  --rl-focus: 203 173 141;
-  /* Legacy aliases */
-  --accent: #CBAD8D;
-  --accent-soft: rgba(203, 173, 141, 0.16);
-  --success: #6F9E7A;
-  --error: #C45C4A;
-  /* Layout */
+
+  /* Semantic roles */
+  --bg-app: 12 14 18;
+  --bg-surface: 18 21 27;
+  --bg-surface-raised: 24 28 36;
+  --bg-hover: 32 38 48;
+  --bg-selected: 40 48 62;
+
+  --border-subtle: 36 42 54;
+  --border-default: 48 56 72;
+  --border-strong: 72 82 102;
+
+  --text-primary: 244 246 250;
+  --text-secondary: 176 186 204;
+  --text-muted: 120 132 154;
+  --text-inverse: 10 12 16;
+
+  /* Temporary high-contrast accent (palette-ready — replace later) */
+  --accent-primary: 232 236 244;
+  --accent-primary-hover: 255 255 255;
+  --accent-secondary: 148 160 184;
+  --accent-soft: 232 236 244;
+
+  --success: 92 186 140;
+  --warning: 220 170 80;
+  --danger: 232 96 96;
+  --info: 110 160 220;
+  --focus-ring: 232 236 244;
+
+  /* Compat aliases used by Tailwind rl_* classes */
+  --rl-bg: var(--bg-app);
+  --rl-surface: var(--bg-surface);
+  --rl-surface-raised: var(--bg-surface-raised);
+  --rl-surface-soft: var(--bg-hover);
+  --rl-surface-hover: var(--bg-hover);
+  --rl-surface-active: var(--bg-selected);
+  --rl-border: var(--border-default);
+  --rl-border-strong: var(--border-strong);
+  --rl-text: var(--text-primary);
+  --rl-text-secondary: var(--text-secondary);
+  --rl-muted: var(--text-muted);
+  --rl-accent: var(--accent-primary);
+  --rl-accent-hover: var(--accent-primary-hover);
+  --rl-danger: var(--danger);
+  --rl-ok: var(--success);
+  --rl-warning: var(--warning);
+  --rl-info: var(--info);
+  --rl-focus: var(--focus-ring);
+
+  --accent: rgb(var(--accent-primary));
+  --accent-soft: rgb(var(--accent-soft) / 0.14);
+  --success-hex: rgb(var(--success));
+  --error: rgb(var(--danger));
+
   --rl-sidebar: 15rem;
   --rl-sidebar-collapsed: 4.25rem;
   --rl-radius: 0.75rem;
   --rl-radius-pill: 9999px;
+  --rl-motion: 160ms;
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --rl-bg: 243 237 228;
-  --rl-surface: 255 252 247;
-  --rl-surface-raised: 255 255 255;
-  --rl-surface-soft: 237 228 214;
-  --rl-surface-hover: 232 222 206;
-  --rl-surface-active: 224 212 194;
-  --rl-border: 212 196 174;
-  --rl-border-strong: 180 160 132;
-  --rl-text: 28 25 22;
-  --rl-text-secondary: 72 64 55;
-  --rl-muted: 110 98 86;
-  --rl-accent: 138 109 75;
-  --rl-accent-hover: 112 88 58;
-  --rl-danger: 169 68 56;
-  --rl-ok: 63 111 76;
-  --rl-warning: 150 108 40;
-  --rl-info: 70 100 120;
-  --rl-focus: 138 109 75;
+  --bg-app: 244 246 250;
+  --bg-surface: 255 255 255;
+  --bg-surface-raised: 255 255 255;
+  --bg-hover: 232 236 244;
+  --bg-selected: 220 226 238;
+  --border-subtle: 220 226 236;
+  --border-default: 200 208 222;
+  --border-strong: 148 160 184;
+  --text-primary: 12 14 18;
+  --text-secondary: 48 56 72;
+  --text-muted: 96 108 132;
+  --text-inverse: 255 255 255;
+  --accent-primary: 18 22 30;
+  --accent-primary-hover: 0 0 0;
+  --accent-secondary: 72 82 102;
+  --accent-soft: 18 22 30;
+  --success: 40 140 96;
+  --warning: 180 130 40;
+  --danger: 190 56 56;
+  --info: 56 110 180;
+  --focus-ring: 18 22 30;
+  --accent: rgb(var(--accent-primary));
+  --accent-soft: rgb(var(--accent-soft) / 0.1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -78,9 +116,46 @@ body {
   @apply min-h-screen;
 }
 
+/* Typography roles */
+.rl-display {
+  @apply font-display text-4xl font-bold tracking-tight text-rl_text;
+}
+
+.rl-page-title {
+  @apply font-display text-3xl font-bold tracking-tight text-rl_text sm:text-[2rem];
+}
+
+.rl-section-title {
+  @apply font-display text-base font-semibold tracking-tight text-rl_text;
+}
+
+.rl-card-title {
+  @apply font-sans text-sm font-semibold tracking-tight text-rl_text;
+}
+
+.rl-body {
+  @apply font-sans text-sm font-normal text-rl_text;
+}
+
+.rl-body-sm {
+  @apply font-sans text-xs font-normal text-rl_muted;
+}
+
+.rl-label {
+  @apply font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-rl_muted;
+}
+
+.rl-meta {
+  @apply font-sans text-xs text-rl_muted;
+}
+
+.rl-metric {
+  @apply font-display text-2xl font-bold tabular-nums tracking-tight text-rl_text;
+}
+
 .field-select,
 .rl-input {
-  @apply w-full rounded-lg border border-rl_border bg-rl_bg px-3 py-2 text-sm text-rl_text placeholder:text-rl_muted/60 focus:border-rl_accent focus:outline-none focus:ring-1 focus:ring-rl_accent/60;
+  @apply w-full rounded-lg border border-rl_border bg-rl_bg px-3 py-2 text-sm text-rl_text placeholder:text-rl_muted/60 transition-[border-color,box-shadow] duration-rl focus:border-rl_accent focus:outline-none focus:ring-2 focus:ring-rl_accent/35;
 }
 
 .rl-panel {
@@ -92,11 +167,11 @@ body {
 }
 
 .rl-btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-full bg-rl_accent px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-rl_bg transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/50;
+  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-rl_accent px-4 py-2.5 text-sm font-semibold tracking-tight text-rl_bg transition-[opacity,transform,background-color] duration-rl hover:bg-rl_accentHover active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/50;
 }
 
 .rl-press {
-  @apply transition-transform duration-150 active:scale-[0.98];
+  @apply transition-transform duration-rl active:scale-[0.98];
 }
 
 @keyframes rl-fade-in {
@@ -105,31 +180,19 @@ body {
 }
 
 .rl-fade-in {
-  animation: rl-fade-in 160ms ease-out;
+  animation: rl-fade-in var(--rl-motion) ease-out;
 }
 
 .rl-btn-ghost {
-  @apply inline-flex items-center justify-center gap-2 rounded-full border border-rl_border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-rl_muted transition-colors hover:border-rl_borderStrong hover:text-rl_text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/40;
+  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-rl_border px-4 py-2.5 text-sm font-semibold tracking-tight text-rl_textSecondary transition-colors duration-rl hover:border-rl_borderStrong hover:bg-rl_surfaceHover hover:text-rl_text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/40;
 }
 
 .rl-btn-danger {
-  @apply inline-flex items-center justify-center gap-2 rounded-full bg-rl_danger px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-rl_bg transition-opacity hover:opacity-90;
+  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-rl_danger px-4 py-2.5 text-sm font-semibold tracking-tight text-white transition-opacity duration-rl hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_danger/50;
 }
 
 .rl-btn-icon {
-  @apply inline-flex h-9 w-9 items-center justify-center rounded-full border border-rl_border text-rl_muted transition-colors hover:border-rl_borderStrong hover:text-rl_text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/40;
-}
-
-.rl-label {
-  @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-rl_muted;
-}
-
-.rl-meta {
-  @apply text-xs text-rl_muted;
-}
-
-.rl-section-title {
-  @apply text-sm font-semibold tracking-tight text-rl_text;
+  @apply inline-flex h-10 w-10 items-center justify-center rounded-lg border border-rl_border text-rl_textSecondary transition-colors duration-rl hover:border-rl_borderStrong hover:bg-rl_surfaceHover hover:text-rl_text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/40;
 }
 
 @keyframes rl-sheet-in {
@@ -158,4 +221,3 @@ body {
     transform: none;
   }
 }
-

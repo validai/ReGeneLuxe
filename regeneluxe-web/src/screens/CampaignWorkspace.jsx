@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useAppNavigate as useNavigate, useAppParams as useParams, useAppSearchParams as useSearchParams } from "@/nav";
 import Tabs from "../components/app/Tabs.jsx";
 import ErrorState from "../components/app/ErrorState.jsx";
+import Icon from "../components/app/Icon.jsx";
 import { useAppData } from "../hooks/useAppData.js";
 import { getActiveCampaignId, setActiveCampaignId, setCampaignActive, updateCampaign } from "../data/campaignRepository.js";
 import { campaignCompleteness } from "../data/campaignContext.js";
@@ -69,8 +70,13 @@ export default function CampaignWorkspace() {
 
   return (
     <div className="mx-auto max-w-workspace space-y-6 px-4 py-8 sm:px-6">
-      <button type="button" onClick={() => navigate("/campaigns")} className="text-xs uppercase tracking-[0.14em] text-rl_muted hover:text-rl_text">
-        ← Campaigns
+      <button
+        type="button"
+        onClick={() => navigate("/campaigns")}
+        className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.14em] text-rl_muted hover:text-rl_text"
+      >
+        <Icon name="back" size="sm" />
+        Campaigns
       </button>
 
       <header className="flex flex-col gap-4 border-b border-rl_border pb-5 lg:flex-row lg:items-start lg:justify-between">

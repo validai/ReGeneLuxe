@@ -2,7 +2,7 @@ export default function MetricCard({ label, value, delta }) {
   if (value == null || value === "") return null;
 
   const deltaText = typeof delta === "number"
-    ? `${delta > 0 ? "↑" : delta < 0 ? "↓" : "→"} ${Math.abs(Math.round(delta))}%`
+    ? `${delta > 0 ? "+" : delta < 0 ? "-" : ""}${Math.abs(Math.round(delta))}%`
     : delta;
 
   return (

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import Icon from "./Icon.jsx";
 
 export default function SideSheet({
   open,
@@ -75,11 +76,11 @@ export default function SideSheet({
       >
         <header className="flex items-start justify-between gap-3 border-b border-rl_border px-5 py-4">
           <div>
-            {title && <h2 className="font-display text-xl tracking-tight text-rl_text">{title}</h2>}
+            {title && <h2 className="font-display text-xl font-semibold tracking-tight text-rl_text">{title}</h2>}
             {subtitle && <p className="mt-1 text-sm text-rl_muted">{subtitle}</p>}
           </div>
           <button type="button" className="rl-btn-icon" onClick={onClose} aria-label="Close">
-            ✕
+            <Icon name="close" size="md" />
           </button>
         </header>
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
