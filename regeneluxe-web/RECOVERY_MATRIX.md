@@ -1,32 +1,21 @@
-# Recovery matrix — final (native App Router peel)
+# Recovery matrix — Data Rails 105–120 COMPLETE
 
 ## Stack A — UI/UX 65–84: COMPLETE
+## Stack B — Modern Rails cutover + native App Router peel: COMPLETE
+## Data Rails 105–120: COMPLETE
 
-## Stack B — Modern Rails 85–104: COMPLETE (cutover)
+Canonical: `http://127.0.0.1:5174/` (`framework: next`)
 
-## Native App Router peel: COMPLETE
+| Area | Status |
+|------|--------|
+| Local SQLite (`.regeneluxe/local.db`) | COMPLETE |
+| Zod domain schemas | COMPLETE |
+| Repository + outbox + jobs | COMPLETE |
+| localStorage → SQLite migration | COMPLETE (idempotent) |
+| Optional Turso Cloud remote | COMPLETE (env-gated) |
+| App-level sync (not Embedded Replicas) | COMPLETE |
+| Date/time UTC + IANA | COMPLETE |
+| Settings data diagnostics | COMPLETE |
+| Secrets excluded from sync | COMPLETE |
 
-Canonical Next.js at `http://127.0.0.1:5174/`. See `ROUTE_PARITY.md`.
-
-| Sprint | Status |
-|--------|--------|
-| 85–100 | COMPLETE |
-| 101 Old stack removal | COMPLETE for product path — Vite kept only as Vitest dependency |
-| 102 Cutover | COMPLETE |
-| 103 UI regression | COMPLETE against Next :5174 |
-| 104 Final verification | COMPLETE |
-| Native peel | COMPLETE — SPA bridge removed; routes under `app/(workspace)/` |
-
-## Retired (do not use)
-
-- Port `3200` (old Next preview)
-- Port `5175` (Vite port hop)
-- Standalone `8787` as product API
-- `npm run dev:vite`
-- `ClientSpa` / `SpaBridge` / product `BrowserRouter`
-
-## Preserved
-
-- Browser `localStorage` operator data
-- `react-router-dom` for **Vitest** MemoryRouter harness only (`src/App.jsx`, `nav/vite.jsx`)
-- Vitest + Vite as **test** tooling only
+See `DATA_ARCHITECTURE.md`, `DATA_MIGRATION_PLAN.md`.

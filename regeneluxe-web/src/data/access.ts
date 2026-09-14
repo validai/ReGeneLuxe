@@ -1,13 +1,14 @@
 /**
- * Data access seam for upcoming repository-backed / synced storage.
+ * Data access seam for repository-backed / synced storage.
  *
- * Today the product reads and writes through `*Repository` modules and
- * `useAppData`, backed by browser localStorage (`storage.js`).
+ * Product path: UI repositories → localStorage mirror (sync UX) + dual-write to
+ * local SQLite via `/api/*` (`server/db`). Optional Turso Cloud via outbox sync.
  *
- * Do not call localStorage from screens. Keep repository APIs stable so a
- * future SQLite / cloud-synced backend can swap the implementation without
- * rewriting App Router pages.
+ * Backends:
+ * - `localStorage` — browser mirror / Vitest harness / rollback window
+ * - `sqlite` — durable local DB (`.regeneluxe/local.db`)
+ * - `memory` — in-process `:memory:` libSQL (`RL_DB_MODE=memory` / tests)
  */
-export const DATA_BACKEND = "localStorage" as const;
+export const DATA_BACKEND = "sqlite" as const;
 
-export type DataBackend = typeof DATA_BACKEND;
+export type DataBackend = "localStorage" | "sqlite" | "memory";

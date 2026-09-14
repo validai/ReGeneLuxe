@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { publicStatus } from "../../../server/secrets.js";
 import { runtimeIdentity, SERVICE_NAME, APP_NAME } from "../../../server/config.js";
+import { getDbHealth, initDb } from "../../../server/db/index.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,6 +9,17 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const status = publicStatus();
   const identity = runtimeIdentity(5174);
+  let db = null;
+  try {
+    await initDb();
+    db = await getDbHealth();
+  } catch (error) {
+    db = {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+      sync: { state: "ERROR", cloudConfigured: false, pendingOutbox: 0 },
+    };
+  }
   return NextResponse.json({
     ok: true,
     ...identity,
@@ -25,6 +37,12 @@ export async function GET() {
     provider: status.provider,
     connectedProviders: status.connectedProviders || [],
     socialConnectionError: false,
+    database: {
+      localHealthy: db?.ok !== false,
+      schemaVersion: db?.schemaVersion ?? null,
+      sync: db?.sync || null,
+      error: db?.error || db?.sync?.error || null,
+    },
     timestamp: new Date().toISOString(),
   });
 }

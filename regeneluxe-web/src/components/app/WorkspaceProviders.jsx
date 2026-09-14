@@ -8,19 +8,44 @@ import { ToastProvider } from "./ToastProvider.jsx";
 import ErrorBoundary from "../ErrorBoundary.jsx";
 import { useAppData } from "../../hooks/useAppData.js";
 import { applyTheme } from "../../data/settingsRepository.js";
+import {
+  bootstrapDurableStore,
+  getLastSyncStatus,
+  persistCollectionToSqlite,
+} from "../../data/durableBootstrap.js";
 
 /**
  * Native App Router chrome: shell, toasts, theme, command palette, shortcuts.
- * Persists across client navigations via the (workspace) layout.
+ * Boots local SQLite migration/dual-write without blocking first paint.
  */
 export default function WorkspaceProviders({ children }) {
   const { settings } = useAppData();
   const [commandOpen, setCommandOpen] = useState(false);
+  const [syncBanner, setSyncBanner] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
     applyTheme(settings.theme);
   }, [settings.theme]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.__rlPersistCollection = persistCollectionToSqlite;
+    }
+    let cancelled = false;
+    bootstrapDurableStore().then((result) => {
+      if (cancelled) return;
+      const sync = result?.sync || getLastSyncStatus();
+      if (sync && sync.cloudConfigured && (sync.state === "PENDING" || sync.pendingOutbox > 0)) {
+        setSyncBanner("Cloud sync pending");
+      } else if (sync && sync.cloudConfigured && (sync.state === "ERROR" || sync.state === "Offline")) {
+        setSyncBanner("Cloud sync offline — working locally");
+      } else {
+        setSyncBanner(null);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let goPending = false;
@@ -99,6 +124,14 @@ export default function WorkspaceProviders({ children }) {
     <ErrorBoundary>
       <ToastProvider>
         <div className="min-h-screen bg-rl_bg text-rl_text">
+          {syncBanner ? (
+            <div
+              className="border-b border-rl_border bg-rl_surface px-4 py-1.5 text-center text-[11px] uppercase tracking-[0.14em] text-rl_muted"
+              role="status"
+            >
+              {syncBanner}
+            </div>
+          ) : null}
           <AppShellNext onOpenCommand={() => setCommandOpen(true)}>
             {children}
           </AppShellNext>

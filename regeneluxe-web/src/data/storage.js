@@ -67,6 +67,14 @@ export function writeJson(key, value) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
     notify();
+    try {
+      // Lazy import avoided — circular risk; call via global hook set by durableBootstrap
+      if (typeof window !== "undefined" && typeof window.__rlPersistCollection === "function") {
+        window.__rlPersistCollection(key, value);
+      }
+    } catch {
+      /* ignore durable mirror errors */
+    }
     return true;
   } catch (error) {
     console.error("[storage] writeJson failed", key, error);
@@ -93,6 +101,13 @@ export function writeString(key, value) {
       window.localStorage.setItem(key, value);
     }
     notify();
+    try {
+      if (typeof window !== "undefined" && typeof window.__rlPersistCollection === "function") {
+        window.__rlPersistCollection(key, value);
+      }
+    } catch {
+      /* ignore */
+    }
     return true;
   } catch (error) {
     console.error("[storage] writeString failed", key, error);

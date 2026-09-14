@@ -1,9 +1,10 @@
-# Modern Rails — native App Router
+# Modern Rails + Data Rails
 
 **Canonical:** Next.js on `http://127.0.0.1:5174/`  
-**Health:** `framework: "next"`  
+**Health:** `framework: "next"` + `database` block  
 **SPA bridge:** removed  
-**Vite product runtime:** retired (Vitest may still use Vite + react-router for screen tests)
+**Durable store:** local SQLite (`.regeneluxe/local.db`) + optional Turso Cloud  
+See `DATA_ARCHITECTURE.md` and `DATA_MIGRATION_PLAN.md`.
 
 ## Commands
 
@@ -17,10 +18,3 @@
 | `npm test` | vitest |
 
 Do not verify against `:3200`, `:5175`, or a standalone `:8787`.
-
-## Architecture
-
-- Native routes under `app/(workspace)/` — see `ROUTE_PARITY.md`
-- Persistent shell via `WorkspaceProviders` + `AppShellNext`
-- Same-origin `/api/*` Route Handlers
-- Client data seam: `src/data/access.ts` + repositories / `useAppData` (localStorage today)

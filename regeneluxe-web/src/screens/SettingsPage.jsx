@@ -11,6 +11,7 @@ import { AI_MODES, AI_MODE_LABELS } from "../data/domain.js";
 import { updateSettings, resetAllLocalData } from "../data/settingsRepository.js";
 import { downloadBackupFile, importBackup, validateBackup } from "../data/backupService.js";
 import { getRuntimeStatus, getRuntimeHealth, saveRuntimeSecret } from "../data/runtimeClient.js";
+import { fetchDbHealth } from "../data/durableBootstrap.js";
 
 const THEMES = [
   { id: "dark", label: "Dark" },
@@ -36,13 +37,16 @@ export default function SettingsPage() {
   const [apiKey, setApiKey] = useState("");
   const [runtimeNote, setRuntimeNote] = useState("");
 
+  const [dbHealth, setDbHealth] = useState(null);
+
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getRuntimeStatus(), getRuntimeHealth()])
-      .then(([status, nextHealth]) => {
+    Promise.all([getRuntimeStatus(), getRuntimeHealth(), fetchDbHealth()])
+      .then(([status, nextHealth, nextDb]) => {
         if (cancelled) return;
         setRuntime(status);
         setHealth(nextHealth);
+        setDbHealth(nextDb);
       })
       .finally(() => {
         if (!cancelled) setRuntimeLoading(false);
@@ -95,7 +99,7 @@ export default function SettingsPage() {
     <PageShell width="narrow" className="space-y-8">
       <PageHeader
         title="Settings"
-        description="Local data only. Nothing is synced or billed."
+        description="Local-first durable store. Cloud sync is optional and never required to work."
       />
 
       <section className="rl-panel space-y-3 p-5">
@@ -191,12 +195,41 @@ export default function SettingsPage() {
       </section>
 
       <section className="rl-panel space-y-3 p-5">
-        <h2 className="text-sm font-semibold text-rl_text">Storage</h2>
+        <h2 className="text-sm font-semibold text-rl_text">Data &amp; sync</h2>
         <p className="text-sm text-rl_muted">
           Schema version {SCHEMA_VERSION}. {campaigns.length} campaigns, {accounts.length} accounts.
         </p>
+        <ul className="space-y-2 text-sm text-rl_muted">
+          <li>
+            Local database ·{" "}
+            {dbHealth?.ok === false || dbHealth?.local?.healthy === false
+              ? `Error${dbHealth?.local?.error || dbHealth?.error ? ` — ${dbHealth.local?.error || dbHealth.error}` : ""}`
+              : "Healthy"}
+          </li>
+          <li>
+            Cloud sync ·{" "}
+            {(() => {
+              const sync = dbHealth?.sync;
+              if (!sync?.cloudConfigured) return "Not configured (local-only)";
+              if (sync.state === "SYNCED") return "Synced";
+              if (sync.state === "PENDING" || sync.pendingOutbox > 0) return "Pending";
+              if (sync.state === "ERROR") return "Error";
+              return sync.state || "Offline";
+            })()}
+          </li>
+          <li>
+            Last sync ·{" "}
+            {dbHealth?.sync?.lastSyncAt
+              ? new Date(dbHealth.sync.lastSyncAt).toLocaleString()
+              : "—"}
+          </li>
+          <li>
+            Pending operations · {dbHealth?.sync?.pendingOutbox ?? 0}
+          </li>
+        </ul>
         <p className="text-xs text-rl_muted">
-          Data lives in this browser&apos;s localStorage.
+          Operator data is durably stored in local SQLite. Browser localStorage remains as a rollback window after migration.
+          API keys and OAuth tokens stay on the local runtime only and are never synced.
         </p>
       </section>
 

@@ -46,8 +46,8 @@ describe("native App Router peel", () => {
     expect(index).not.toContain("./vite.jsx");
   });
 
-  it("preserves the localStorage data backend seam for now", () => {
-    expect(DATA_BACKEND).toBe("localStorage");
+  it("declares sqlite as the durable data backend", () => {
+    expect(DATA_BACKEND).toBe("sqlite");
   });
 
   it("keeps same-origin API route handlers", () => {
