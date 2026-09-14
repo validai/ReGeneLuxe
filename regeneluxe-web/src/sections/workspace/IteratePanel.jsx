@@ -42,7 +42,7 @@ export default function IteratePanel({ campaign, onSaved }) {
         </FormField>
       ))}
       <div className="flex items-center gap-3">
-        <button type="submit" className="rounded-full bg-rl_accent px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-rl_bg">
+        <button type="submit" className="rounded-full bg-rl_accent px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white">
           Save lessons
         </button>
         {saved && <p className="text-xs text-rl_ok">Saved.</p>}

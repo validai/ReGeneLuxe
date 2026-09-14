@@ -4,7 +4,7 @@ export default function NextBestAction({ title = "Next", message, href, actionLa
   if (!message) return null;
 
   return (
-    <section className="rounded-xl border border-rl_accent/30 bg-rl_accent/5 px-5 py-5">
+    <section className="rl-intel rounded-xl border border-rl_accent/25 px-5 py-5">
       <p className="rl-label text-rl_accent">{title}</p>
       <p className="mt-2 max-w-2xl text-lg font-semibold tracking-tight text-rl_text sm:text-xl">
         {message}

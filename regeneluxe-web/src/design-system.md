@@ -1,72 +1,39 @@
 # ReGeneLuxe design system inventory
 
-Canonical language for the app shell. Do not invent page-specific colors or button styles.
+Canonical language for the app shell. Do not invent page-specific colors.
 
-## Semantic tokens (`src/index.css` + `tailwind.config.js`)
+## Electric Intelligence (FINAL palette)
 
-Cool-neutral scale (no tan). Dark is authoritative; light remaps via `[data-theme="light"]`.
+Dark is authoritative. Light = Normal mode (same accents, light graphite surfaces).
 
-| Token | Role |
-|-------|------|
-| `rl_bg` / `--rl-bg` | Application background (level 0) |
-| `rl_surface` | Primary workspace (level 1) |
-| `rl_surfaceRaised` | Raised panels/controls (level 2) |
-| `rl_surfaceHover` / `rl_surfaceActive` | Hover / selected (level 3) |
-| `rl_border` / `rl_borderStrong` | Dividers |
-| `rl_text` / `rl_textSecondary` / `rl_muted` | Text hierarchy |
-| `rl_accent` / `rl_accentHover` | Primary action, active nav inset bar, focus |
-| `rl_ok` / `rl_warning` / `rl_danger` / `rl_info` | Status |
-| `rl_focus` | Focus ring |
+| Role | Hex | Token |
+|------|-----|-------|
+| App background | `#090B10` | `--bg-app` / `rl_bg` |
+| Primary surface | `#141821` | `--bg-surface` / `rl_surface` |
+| Primary accent | `#6C63FF` | `--accent-primary` / `rl_accent` |
+| Secondary accent | `#36C5FF` | `--accent-secondary` / `rl_accentSecondary` / `rl_info` |
+| Primary text | `#F7F9FC` | `--text-primary` / `rl_text` |
+| Secondary text | `#A7B0C0` | `--text-secondary` / `rl_textSecondary` |
+| Success | `#22D3A7` | `--success` / `rl_ok` |
+| Warning | `#FBBF24` | `--warning` / `rl_warning` |
+| Error | `#F87171` | `--danger` / `rl_danger` |
+
+Derived: `--bg-surface-raised`, `--bg-hover`, `--bg-selected`, borders, accent hover/pressed, chart-1…4.
+
+**Rules:** Indigo = action/intelligence/selection. Cyan = analytics/info. Status colors = state only. Favicon + wordmark stay **monochrome**.
 
 ## Typography
 
-| Role | Implementation |
-|------|----------------|
-| Display / page title | `font-display` — Space Grotesk (`font-semibold tracking-tight`) |
-| Body / UI | `font-sans` — Geist Sans |
-| Section / label | `.rl-label` |
-| Meta | `.rl-meta` |
-| Section title | `.rl-section-title` |
-
-Loaded in `app/layout.tsx` via `next/font` (Space_Grotesk) + `geist/font/sans`.
+Space Grotesk (`font-display`) · Geist Sans (`font-sans`) via `app/layout.tsx`.
 
 ## Icons
 
-Phosphor Icons **bold**, monochrome (`currentColor`) via `src/components/app/Icon.jsx` / `NavIcon`. Prefer icons over Unicode glyphs in chrome (close, back, nav).
+Phosphor **fill** (nav) / **bold** (actions), monochrome `currentColor` via `Icon.jsx`.
 
-## Mark / favicon
+## Buttons
 
-Geometric **R** monogram (thick stem + top/mid crossbars). Assets: `public/icon.svg`, `icon-light.svg`, `icon-dark.svg`; Next `app/icon.tsx` + `app/apple-icon.tsx`; `public/site.webmanifest`.
+`.rl-btn` primary indigo · `.rl-btn-secondary` · `.rl-btn-ghost` · `.rl-btn-danger` · `.rl-btn-icon`
 
-## Buttons (CSS utilities — no per-page variants)
+## Shared components
 
-- `.rl-btn` — primary (rare)
-- `.rl-btn-ghost` — secondary
-- `.rl-btn-danger` — destructive
-- `.rl-btn-icon` — icon-only
-
-## Shared components (`src/components/app/`)
-
-| Component | Use |
-|-----------|-----|
-| `AppShell` / `AppShellNext` | Global nav, Create, account, collapse |
-| `PageShell` / `PageHeader` | Page frame |
-| `FilterBar` | Shared filters + clear |
-| `SegmentedControl` / `Tabs` | View switching |
-| `StatusBadge` | Content/campaign/connection states |
-| `SideSheet` | Quick inspect/edit |
-| `ConfirmDialog` | Destructive/critical confirm |
-| `ToastProvider` / `useToast` | Transient feedback |
-| `EmptyState` / `ErrorState` / `Skeleton` | Empty, error, loading |
-| `AttentionItem` / `NextBestAction` / `ApprovalSheet` | Operational attention |
-| `MetricCard` | Restrained metrics |
-| `CommandPalette` | ⌘K navigation |
-| `FormField` | Labeled inputs |
-
-## Page map
-
-Dashboard · Calendar · Content · Campaigns · Inbox · Analytics · Accounts (+ Queue, Settings secondary).
-
-## Accent discipline
-
-Neutral accent for primary action, active nav inset, selection, and key recommendations only — not every border or heading. Do not introduce a colorful accent palette.
+`AppShell(Next)`, `PageShell`, `PageHeader`, `EmptyState`, `NextBestAction` (`.rl-intel`), etc.

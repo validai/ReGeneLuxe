@@ -126,7 +126,7 @@ export default function AccountsPage() {
             type="button"
             onClick={() => setDraft({ ...draft, active: !draft.active })}
             className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${
-              draft.active ? "bg-rl_ok text-rl_bg" : "border border-rl_border text-rl_muted"
+              draft.active ? "bg-rl_ok text-white" : "border border-rl_border text-rl_muted"
             }`}
             aria-pressed={draft.active}
           >

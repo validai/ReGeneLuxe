@@ -56,7 +56,7 @@ export default function AppShell({ children, onOpenCommand }) {
     <div className="min-h-screen bg-rl_bg text-rl_text lg:flex">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-rl_accent focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-rl_bg"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-rl_accent focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
       >
         Skip to main content
       </a>
@@ -224,7 +224,7 @@ export default function AppShell({ children, onOpenCommand }) {
               end={link.end}
               className={({ isActive }) =>
                 `whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors duration-rl ${
-                  isActive ? "bg-rl_accent text-rl_bg" : "text-rl_muted hover:text-rl_text"
+                  isActive ? "bg-rl_accent text-white" : "text-rl_muted hover:text-rl_text"
                 }`
               }
             >

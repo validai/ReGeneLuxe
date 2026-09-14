@@ -4,8 +4,8 @@
   "description": "Private local-first social media operating environment",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0c0e12",
-  "theme_color": "#0c0e12",
+  "background_color": "#090B10",
+  "theme_color": "#090B10",
   "icons": [
     {
       "src": "/icon.svg",

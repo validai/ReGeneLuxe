@@ -45,7 +45,7 @@ export default function OverviewPanel({ campaign, accounts, content, decisions }
       </section>
 
       <section>
-        <h2 className="rl-label">What ReGeneLuxe sees</h2>
+        <h2 className="rl-label text-rl_accent">What ReGeneLuxe sees</h2>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-rl_text">{snapshot.summary}</p>
       </section>
 

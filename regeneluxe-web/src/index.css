@@ -3,43 +3,50 @@
 @tailwind utilities;
 
 /*
-  Semantic color rails — temporary cool neutrals.
-  Final brand accent palette is NOT chosen here; swap --accent-* centrally later.
+  Electric Intelligence — FINAL brand palette.
+  Dark = canonical product theme. Light = Normal mode.
+  Favicons/wordmark stay monochrome; accents flow through tokens.
 */
 
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
 
-  /* Semantic roles */
-  --bg-app: 12 14 18;
-  --bg-surface: 18 21 27;
-  --bg-surface-raised: 24 28 36;
-  --bg-hover: 32 38 48;
-  --bg-selected: 40 48 62;
+  /* Core Electric Intelligence */
+  --bg-app: 9 11 16;                 /* #090B10 */
+  --bg-surface: 20 24 33;            /* #141821 */
+  --bg-surface-raised: 28 34 48;     /* derived graphite */
+  --bg-hover: 34 42 58;
+  --bg-selected: 38 46 68;
 
-  --border-subtle: 36 42 54;
-  --border-default: 48 56 72;
-  --border-strong: 72 82 102;
+  --border-subtle: 30 38 54;
+  --border-default: 42 52 72;
+  --border-strong: 58 70 96;
 
-  --text-primary: 244 246 250;
-  --text-secondary: 176 186 204;
-  --text-muted: 120 132 154;
-  --text-inverse: 10 12 16;
+  --text-primary: 247 249 252;       /* #F7F9FC */
+  --text-secondary: 167 176 192;     /* #A7B0C0 */
+  --text-muted: 130 140 160;
+  --text-inverse: 9 11 16;
 
-  /* Temporary high-contrast accent (palette-ready — replace later) */
-  --accent-primary: 232 236 244;
-  --accent-primary-hover: 255 255 255;
-  --accent-secondary: 148 160 184;
-  --accent-soft: 232 236 244;
+  --accent-primary: 108 99 255;      /* #6C63FF */
+  --accent-primary-hover: 123 115 255;
+  --accent-primary-pressed: 90 82 224;
+  --accent-secondary: 54 197 255;    /* #36C5FF */
+  --accent-soft: 108 99 255;
 
-  --success: 92 186 140;
-  --warning: 220 170 80;
-  --danger: 232 96 96;
-  --info: 110 160 220;
-  --focus-ring: 232 236 244;
+  --success: 34 211 167;             /* #22D3A7 */
+  --warning: 251 191 36;             /* #FBBF24 */
+  --danger: 248 113 113;             /* #F87171 */
+  --info: 54 197 255;                /* analytics / secondary */
+  --focus-ring: 108 99 255;
 
-  /* Compat aliases used by Tailwind rl_* classes */
+  /* Chart family */
+  --chart-1: 108 99 255;
+  --chart-2: 54 197 255;
+  --chart-3: 88 120 255;
+  --chart-4: 90 210 240;
+
+  /* Compat aliases (Tailwind rl_*) */
   --rl-bg: var(--bg-app);
   --rl-surface: var(--bg-surface);
   --rl-surface-raised: var(--bg-surface-raised);
@@ -53,6 +60,7 @@
   --rl-muted: var(--text-muted);
   --rl-accent: var(--accent-primary);
   --rl-accent-hover: var(--accent-primary-hover);
+  --rl-accent-secondary: var(--accent-secondary);
   --rl-danger: var(--danger);
   --rl-ok: var(--success);
   --rl-warning: var(--warning);
@@ -60,7 +68,7 @@
   --rl-focus: var(--focus-ring);
 
   --accent: rgb(var(--accent-primary));
-  --accent-soft: rgb(var(--accent-soft) / 0.14);
+  --accent-soft: rgb(var(--accent-soft) / 0.16);
   --success-hex: rgb(var(--success));
   --error: rgb(var(--danger));
 
@@ -71,31 +79,44 @@
   --rl-motion: 160ms;
 }
 
+/* Normal mode — same Electric Intelligence hues on light graphite */
 [data-theme="light"] {
   color-scheme: light;
-  --bg-app: 244 246 250;
+
+  --bg-app: 244 246 251;
   --bg-surface: 255 255 255;
   --bg-surface-raised: 255 255 255;
-  --bg-hover: 232 236 244;
-  --bg-selected: 220 226 238;
-  --border-subtle: 220 226 236;
-  --border-default: 200 208 222;
-  --border-strong: 148 160 184;
-  --text-primary: 12 14 18;
-  --text-secondary: 48 56 72;
-  --text-muted: 96 108 132;
-  --text-inverse: 255 255 255;
-  --accent-primary: 18 22 30;
-  --accent-primary-hover: 0 0 0;
-  --accent-secondary: 72 82 102;
-  --accent-soft: 18 22 30;
-  --success: 40 140 96;
-  --warning: 180 130 40;
-  --danger: 190 56 56;
-  --info: 56 110 180;
-  --focus-ring: 18 22 30;
+  --bg-hover: 232 236 246;
+  --bg-selected: 226 230 248;
+
+  --border-subtle: 226 230 240;
+  --border-default: 210 216 230;
+  --border-strong: 160 170 194;
+
+  --text-primary: 12 16 28;
+  --text-secondary: 74 84 104;
+  --text-muted: 106 116 138;
+  --text-inverse: 247 249 252;
+
+  --accent-primary: 108 99 255;
+  --accent-primary-hover: 90 82 230;
+  --accent-primary-pressed: 78 70 210;
+  --accent-secondary: 14 150 210;
+  --accent-soft: 108 99 255;
+
+  --success: 16 160 130;
+  --warning: 200 140 20;
+  --danger: 210 70 70;
+  --info: 14 150 210;
+  --focus-ring: 108 99 255;
+
+  --chart-1: 108 99 255;
+  --chart-2: 14 150 210;
+  --chart-3: 88 120 255;
+  --chart-4: 40 180 220;
+
   --accent: rgb(var(--accent-primary));
-  --accent-soft: rgb(var(--accent-soft) / 0.1);
+  --accent-soft: rgb(var(--accent-soft) / 0.12);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -116,7 +137,6 @@ body {
   @apply min-h-screen;
 }
 
-/* Typography roles */
 .rl-display {
   @apply font-display text-4xl font-bold tracking-tight text-rl_text;
 }
@@ -155,7 +175,7 @@ body {
 
 .field-select,
 .rl-input {
-  @apply w-full rounded-lg border border-rl_border bg-rl_bg px-3 py-2 text-sm text-rl_text placeholder:text-rl_muted/60 transition-[border-color,box-shadow] duration-rl focus:border-rl_accent focus:outline-none focus:ring-2 focus:ring-rl_accent/35;
+  @apply w-full rounded-lg border border-rl_border bg-rl_bg px-3 py-2 text-sm text-rl_text placeholder:text-rl_muted/60 transition-[border-color,box-shadow] duration-rl focus:border-rl_accent focus:outline-none focus:ring-2 focus:ring-[rgb(var(--focus-ring)/0.45)];
 }
 
 .rl-panel {
@@ -167,7 +187,11 @@ body {
 }
 
 .rl-btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-rl_accent px-4 py-2.5 text-sm font-semibold tracking-tight text-rl_bg transition-[opacity,transform,background-color] duration-rl hover:bg-rl_accentHover active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/50;
+  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-rl_accent px-4 py-2.5 text-sm font-semibold tracking-tight text-white transition-[background-color,transform,opacity] duration-rl hover:bg-rl_accentHover active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--focus-ring)/0.55)];
+}
+
+.rl-btn:active {
+  background-color: rgb(var(--accent-primary-pressed));
 }
 
 .rl-press {
@@ -184,7 +208,11 @@ body {
 }
 
 .rl-btn-ghost {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-rl_border px-4 py-2.5 text-sm font-semibold tracking-tight text-rl_textSecondary transition-colors duration-rl hover:border-rl_borderStrong hover:bg-rl_surfaceHover hover:text-rl_text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/40;
+  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-rl_border bg-transparent px-4 py-2.5 text-sm font-semibold tracking-tight text-rl_textSecondary transition-colors duration-rl hover:border-rl_borderStrong hover:bg-rl_surfaceHover hover:text-rl_text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--focus-ring)/0.4)];
+}
+
+.rl-btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-rl_border bg-rl_surfaceRaised px-4 py-2.5 text-sm font-semibold tracking-tight text-rl_text transition-colors duration-rl hover:bg-rl_surfaceHover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--focus-ring)/0.4)];
 }
 
 .rl-btn-danger {
@@ -192,7 +220,19 @@ body {
 }
 
 .rl-btn-icon {
-  @apply inline-flex h-10 w-10 items-center justify-center rounded-lg border border-rl_border text-rl_textSecondary transition-colors duration-rl hover:border-rl_borderStrong hover:bg-rl_surfaceHover hover:text-rl_text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/40;
+  @apply inline-flex h-10 w-10 items-center justify-center rounded-lg border border-rl_border text-rl_textSecondary transition-colors duration-rl hover:border-rl_borderStrong hover:bg-rl_surfaceHover hover:text-rl_text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--focus-ring)/0.4)];
+}
+
+.rl-link {
+  @apply text-rl_text underline-offset-2 transition-colors hover:text-[rgb(var(--accent-secondary))] hover:underline;
+}
+
+.rl-intel {
+  @apply border-l-2 border-rl_accent bg-rl_accent/10;
+}
+
+.rl-accent-secondary {
+  color: rgb(var(--accent-secondary));
 }
 
 @keyframes rl-sheet-in {

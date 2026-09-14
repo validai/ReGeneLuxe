@@ -134,7 +134,7 @@ export default function ResultsPanel({ campaign, accounts, onSaved }) {
           ))}
         </div>
 
-        <button type="submit" className="rounded-full bg-rl_accent px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-rl_bg">
+        <button type="submit" className="rounded-full bg-rl_accent px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white">
           Save result
         </button>
       </form>

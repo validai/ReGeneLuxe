@@ -13,7 +13,7 @@ export default function SegmentedControl({ options = [], value, onChange, ariaLa
             aria-selected={active}
             onClick={() => onChange?.(id)}
             className={`rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
-              active ? "bg-rl_accent text-rl_bg" : "text-rl_muted hover:text-rl_text"
+              active ? "bg-rl_accent text-white" : "text-rl_muted hover:text-rl_text"
             }`}
           >
             {label}

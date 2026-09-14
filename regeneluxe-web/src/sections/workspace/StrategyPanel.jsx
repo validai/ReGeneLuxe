@@ -21,7 +21,7 @@ export default function StrategyPanel({ campaign, accounts }) {
             type="button"
             onClick={() => setMode(id)}
             className={`rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.14em] transition-colors duration-rl ${
-              mode === id ? "bg-rl_accent text-rl_bg" : "text-rl_muted hover:text-rl_text"
+              mode === id ? "bg-rl_accent text-white" : "text-rl_muted hover:text-rl_text"
             }`}
           >
             {label}

@@ -21,6 +21,7 @@ export default {
         rl_muted: "rgb(var(--rl-muted) / <alpha-value>)",
         rl_accent: "rgb(var(--rl-accent) / <alpha-value>)",
         rl_accentHover: "rgb(var(--rl-accent-hover) / <alpha-value>)",
+        rl_accentSecondary: "rgb(var(--rl-accent-secondary) / <alpha-value>)",
         rl_danger: "rgb(var(--rl-danger) / <alpha-value>)",
         rl_ok: "rgb(var(--rl-ok) / <alpha-value>)",
         rl_warning: "rgb(var(--rl-warning) / <alpha-value>)",

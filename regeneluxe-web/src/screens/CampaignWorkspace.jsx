@@ -108,7 +108,7 @@ export default function CampaignWorkspace() {
           type="button"
           onClick={() => setCampaignActive(campaign.id, !campaign.active)}
           className={`rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] ${
-            campaign.active ? "bg-rl_ok text-rl_bg" : "border border-rl_border text-rl_muted"
+            campaign.active ? "bg-rl_ok text-white" : "border border-rl_border text-rl_muted"
           }`}
           aria-pressed={campaign.active}
         >
