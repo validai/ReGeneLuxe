@@ -101,7 +101,7 @@ export async function get(collection, id, client = null) {
   return parseRow(result.rows[0]);
 }
 
-export async function upsert(collection, record, client = null) {
+export async function upsert(collection, record, client = null, options = {}) {
   if (!record || !record.id) {
     throw new Error("upsert requires record.id");
   }
@@ -109,61 +109,68 @@ export async function upsert(collection, record, client = null) {
   const existing = await get(collection, record.id, db);
   const now = nowIso();
   const createdAt = existing?.createdAt || record.createdAt || now;
-  const revision = (existing?.revision || 0) + 1;
+  const revision = options.forceRevision != null
+    ? Number(options.forceRevision)
+    : (existing?.revision || 0) + 1;
   const payload = {
     ...record,
     id: record.id,
     createdAt,
-    updatedAt: now,
+    updatedAt: record.updatedAt || now,
   };
   delete payload.revision;
   delete payload.syncStatus;
   delete payload.deletedAt;
   delete payload.schemaVersion;
 
+  const syncStatus = options.skipOutbox ? "SYNCED" : "PENDING";
+
   await db.execute({
     sql: `INSERT INTO entities (
       collection, id, payload, created_at, updated_at, schema_version, revision, sync_status, deleted_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', NULL)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)
     ON CONFLICT(collection, id) DO UPDATE SET
       payload = excluded.payload,
       updated_at = excluded.updated_at,
       schema_version = excluded.schema_version,
       revision = excluded.revision,
-      sync_status = 'PENDING',
+      sync_status = excluded.sync_status,
       deleted_at = NULL`,
     args: [
       collection,
       record.id,
       JSON.stringify(payload),
       createdAt,
-      now,
+      payload.updatedAt,
       SCHEMA_VERSION,
       revision,
+      syncStatus,
     ],
   });
 
   if (isAnalyticsCollection(collection)) {
     await writeMetricSnapshot(db, payload, {
       createdAt,
-      updatedAt: now,
+      updatedAt: payload.updatedAt,
       revision,
-      syncStatus: "PENDING",
+      syncStatus,
       deletedAt: null,
     });
   }
 
-  await enqueueOutbox(
-    {
-      collection,
-      recordId: record.id,
-      op: OUTBOX_OPS.UPSERT,
-      payload,
-      revision,
-      idempotencyKey: `${collection}:${record.id}:${revision}`,
-    },
-    db,
-  );
+  if (!options.skipOutbox) {
+    await enqueueOutbox(
+      {
+        collection,
+        recordId: record.id,
+        op: OUTBOX_OPS.UPSERT,
+        payload,
+        revision,
+        idempotencyKey: `${collection}:${record.id}:${revision}`,
+      },
+      db,
+    );
+  }
 
   return get(collection, record.id, db);
 }

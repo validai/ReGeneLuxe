@@ -1,23 +1,26 @@
 import { emptyAccount, nowIso } from "./models.js";
 import { migrateAccountRecord } from "./migrate.js";
-import { readJson, writeJson, STORAGE_KEYS } from "./storage.js";
+import { STORAGE_KEYS } from "./storage.js";
 import { recordEvent } from "./events.js";
-
-function persist(accounts) {
-  return writeJson(STORAGE_KEYS.accounts, accounts);
-}
+import {
+  bridgeList,
+  bridgeUpsert,
+  bridgeRemove,
+  bridgeReplaceAll,
+  isSqliteAuthority,
+} from "./repoBridge.js";
 
 function accountNeedsMigration(item) {
   return !item || typeof item !== "object" || typeof item.active !== "boolean" || !item.connectionState;
 }
 
 export function listAccounts() {
-  const raw = readJson(STORAGE_KEYS.accounts, []);
+  const raw = bridgeList("accounts", STORAGE_KEYS.accounts, []);
   if (!Array.isArray(raw)) return [];
   const filtered = raw.filter((item) => item && typeof item === "object" && item.id);
-  if (filtered.some(accountNeedsMigration)) {
+  if (!isSqliteAuthority() && filtered.some(accountNeedsMigration)) {
     const migrated = filtered.map(migrateAccountRecord);
-    persist(migrated);
+    bridgeReplaceAll("accounts", STORAGE_KEYS.accounts, migrated);
     return migrated;
   }
   return filtered.map(migrateAccountRecord);
@@ -30,9 +33,13 @@ export function getAccount(id) {
 
 export function createAccount(partial = {}) {
   const account = emptyAccount(partial);
-  const accounts = listAccounts();
-  accounts.unshift(account);
-  persist(accounts);
+  if (isSqliteAuthority()) {
+    bridgeUpsert("accounts", STORAGE_KEYS.accounts, account);
+  } else {
+    const accounts = listAccounts();
+    accounts.unshift(account);
+    bridgeReplaceAll("accounts", STORAGE_KEYS.accounts, accounts);
+  }
   return account;
 }
 
@@ -50,9 +57,15 @@ export function updateAccount(id, patch) {
     connectionMethod: patch.connectionMethod || previous.connectionMethod || "MANUAL",
     updatedAt: nowIso(),
   };
+  delete next.accessToken;
+  delete next.refreshToken;
 
-  accounts[index] = next;
-  persist(accounts);
+  if (isSqliteAuthority()) {
+    bridgeUpsert("accounts", STORAGE_KEYS.accounts, next);
+  } else {
+    accounts[index] = next;
+    bridgeReplaceAll("accounts", STORAGE_KEYS.accounts, accounts);
+  }
 
   if (patch.connectionState && patch.connectionState !== previous.connectionState) {
     if (patch.connectionState === "CONNECTED") {
@@ -65,7 +78,8 @@ export function updateAccount(id, patch) {
         accountId: next.id,
         message: `Connection expired for ${next.handle || next.displayName || next.platform}`,
       });
-    } else if (["DISCONNECTED", "MANUAL_ONLY", "ERROR"].includes(patch.connectionState) && previous.connectionState === "CONNECTED") {
+    } else if (["DISCONNECTED", "MANUAL_ONLY", "ERROR", "UNCONNECTED"].includes(patch.connectionState)
+      && previous.connectionState === "CONNECTED") {
       recordEvent("ACCOUNT_DISCONNECTED", {
         accountId: next.id,
         message: `Disconnected ${next.handle || next.displayName || next.platform}`,
@@ -77,12 +91,11 @@ export function updateAccount(id, patch) {
 }
 
 export function deleteAccount(id) {
-  persist(listAccounts().filter((account) => account.id !== id));
-  return true;
+  return bridgeRemove("accounts", STORAGE_KEYS.accounts, id);
 }
 
 export function replaceAccounts(accounts) {
-  return persist(Array.isArray(accounts) ? accounts : []);
+  return bridgeReplaceAll("accounts", STORAGE_KEYS.accounts, Array.isArray(accounts) ? accounts : []);
 }
 
 export function resolveAccount(id, accounts = listAccounts()) {

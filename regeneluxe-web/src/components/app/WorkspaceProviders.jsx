@@ -11,12 +11,11 @@ import { applyTheme } from "../../data/settingsRepository.js";
 import {
   bootstrapDurableStore,
   getLastSyncStatus,
-  persistCollectionToSqlite,
 } from "../../data/durableBootstrap.js";
 
 /**
  * Native App Router chrome: shell, toasts, theme, command palette, shortcuts.
- * Boots local SQLite migration/dual-write without blocking first paint.
+ * Boots local SQLite as the operational authority (non-blocking first paint).
  */
 export default function WorkspaceProviders({ children }) {
   const { settings } = useAppData();
@@ -29,9 +28,6 @@ export default function WorkspaceProviders({ children }) {
   }, [settings.theme]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.__rlPersistCollection = persistCollectionToSqlite;
-    }
     let cancelled = false;
     bootstrapDurableStore().then((result) => {
       if (cancelled) return;
@@ -44,7 +40,6 @@ export default function WorkspaceProviders({ children }) {
         setSyncBanner(null);
       }
     });
-    // Durable job worker tick — non-blocking; continues when providers/cloud/AI fail.
     const tick = () => {
       fetch("/api/jobs/tick", {
         method: "POST",

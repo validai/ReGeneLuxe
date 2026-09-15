@@ -5,6 +5,8 @@ import {
   initDb,
   JOB_TYPES,
   pushOutboxToRemote,
+  pullRemoteToLocal,
+  reconcileWithRemote,
 } from "../../../server/db/index.js";
 
 export const dynamic = "force-dynamic";
@@ -29,12 +31,34 @@ export async function POST(request: Request) {
     if (body?.enqueueOnly) {
       await enqueueJob({
         type: JOB_TYPES.SYNC_REMOTE,
-        payload: {},
+        payload: { pull: body.pull !== false, push: body.push !== false },
       });
       return NextResponse.json({ ok: true, enqueued: true });
     }
-    const result = await pushOutboxToRemote();
-    return NextResponse.json({ ok: true, ...result });
+
+    if (body?.pull && body?.push !== false) {
+      const result = await reconcileWithRemote();
+      const status = await getSyncStatus();
+      return NextResponse.json({ ok: true, ...result, status });
+    }
+
+    if (body?.pull && body?.push === false) {
+      const pull = await pullRemoteToLocal();
+      const status = await getSyncStatus();
+      return NextResponse.json({ ok: true, pull, status });
+    }
+
+    if (body?.push === false && body?.pull === false) {
+      const status = await getSyncStatus();
+      return NextResponse.json({ ok: true, status });
+    }
+
+    // Default: push outbox (backward compatible). Prefer reconcile via { pull: true }.
+    const result = body?.pull
+      ? await reconcileWithRemote()
+      : { push: await pushOutboxToRemote() };
+    const status = await getSyncStatus();
+    return NextResponse.json({ ok: true, ...result, status });
   } catch (error) {
     return NextResponse.json({
       ok: false,

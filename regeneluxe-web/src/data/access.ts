@@ -1,14 +1,23 @@
 /**
  * Data access seam for repository-backed / synced storage.
  *
- * Product path: UI repositories → localStorage mirror (sync UX) + dual-write to
- * local SQLite via `/api/*` (`server/db`). Optional Turso Cloud via outbox sync.
+ * Product authority (after boot):
+ *   UI repositories → operationalStore (memory) → SQLite via /api → Turso outbox
  *
- * Backends:
- * - `localStorage` — browser mirror / Vitest harness / rollback window
- * - `sqlite` — durable local DB (`.regeneluxe/local.db`)
- * - `memory` — in-process `:memory:` libSQL (`RL_DB_MODE=memory` / tests)
+ * Test harness (Vitest):
+ *   localStorage only — no Next API required
+ *
+ * UI preferences (sidebar/view) stay in localStorage always.
  */
+
 export const DATA_BACKEND = "sqlite" as const;
 
 export type DataBackend = "localStorage" | "sqlite" | "memory";
+
+/** Vitest / unit tests without Next server. */
+export function isTestHarness(): boolean {
+  if (typeof process !== "undefined" && (process.env.VITEST || process.env.NODE_ENV === "test")) {
+    return true;
+  }
+  return false;
+}

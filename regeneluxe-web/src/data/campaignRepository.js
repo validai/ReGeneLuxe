@@ -1,23 +1,28 @@
 import { emptyCampaign, mergeIntake, nowIso } from "./models.js";
 import { markSchemaCurrent, migrateCampaigns, needsCampaignMigration } from "./migrate.js";
-import { readJson, writeJson, readString, writeString, STORAGE_KEYS } from "./storage.js";
+import { STORAGE_KEYS } from "./storage.js";
 import { recordEvent } from "./events.js";
+import {
+  bridgeList,
+  bridgeUpsert,
+  bridgeRemove,
+  bridgeReplaceAll,
+  bridgeGetMeta,
+  bridgeSetMeta,
+  isSqliteAuthority,
+} from "./repoBridge.js";
 
-function loadRaw() {
-  return readJson(STORAGE_KEYS.campaigns, []);
-}
-
-function persist(campaigns) {
-  return writeJson(STORAGE_KEYS.campaigns, campaigns);
+function loadList() {
+  return bridgeList("campaigns", STORAGE_KEYS.campaigns, []);
 }
 
 export function listCampaigns() {
-  const raw = loadRaw();
+  const raw = loadList();
   if (!Array.isArray(raw)) return [];
 
-  if (needsCampaignMigration(raw)) {
+  if (!isSqliteAuthority() && needsCampaignMigration(raw)) {
     const migrated = migrateCampaigns(raw);
-    persist(migrated);
+    bridgeReplaceAll("campaigns", STORAGE_KEYS.campaigns, migrated);
     markSchemaCurrent();
     return migrated;
   }
@@ -31,14 +36,18 @@ export function getCampaign(id) {
 }
 
 export function saveCampaigns(campaigns) {
-  return persist(campaigns);
+  return bridgeReplaceAll("campaigns", STORAGE_KEYS.campaigns, campaigns);
 }
 
 export function createCampaign(partial = {}) {
   const campaign = emptyCampaign(partial);
-  const campaigns = listCampaigns();
-  campaigns.unshift(campaign);
-  persist(campaigns);
+  if (isSqliteAuthority()) {
+    bridgeUpsert("campaigns", STORAGE_KEYS.campaigns, campaign);
+  } else {
+    const campaigns = listCampaigns();
+    campaigns.unshift(campaign);
+    bridgeReplaceAll("campaigns", STORAGE_KEYS.campaigns, campaigns);
+  }
   setActiveCampaignId(campaign.id);
   recordEvent("CAMPAIGN_CREATED", {
     campaignId: campaign.id,
@@ -78,7 +87,11 @@ export function updateCampaign(id, patch) {
   };
 
   campaigns[index] = next;
-  persist(campaigns);
+  if (isSqliteAuthority()) {
+    bridgeUpsert("campaigns", STORAGE_KEYS.campaigns, next);
+  } else {
+    bridgeReplaceAll("campaigns", STORAGE_KEYS.campaigns, campaigns);
+  }
   const meaningfulKeys = Object.keys(patch).filter((key) => key !== "currentSection" && key !== "updatedAt");
   if (meaningfulKeys.length) {
     recordEvent("CAMPAIGN_UPDATED", {
@@ -94,20 +107,19 @@ export function setCampaignActive(id, active) {
 }
 
 export function deleteCampaign(id) {
-  const campaigns = listCampaigns().filter((campaign) => campaign.id !== id);
-  persist(campaigns);
+  bridgeRemove("campaigns", STORAGE_KEYS.campaigns, id);
   if (getActiveCampaignId() === id) {
-    setActiveCampaignId(campaigns[0]?.id || null);
+    setActiveCampaignId(listCampaigns()[0]?.id || null);
   }
   return true;
 }
 
 export function getActiveCampaignId() {
-  return readString(STORAGE_KEYS.activeCampaignId);
+  return bridgeGetMeta("active_campaign_id", STORAGE_KEYS.activeCampaignId);
 }
 
 export function setActiveCampaignId(id) {
-  return writeString(STORAGE_KEYS.activeCampaignId, id || null);
+  return bridgeSetMeta("active_campaign_id", STORAGE_KEYS.activeCampaignId, id || null);
 }
 
 export function getActiveCampaign() {
@@ -117,5 +129,5 @@ export function getActiveCampaign() {
 }
 
 export function replaceCampaigns(campaigns) {
-  return persist(Array.isArray(campaigns) ? campaigns : []);
+  return bridgeReplaceAll("campaigns", STORAGE_KEYS.campaigns, Array.isArray(campaigns) ? campaigns : []);
 }

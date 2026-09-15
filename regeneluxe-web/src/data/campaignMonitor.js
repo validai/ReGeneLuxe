@@ -7,6 +7,13 @@ import { toDateKey } from "../utils/dates.js";
 import { listEvents } from "./events.js";
 import { compareCampaignSnapshots } from "./changeDetector.js";
 import { readJson, writeJson, STORAGE_KEYS } from "./storage.js";
+import {
+  listCollection,
+  replaceCollection,
+  isOperationalPrimary,
+} from "./operationalStore.js";
+import { isTestHarness } from "./access";
+import { queuePersistRecord } from "./dataClient.js";
 
 export { recordEvent, listEvents, EVENT_TYPES } from "./events.js";
 
@@ -400,6 +407,20 @@ export function nextBestAction(snapshot) {
 
 export function rememberSnapshot(snapshot) {
   if (!snapshot?.campaignId) return null;
+  if (isOperationalPrimary() && !isTestHarness()) {
+    const list = listCollection("campaign_snapshots");
+    const previous = list.find((item) => item.campaignId === snapshot.campaignId) || null;
+    const record = {
+      id: snapshot.id || `csnap_${snapshot.campaignId}`,
+      campaignId: snapshot.campaignId,
+      ...snapshot,
+    };
+    const next = list.filter((item) => item.campaignId !== snapshot.campaignId);
+    next.unshift(record);
+    replaceCollection("campaign_snapshots", next);
+    queuePersistRecord("campaign_snapshots", record);
+    return previous;
+  }
   const all = readJson(STORAGE_KEYS.campaignSnapshots, {});
   const previous = all[snapshot.campaignId] || null;
   all[snapshot.campaignId] = snapshot;
@@ -408,6 +429,9 @@ export function rememberSnapshot(snapshot) {
 }
 
 export function readRememberedSnapshot(campaignId) {
+  if (isOperationalPrimary() && !isTestHarness()) {
+    return listCollection("campaign_snapshots").find((item) => item.campaignId === campaignId) || null;
+  }
   const all = readJson(STORAGE_KEYS.campaignSnapshots, {});
   return all?.[campaignId] || null;
 }

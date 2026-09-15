@@ -75,6 +75,8 @@ export const setMeta = repository.setMeta;
 
 export const getSyncStatus = sync.getSyncStatus;
 export const pushOutboxToRemote = sync.pushOutboxToRemote;
+export const pullRemoteToLocal = sync.pullRemoteToLocal;
+export const reconcileWithRemote = sync.reconcileWithRemote;
 
 export const enqueueJob = jobs.enqueueJob;
 export const claimNextJob = jobs.claimNextJob;

@@ -1,17 +1,27 @@
 import { useMemo, useSyncExternalStore } from "react";
 import { subscribe, getSnapshotVersion } from "../data/storage.js";
+import { subscribeOperational, getOperationalVersion, isOperationalPrimary } from "../data/operationalStore.js";
 import { listCampaigns, getActiveCampaignId } from "../data/campaignRepository.js";
 import { listAccounts } from "../data/accountRepository.js";
 import { getSettings } from "../data/settingsRepository.js";
 import { listContent, listInbox, listSnapshots, listQueue, listDecisions, listActivity } from "../data/collectionRepository.js";
 import { getWorkingAccountId } from "../data/workingContext.js";
 
+function subscribeAll(listener) {
+  const unsubA = subscribe(listener);
+  const unsubB = subscribeOperational(listener);
+  return () => {
+    unsubA();
+    unsubB();
+  };
+}
+
 function getSnapshot() {
-  return getSnapshotVersion();
+  return `${getSnapshotVersion()}:${getOperationalVersion()}:${isOperationalPrimary() ? 1 : 0}`;
 }
 
 export function useAppData() {
-  const version = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const version = useSyncExternalStore(subscribeAll, getSnapshot, getSnapshot);
 
   return useMemo(() => {
     const campaigns = listCampaigns();
@@ -40,6 +50,7 @@ export function useAppData() {
       activeCampaignId,
       workingAccountId,
       activeCampaign: campaigns.find((campaign) => campaign.id === activeCampaignId) || null,
+      dataAuthority: isOperationalPrimary() ? "sqlite" : "localStorage",
     };
   }, [version]);
 }

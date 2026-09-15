@@ -1,5 +1,11 @@
 import { createId, nowIso } from "./ids.js";
-import { readJson, writeJson, STORAGE_KEYS } from "./storage.js";
+import { STORAGE_KEYS } from "./storage.js";
+import {
+  bridgeList,
+  bridgeUpsert,
+  bridgeReplaceAll,
+  isSqliteAuthority,
+} from "./repoBridge.js";
 
 export const EVENT_TYPES = [
   "CAMPAIGN_CREATED",
@@ -26,8 +32,7 @@ export const EVENT_TYPES = [
 ];
 
 function storeEvents() {
-  const raw = readJson(STORAGE_KEYS.events, []);
-  return Array.isArray(raw) ? raw : [];
+  return bridgeList("events", STORAGE_KEYS.events, []);
 }
 
 export function recordEvent(type, payload = {}) {
@@ -42,9 +47,13 @@ export function recordEvent(type, payload = {}) {
     message: payload.message || "",
     meta: payload.meta || {},
   };
+  if (isSqliteAuthority()) {
+    bridgeUpsert("events", STORAGE_KEYS.events, event);
+    return event;
+  }
   const list = storeEvents();
   list.unshift(event);
-  writeJson(STORAGE_KEYS.events, list.slice(0, 500));
+  bridgeReplaceAll("events", STORAGE_KEYS.events, list.slice(0, 500));
   return event;
 }
 

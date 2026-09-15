@@ -198,6 +198,7 @@ export default function SettingsPage() {
         <h2 className="text-sm font-semibold text-rl_text">Data &amp; sync</h2>
         <p className="text-sm text-rl_muted">
           Schema version {SCHEMA_VERSION}. {campaigns.length} campaigns, {accounts.length} accounts.
+          Local SQLite is the operational source of truth.
         </p>
         <ul className="space-y-2 text-sm text-rl_muted">
           <li>
@@ -207,13 +208,24 @@ export default function SettingsPage() {
               : "Healthy"}
           </li>
           <li>
-            Cloud sync ·{" "}
+            Cloud database ·{" "}
             {(() => {
               const sync = dbHealth?.sync;
-              if (!sync?.cloudConfigured) return "Not configured (local-only)";
+              if (!sync?.cloudConfigured) return "Offline (not configured)";
+              if (sync.state === "ERROR") return "Error";
+              if (!sync.localHealthy) return "Error";
+              return "Connected";
+            })()}
+          </li>
+          <li>
+            Sync ·{" "}
+            {(() => {
+              const sync = dbHealth?.sync;
+              if (!sync?.cloudConfigured) return "Local only";
               if (sync.state === "SYNCED") return "Synced";
               if (sync.state === "PENDING" || sync.pendingOutbox > 0) return "Pending";
-              if (sync.state === "ERROR") return "Error";
+              if (sync.state === "SYNCING") return "Syncing";
+              if (sync.state === "ERROR" || sync.state === "CONFLICT") return sync.state === "CONFLICT" ? "Conflict" : "Error";
               return sync.state || "Offline";
             })()}
           </li>
@@ -224,12 +236,25 @@ export default function SettingsPage() {
               : "—"}
           </li>
           <li>
-            Pending operations · {dbHealth?.sync?.pendingOutbox ?? 0}
+            Pending changes · {dbHealth?.sync?.pendingOutbox ?? 0}
           </li>
         </ul>
+        <button
+          type="button"
+          className="rl-btn-ghost"
+          onClick={async () => {
+            await fetch("/api/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ pull: true, push: true }),
+            }).catch(() => {});
+            setDbHealth(await fetchDbHealth());
+          }}
+        >
+          Sync now
+        </button>
         <p className="text-xs text-rl_muted">
-          Operator data is durably stored in local SQLite. Browser localStorage remains as a rollback window after migration.
-          API keys and OAuth tokens stay on the local runtime only and are never synced.
+          The app works offline. Cloud sync is optional. API keys and OAuth tokens stay on the local runtime and are never synced.
         </p>
       </section>
 

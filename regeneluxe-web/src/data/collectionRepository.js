@@ -1,36 +1,43 @@
 import { emptyContentItem, emptyInteraction, emptySnapshot, emptyQueueJob, emptyDecision, emptyActivity, mapAssetStatus } from "./domain.js";
 import { listCampaigns } from "./campaignRepository.js";
-import { readJson, writeJson, STORAGE_KEYS } from "./storage.js";
+import { STORAGE_KEYS } from "./storage.js";
 import { nowIso } from "./ids.js";
 import { recordEvent } from "./events.js";
+import {
+  bridgeList,
+  bridgeUpsert,
+  bridgeRemove,
+  bridgeReplaceAll,
+  isSqliteAuthority,
+} from "./repoBridge.js";
 
-function store(key, fallback = []) {
-  const raw = readJson(key, fallback);
-  return Array.isArray(raw) ? raw : [];
-}
+const KEY_MAP = {
+  content: STORAGE_KEYS.content,
+  inbox: STORAGE_KEYS.inbox,
+  analytics: STORAGE_KEYS.analytics,
+  queue: STORAGE_KEYS.queue,
+  decisions: STORAGE_KEYS.decisions,
+  activity: STORAGE_KEYS.activity,
+};
 
-function persist(key, list) {
-  return writeJson(key, list);
-}
-
-function upsert(key, factory, item) {
-  const list = store(key);
-  const record = factory(item);
+function upsert(collection, storageKey, factory, item) {
+  const record = factory({ ...item, updatedAt: nowIso() });
+  if (isSqliteAuthority()) {
+    return bridgeUpsert(collection, storageKey, record);
+  }
+  const list = bridgeList(collection, storageKey, []);
   const index = list.findIndex((entry) => entry.id === record.id);
   if (index === -1) list.unshift(record);
   else list[index] = { ...list[index], ...record, updatedAt: nowIso() };
-  persist(key, list);
+  bridgeReplaceAll(collection, storageKey, list);
   return record;
 }
 
-function remove(key, id) {
-  persist(key, store(key).filter((item) => item.id !== id));
-  return true;
-}
-
 export function listContent() {
-  const existing = store(STORAGE_KEYS.content);
+  const existing = bridgeList("content", KEY_MAP.content, []);
   if (existing.length) return existing.map((item) => emptyContentItem(item));
+
+  if (isSqliteAuthority()) return [];
 
   const migrated = [];
   listCampaigns().forEach((campaign) => {
@@ -51,7 +58,7 @@ export function listContent() {
       }));
     });
   });
-  if (migrated.length) persist(STORAGE_KEYS.content, migrated);
+  if (migrated.length) bridgeReplaceAll("content", KEY_MAP.content, migrated);
   return migrated;
 }
 
@@ -60,31 +67,31 @@ export function getContent(id) {
 }
 
 export function saveContent(partial) {
-  return upsert(STORAGE_KEYS.content, emptyContentItem, partial);
+  return upsert("content", KEY_MAP.content, emptyContentItem, partial);
 }
 
 export function deleteContent(id) {
-  return remove(STORAGE_KEYS.content, id);
+  return bridgeRemove("content", KEY_MAP.content, id);
 }
 
 export function replaceContent(list) {
-  return persist(STORAGE_KEYS.content, Array.isArray(list) ? list.map((item) => emptyContentItem(item)) : []);
+  return bridgeReplaceAll("content", KEY_MAP.content, Array.isArray(list) ? list.map((item) => emptyContentItem(item)) : []);
 }
 
 export function listInbox() {
-  return store(STORAGE_KEYS.inbox).map((item) => emptyInteraction(item));
+  return bridgeList("inbox", KEY_MAP.inbox, []).map((item) => emptyInteraction(item));
 }
 
 export function saveInteraction(partial) {
-  return upsert(STORAGE_KEYS.inbox, emptyInteraction, partial);
+  return upsert("inbox", KEY_MAP.inbox, emptyInteraction, partial);
 }
 
 export function replaceInbox(list) {
-  return persist(STORAGE_KEYS.inbox, Array.isArray(list) ? list.map((item) => emptyInteraction(item)) : []);
+  return bridgeReplaceAll("inbox", KEY_MAP.inbox, Array.isArray(list) ? list.map((item) => emptyInteraction(item)) : []);
 }
 
 export function listSnapshots() {
-  return store(STORAGE_KEYS.analytics).map((item) => emptySnapshot(item));
+  return bridgeList("analytics", KEY_MAP.analytics, []).map((item) => emptySnapshot(item));
 }
 
 export function saveSnapshot(partial) {
@@ -94,7 +101,7 @@ export function saveSnapshot(partial) {
       metrics[key] = null;
     }
   });
-  const next = upsert(STORAGE_KEYS.analytics, emptySnapshot, { ...partial, metrics });
+  const next = upsert("analytics", KEY_MAP.analytics, emptySnapshot, { ...partial, metrics });
   recordEvent("ANALYTICS_REFRESHED", {
     campaignId: next.campaignId,
     accountId: next.accountId,
@@ -105,51 +112,51 @@ export function saveSnapshot(partial) {
 }
 
 export function replaceSnapshots(list) {
-  return persist(STORAGE_KEYS.analytics, Array.isArray(list) ? list.map((item) => emptySnapshot(item)) : []);
+  return bridgeReplaceAll("analytics", KEY_MAP.analytics, Array.isArray(list) ? list.map((item) => emptySnapshot(item)) : []);
 }
 
 export function listQueue() {
-  return store(STORAGE_KEYS.queue).map((item) => emptyQueueJob(item));
+  return bridgeList("queue", KEY_MAP.queue, []).map((item) => emptyQueueJob(item));
 }
 
 export function saveQueueJob(partial) {
-  return upsert(STORAGE_KEYS.queue, emptyQueueJob, partial);
+  return upsert("queue", KEY_MAP.queue, emptyQueueJob, partial);
 }
 
 export function replaceQueue(list) {
-  return persist(STORAGE_KEYS.queue, Array.isArray(list) ? list.map((item) => emptyQueueJob(item)) : []);
+  return bridgeReplaceAll("queue", KEY_MAP.queue, Array.isArray(list) ? list.map((item) => emptyQueueJob(item)) : []);
 }
 
 export function listDecisions() {
-  return store(STORAGE_KEYS.decisions).map((item) => emptyDecision(item));
+  return bridgeList("decisions", KEY_MAP.decisions, []).map((item) => emptyDecision(item));
 }
 
 export function saveDecision(partial) {
-  return upsert(STORAGE_KEYS.decisions, emptyDecision, partial);
+  return upsert("decisions", KEY_MAP.decisions, emptyDecision, partial);
 }
 
 export function replaceDecisions(list) {
-  return persist(STORAGE_KEYS.decisions, Array.isArray(list) ? list.map((item) => emptyDecision(item)) : []);
+  return bridgeReplaceAll("decisions", KEY_MAP.decisions, Array.isArray(list) ? list.map((item) => emptyDecision(item)) : []);
 }
 
 export function listActivity(campaignId) {
-  const all = store(STORAGE_KEYS.activity).map((item) => emptyActivity(item));
+  const all = bridgeList("activity", KEY_MAP.activity, []).map((item) => emptyActivity(item));
   return campaignId ? all.filter((item) => item.campaignId === campaignId) : all;
 }
 
 export function saveActivity(partial) {
-  return upsert(STORAGE_KEYS.activity, emptyActivity, partial);
+  return upsert("activity", KEY_MAP.activity, emptyActivity, partial);
 }
 
 export function replaceActivity(list) {
-  return persist(STORAGE_KEYS.activity, Array.isArray(list) ? list.map((item) => emptyActivity(item)) : []);
+  return bridgeReplaceAll("activity", KEY_MAP.activity, Array.isArray(list) ? list.map((item) => emptyActivity(item)) : []);
 }
 
 export function resetCollections() {
-  persist(STORAGE_KEYS.content, []);
-  persist(STORAGE_KEYS.inbox, []);
-  persist(STORAGE_KEYS.analytics, []);
-  persist(STORAGE_KEYS.queue, []);
-  persist(STORAGE_KEYS.decisions, []);
-  persist(STORAGE_KEYS.activity, []);
+  bridgeReplaceAll("content", KEY_MAP.content, []);
+  bridgeReplaceAll("inbox", KEY_MAP.inbox, []);
+  bridgeReplaceAll("analytics", KEY_MAP.analytics, []);
+  bridgeReplaceAll("queue", KEY_MAP.queue, []);
+  bridgeReplaceAll("decisions", KEY_MAP.decisions, []);
+  bridgeReplaceAll("activity", KEY_MAP.activity, []);
 }

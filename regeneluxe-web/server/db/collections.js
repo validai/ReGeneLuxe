@@ -28,6 +28,13 @@ export const MUTABLE_COLLECTIONS = new Set([
   COLLECTIONS.accounts,
   COLLECTIONS.content,
   COLLECTIONS.settings,
+  COLLECTIONS.queue,
+  COLLECTIONS.inbox,
+  COLLECTIONS.campaign_snapshots,
+  COLLECTIONS.approvals,
+  COLLECTIONS.attention,
+  COLLECTIONS.experiments,
+  COLLECTIONS.publications,
 ]);
 
 export const APPEND_ONLY_COLLECTIONS = new Set([
@@ -38,5 +45,7 @@ export const APPEND_ONLY_COLLECTIONS = new Set([
   COLLECTIONS.publication_attempts,
   COLLECTIONS.brain_runs,
   COLLECTIONS.monitor_runs,
+  COLLECTIONS.campaign_results,
+  COLLECTIONS.campaign_changes,
   "metric_snapshots",
 ]);

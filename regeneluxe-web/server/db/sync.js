@@ -1,9 +1,9 @@
 import { checkLocalHealth, getLocalClient, getRemoteClient, isUnhealthy } from "./client.js";
-import { APPEND_ONLY_COLLECTIONS, MUTABLE_COLLECTIONS } from "./collections.js";
-import { migrate } from "./migrations.js";
+import { APPEND_ONLY_COLLECTIONS, MUTABLE_COLLECTIONS, COLLECTIONS } from "./collections.js";
+import { migrate, SCHEMA_VERSION } from "./migrations.js";
 import { claimBatch, markState, OUTBOX_OPS, OUTBOX_STATES } from "./outbox.js";
 import { listJobs, JOB_STATES } from "./jobs.js";
-import { getMeta, setMeta } from "./repository.js";
+import { getMeta, setMeta, get as getLocal, upsert as upsertLocal } from "./repository.js";
 
 export async function getSyncStatus() {
   const remote = getRemoteClient();
@@ -58,6 +58,29 @@ async function remoteGetEntity(remote, collection, id) {
   return result.rows[0] || null;
 }
 
+async function remoteListCollection(remote, collection) {
+  const result = await remote.execute({
+    sql: "SELECT * FROM entities WHERE collection = ? AND deleted_at IS NULL",
+    args: [collection],
+  });
+  return result.rows || [];
+}
+
+function parseRemoteRow(row) {
+  if (!row) return null;
+  const payload = JSON.parse(row.payload || "{}");
+  return {
+    ...payload,
+    id: row.id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    schemaVersion: Number(row.schema_version || SCHEMA_VERSION),
+    revision: Number(row.revision || 1),
+    syncStatus: row.sync_status || "SYNCED",
+    deletedAt: row.deleted_at || null,
+  };
+}
+
 async function remoteUpsertEntity(remote, item) {
   const now = new Date().toISOString();
   const payload = item.payload == null ? null : JSON.stringify(item.payload);
@@ -96,7 +119,7 @@ async function remoteSoftDelete(remote, collection, id, revision) {
 
 /**
  * Push pending outbox entries to remote Turso (if configured).
- * Mutable collections: CONFLICT when remote.revision > local.
+ * Mutable: CONFLICT when remote.revision > local.
  * Append-only: insert by id; skip if exists.
  */
 export async function pushOutboxToRemote() {
@@ -188,4 +211,105 @@ export async function pushOutboxToRemote() {
   await setMeta("sync_state", conflicts ? "CONFLICT" : errors ? "ERROR" : "SYNCED", local);
 
   return { pushed, conflicts, errors, skipped: false };
+}
+
+/**
+ * Pull remote Turso entities into local SQLite without blind overwrite.
+ *
+ * Append-only: insert missing by stable id; never replace existing.
+ * Mutable: higher revision wins; local-newer stays local (pending push).
+ */
+export async function pullRemoteToLocal() {
+  const remote = getRemoteClient();
+  if (!remote) {
+    return { pulled: 0, skipped: true, reason: "no_remote" };
+  }
+
+  await migrate(remote);
+  const local = getLocalClient();
+  await setMeta("sync_state", "SYNCING", local);
+
+  let pulled = 0;
+  let skippedCount = 0;
+  let conflicts = 0;
+  const collections = Object.values(COLLECTIONS);
+
+  for (const collection of collections) {
+    const remoteRows = await remoteListCollection(remote, collection);
+    for (const row of remoteRows) {
+      const remoteRecord = parseRemoteRow(row);
+      if (!remoteRecord?.id) continue;
+      const localRecord = await getLocal(collection, remoteRecord.id, local);
+      const appendOnly = APPEND_ONLY_COLLECTIONS.has(collection) || collection === "metric_snapshots";
+      const mutable = MUTABLE_COLLECTIONS.has(collection);
+
+      if (appendOnly) {
+        if (localRecord) {
+          skippedCount += 1;
+          continue;
+        }
+        await upsertLocal(collection, remoteRecord, local, {
+          skipOutbox: true,
+          forceRevision: remoteRecord.revision || 1,
+        });
+        pulled += 1;
+        continue;
+      }
+
+      if (!localRecord) {
+        await upsertLocal(collection, remoteRecord, local, {
+          skipOutbox: true,
+          forceRevision: remoteRecord.revision || 1,
+        });
+        pulled += 1;
+        continue;
+      }
+
+      const localRev = Number(localRecord.revision || 0);
+      const remoteRev = Number(remoteRecord.revision || 0);
+
+      if (remoteRev > localRev) {
+        await upsertLocal(collection, remoteRecord, local, {
+          skipOutbox: true,
+          forceRevision: remoteRev,
+        });
+        pulled += 1;
+      } else if (remoteRev < localRev && mutable) {
+        skippedCount += 1;
+      } else {
+        skippedCount += 1;
+      }
+    }
+
+    const deletedRemote = await remote.execute({
+      sql: "SELECT * FROM entities WHERE collection = ? AND deleted_at IS NOT NULL",
+      args: [collection],
+    });
+    for (const row of deletedRemote.rows || []) {
+      const localRecord = await getLocal(collection, row.id, local);
+      if (!localRecord || localRecord.deletedAt) continue;
+      if (Number(row.revision || 0) >= Number(localRecord.revision || 0)) {
+        await local.execute({
+          sql: `UPDATE entities SET deleted_at = ?, updated_at = ?, revision = ?, sync_status = 'SYNCED'
+            WHERE collection = ? AND id = ?`,
+          args: [row.deleted_at, row.updated_at || new Date().toISOString(), row.revision || 1, collection, row.id],
+        });
+        pulled += 1;
+      } else {
+        conflicts += 1;
+      }
+    }
+  }
+
+  const now = new Date().toISOString();
+  await setMeta("last_sync_at", now, local);
+  await setMeta("sync_state", conflicts ? "CONFLICT" : "SYNCED", local);
+
+  return { pulled, skipped: skippedCount, conflicts, reason: null };
+}
+
+export async function reconcileWithRemote() {
+  const pull = await pullRemoteToLocal();
+  const push = await pushOutboxToRemote();
+  return { pull, push };
 }

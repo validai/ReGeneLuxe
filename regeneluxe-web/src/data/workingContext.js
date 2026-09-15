@@ -1,11 +1,12 @@
-import { readString, writeString, STORAGE_KEYS } from "../data/storage.js";
+import { STORAGE_KEYS } from "./storage.js";
+import { bridgeGetMeta, bridgeSetMeta } from "./repoBridge.js";
 
 export function getWorkingAccountId() {
-  return readString(STORAGE_KEYS.workingAccountId) || "";
+  return bridgeGetMeta("working_account_id", STORAGE_KEYS.workingAccountId) || "";
 }
 
 export function setWorkingAccountId(id) {
-  return writeString(STORAGE_KEYS.workingAccountId, id || null);
+  return bridgeSetMeta("working_account_id", STORAGE_KEYS.workingAccountId, id || null);
 }
 
 export function filterByWorkingAccount(items, accounts, workingAccountId, getAccountIds = (item) => item.accountIds || []) {

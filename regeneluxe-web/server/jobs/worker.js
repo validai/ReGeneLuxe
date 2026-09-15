@@ -11,7 +11,7 @@ import {
 } from "../db/index.js";
 import { getConnector, normalizeProviderId } from "../connectors/registry.js";
 import { buildMetricSnapshotRecord } from "../connectors/normalizeMetrics.js";
-import { pushOutboxToRemote } from "../db/sync.js";
+import { pushOutboxToRemote, reconcileWithRemote } from "../db/sync.js";
 import { publicationIdempotencyKey } from "../../src/data/idempotency.js";
 
 const WORKER_ID = `worker_${process.pid}`;
@@ -25,8 +25,9 @@ async function loadAccount(accountId) {
     });
 }
 
-async function handleSyncRemote() {
-  return pushOutboxToRemote();
+async function handleSyncRemote(payload = {}) {
+  if (payload.pull === false) return pushOutboxToRemote();
+  return reconcileWithRemote();
 }
 
 async function handleRefreshAnalytics(payload = {}) {

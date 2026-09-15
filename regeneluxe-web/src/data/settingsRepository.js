@@ -1,25 +1,28 @@
 import { SCHEMA_VERSION, emptySettings } from "./models.js";
-import { readJson, writeJson, removeKey, STORAGE_KEYS } from "./storage.js";
+import { STORAGE_KEYS, writeJson, removeKey } from "./storage.js";
 import { resetCollections } from "./collectionRepository.js";
+import {
+  bridgeGetSettings,
+  bridgeSaveSettings,
+  bridgeReplaceAll,
+  bridgeClearMeta,
+  isSqliteAuthority,
+} from "./repoBridge.js";
+import { resetOperationalStore, setOperationalPrimary } from "./operationalStore.js";
+import { queuePersistRecord } from "./dataClient.js";
 
 export function getSettings() {
-  const raw = readJson(STORAGE_KEYS.settings, null);
-  if (!raw || typeof raw !== "object") {
-    return emptySettings();
-  }
-  return emptySettings(raw);
+  return bridgeGetSettings(STORAGE_KEYS.settings, emptySettings);
 }
 
 export function updateSettings(patch) {
   const next = emptySettings({ ...getSettings(), ...patch, schemaVersion: SCHEMA_VERSION });
-  writeJson(STORAGE_KEYS.settings, next);
-  return next;
+  return bridgeSaveSettings(STORAGE_KEYS.settings, next);
 }
 
 export function replaceSettings(settings) {
   const next = emptySettings(settings || {});
-  writeJson(STORAGE_KEYS.settings, next);
-  return next;
+  return bridgeSaveSettings(STORAGE_KEYS.settings, next);
 }
 
 export function applyTheme(theme = "dark") {
@@ -33,11 +36,23 @@ export function applyTheme(theme = "dark") {
 }
 
 export function resetAllLocalData() {
+  if (isSqliteAuthority()) {
+    bridgeReplaceAll("campaigns", STORAGE_KEYS.campaigns, []);
+    bridgeReplaceAll("accounts", STORAGE_KEYS.accounts, []);
+    bridgeReplaceAll("settings", STORAGE_KEYS.settings, [emptySettings({ id: "app" })]);
+    resetCollections();
+    bridgeClearMeta("active_campaign_id", STORAGE_KEYS.activeCampaignId);
+    queuePersistRecord("settings", emptySettings({ id: "app" }));
+    // Clear operational store locally; DB wipe is best-effort via empty replaces above.
+    return true;
+  }
   writeJson(STORAGE_KEYS.campaigns, []);
   writeJson(STORAGE_KEYS.accounts, []);
   writeJson(STORAGE_KEYS.settings, emptySettings());
   writeJson(STORAGE_KEYS.schemaVersion, SCHEMA_VERSION);
   removeKey(STORAGE_KEYS.activeCampaignId);
   resetCollections();
+  resetOperationalStore();
+  setOperationalPrimary(false);
   return true;
 }
