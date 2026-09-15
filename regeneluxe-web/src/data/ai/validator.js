@@ -33,12 +33,13 @@ export function validateBrainOutput(payload) {
       importantChanges: payload.importantChanges || [],
       findings: payload.findings || [],
       nextBestAction: payload.nextBestAction || null,
-      recommendations: payload.recommendations || [],
+      recommendations: payload.recommendations || payload.contentRecommendations || [],
       contentChanges: payload.contentChanges || [],
-      schedulingChanges: payload.schedulingChanges || [],
+      schedulingChanges: payload.schedulingChanges || payload.scheduleAdjustments || [],
+      platformRecommendations: payload.platformRecommendations || [],
       experimentActions: payload.experimentActions || [],
       approvalRequests: payload.approvalRequests || [],
-      warnings: payload.warnings || [],
+      warnings: payload.warnings || payload.risks || [],
       confidence: typeof payload.confidence === "number" ? payload.confidence : null,
       evidenceRefs: payload.evidenceRefs || [],
     },
@@ -49,7 +50,8 @@ export function sanitizeAiContext(context) {
   const clone = JSON.parse(JSON.stringify(context || {}));
   const strip = (object) => {
     if (!object || typeof object !== "object") return;
-    ["apiKey", "accessToken", "refreshToken", "token", "secret", "password"].forEach((key) => {
+    ["apiKey", "accessToken", "refreshToken", "token", "secret", "password", "clientSecret", "authorization", "Authorization",
+      "access_token", "refresh_token", "client_secret", "api_key"].forEach((key) => {
       if (key in object) delete object[key];
     });
     Object.values(object).forEach((value) => {

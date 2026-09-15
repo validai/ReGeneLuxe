@@ -9,6 +9,7 @@ import { useAppData } from "../hooks/useAppData.js";
 import { emptyContentItem, emptyVariant } from "../data/domain.js";
 import { saveContent, getContent } from "../data/collectionRepository.js";
 import { scheduleContent, requestPublish, markPublished } from "../data/publishing.js";
+import { publishMediaSupport } from "../data/connectors/registry.js";
 import { ASSET_TYPES } from "../data/models.js";
 import { recordEvent } from "../data/events.js";
 
@@ -673,13 +674,22 @@ export default function ComposerPage() {
                 {selectedAccounts.length === 0 ? (
                   <p className="mt-2 text-sm text-rl_muted">None selected</p>
                 ) : (
-                  <ul className="mt-2 space-y-1.5">
-                    {selectedAccounts.map((account) => (
-                      <li key={account.id} className="text-sm text-rl_text">
-                        {account.platform}
-                        <span className="ml-1.5 text-rl_muted">{account.handle || account.displayName}</span>
-                      </li>
-                    ))}
+                  <ul className="mt-2 space-y-2">
+                    {selectedAccounts.map((account) => {
+                      const media = publishMediaSupport(account.platform);
+                      return (
+                        <li key={account.id} className="text-sm text-rl_text">
+                          <div>
+                            {account.platform}
+                            <span className="ml-1.5 text-rl_muted">{account.handle || account.displayName}</span>
+                          </div>
+                          <p className="mt-0.5 text-xs text-rl_muted">
+                            Image {media.image ? "✓" : "✕"} · Video {media.video ? "✓" : "✕"} · Text {media.text ? "✓" : "✕"}
+                            {account.connectionState !== "CONNECTED" ? " · manual until connected" : ""}
+                          </p>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>
@@ -723,9 +733,18 @@ export default function ComposerPage() {
             <button
               type="button"
               className="rl-btn-ghost"
-              onClick={() => {
+              onClick={async () => {
                 const account = selectedAccounts[0];
                 const result = requestPublish(form, account);
+                if (result.asyncPublish) {
+                  setMessage("Publishing through provider…");
+                  const published = await result.asyncPublish();
+                  setMessage(published.error || (published.ok ? "Provider publish queued/completed." : "Publish failed."));
+                  return;
+                }
+                if (result.pendingApproval && account?.connectionState === "CONNECTED") {
+                  setMessage("Ready for approval. After approval, use Queue or Publish with approval.");
+                }
                 setMessage(result.error || (result.pendingApproval ? "Ready for approval." : "Saved."));
                 if (result.content) setForm(result.content);
               }}

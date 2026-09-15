@@ -30,13 +30,17 @@ export function writeSecrets(next) {
 
 export function publicStatus() {
   const secrets = readSecrets();
+  const providerEntries = Object.entries(secrets.providers || {});
   return {
     running: true,
     aiConfigured: Boolean(secrets.ai?.apiKey && secrets.ai.provider && secrets.ai.provider !== "none"),
     provider: secrets.ai?.apiKey ? secrets.ai.provider : null,
-    connectedProviders: Object.entries(secrets.providers || {})
-      .filter(([, value]) => value?.accessToken)
-      .map(([name]) => name),
+    connectedProviders: providerEntries
+      .filter(([key, value]) => value?.accessToken && !key.endsWith("::app"))
+      .map(([name]) => name.split("::")[0]),
+    providerAppsConfigured: providerEntries
+      .filter(([key, value]) => key.endsWith("::app") && value?.clientId)
+      .map(([key]) => key.replace(/::app$/, "")),
   };
 }
 

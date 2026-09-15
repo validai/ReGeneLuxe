@@ -308,9 +308,11 @@ export function emptyAccount(partial = {}) {
     connectionState: CONNECTION_STATES.includes(partial.connectionState)
       ? partial.connectionState
       : (partial.connectionMethod === "MANUAL" || !partial.connectionMethod ? "MANUAL_ONLY" : "UNCONNECTED"),
-    lastSync: partial.lastSync || "",
+    lastSync: partial.lastSync || partial.lastSuccessfulSync || "",
+    lastSuccessfulSync: partial.lastSuccessfulSync || partial.lastSync || "",
     analyticsFreshness: partial.analyticsFreshness || "",
-    connectionError: partial.connectionError || "",
+    lastErrorSummary: partial.lastErrorSummary || partial.connectionError || "",
+    connectionError: partial.connectionError || partial.lastErrorSummary || "",
     publishPermission: PUBLISH_PERMISSIONS.includes(partial.publishPermission)
       ? partial.publishPermission
       : "APPROVAL_REQUIRED",

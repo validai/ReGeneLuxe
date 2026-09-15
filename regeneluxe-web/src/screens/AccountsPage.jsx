@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@/nav";
 import PageShell from "../components/app/PageShell.jsx";
 import PageHeader from "../components/app/PageHeader.jsx";
@@ -11,8 +11,15 @@ import { useAppData } from "../hooks/useAppData.js";
 import { createAccount, deleteAccount, updateAccount } from "../data/accountRepository.js";
 import { PLATFORMS, emptyAccount } from "../data/models.js";
 import { PUBLISH_PERMISSIONS, PUBLISH_PERMISSION_LABELS } from "../data/domain.js";
-import { declaredCapabilities } from "../data/connectors/registry.js";
+import {
+  declaredCapabilities,
+  publishMediaSupport,
+  startProviderConnect,
+  connectionAction,
+  refreshAccountAnalytics,
+} from "../data/connectors/registry.js";
 import { formatStamp } from "../utils/dates.js";
+import { useToast } from "../components/app/useToast.js";
 
 const blank = () => emptyAccount({
   platform: "Instagram",
@@ -24,12 +31,14 @@ const blank = () => emptyAccount({
 
 const HEALTH = {
   CONNECTED: { label: "Connected", tone: "bg-rl_ok/15 text-rl_ok" },
-  AUTH_EXPIRED: { label: "Needs attention", tone: "bg-rl_danger/15 text-rl_danger" },
-  ERROR: { label: "Needs attention", tone: "bg-rl_danger/15 text-rl_danger" },
+  AUTH_EXPIRED: { label: "Needs attention", tone: "bg-rl_warning/15 text-rl_warning" },
+  RECONNECT_REQUIRED: { label: "Reconnect required", tone: "bg-rl_warning/15 text-rl_warning" },
+  ERROR: { label: "Error", tone: "bg-rl_danger/15 text-rl_danger" },
   MANUAL_ONLY: { label: "Manual", tone: "bg-rl_surfaceSoft text-rl_muted" },
-  UNCONNECTED: { label: "Disconnected", tone: "bg-rl_warning/15 text-rl_warning" },
-  CONNECTING: { label: "Needs attention", tone: "bg-rl_warning/15 text-rl_warning" },
-  UNSUPPORTED: { label: "Disconnected", tone: "bg-rl_surfaceSoft text-rl_muted" },
+  UNCONNECTED: { label: "Not connected", tone: "bg-rl_warning/15 text-rl_warning" },
+  CONNECTING: { label: "Connecting", tone: "bg-rl_warning/15 text-rl_warning" },
+  SETUP_REQUIRED: { label: "Setup required", tone: "bg-rl_warning/15 text-rl_warning" },
+  UNSUPPORTED: { label: "Unsupported", tone: "bg-rl_surfaceSoft text-rl_muted" },
 };
 
 function healthFor(connectionState) {
@@ -39,22 +48,131 @@ function healthFor(connectionState) {
 function softCapabilityLine(platform) {
   const caps = declaredCapabilities(platform);
   if (!caps.length) return "Publishing stays manual until a real sign-in exists.";
-  const readable = caps
-    .slice(0, 3)
-    .map((cap) => String(cap).replaceAll("_", " ").toLowerCase())
-    .join(", ");
-  return `When connected, this platform can support ${readable}.`;
+  const media = publishMediaSupport(platform);
+  const bits = [
+    media.image ? "Image ✓" : "Image ✕",
+    media.video ? "Video ✓" : "Video ✕",
+    media.text ? "Text ✓" : null,
+  ].filter(Boolean);
+  return `When connected: ${bits.join(" · ")}.`;
+}
+
+function providerSlug(platform) {
+  return String(platform || "").toLowerCase().replace("twitter", "x");
 }
 
 export default function AccountsPage() {
   const { accounts, campaigns, content } = useAppData();
+  const toast = useToast();
   const [draft, setDraft] = useState(blank());
   const [editingId, setEditingId] = useState(null);
   const [errors, setErrors] = useState({});
   const [pendingDelete, setPendingDelete] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+  const [setupMessage, setSetupMessage] = useState("");
 
   const selected = accounts.find((account) => account.id === selectedId) || null;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const connect = params.get("connect");
+    if (!connect) return;
+    const message = params.get("message") || "";
+    const accountId = params.get("accountId");
+    if (connect === "success" && accountId) {
+      updateAccount(accountId, {
+        connectionState: "CONNECTED",
+        connectionMethod: "OAUTH",
+        lastSuccessfulSync: new Date().toISOString(),
+        lastErrorSummary: "",
+      });
+      toast?.push?.("Account connected.", "ok");
+      setSelectedId(accountId);
+    } else if (connect === "error") {
+      setSetupMessage(message || "Connection failed.");
+      if (accountId) {
+        updateAccount(accountId, {
+          connectionState: "ERROR",
+          lastErrorSummary: message,
+        });
+      }
+    }
+    params.delete("connect");
+    params.delete("message");
+    params.delete("accountId");
+    params.delete("provider");
+    const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}`;
+    window.history.replaceState({}, "", next);
+  }, [toast]);
+
+  const runConnect = async (account) => {
+    setBusyId(account.id);
+    setSetupMessage("");
+    try {
+      const result = await startProviderConnect(
+        providerSlug(account.platform),
+        account.id,
+        "/accounts",
+        account,
+      );
+      if (result.authUrl) {
+        updateAccount(account.id, { connectionState: "CONNECTING", connectionMethod: "OAUTH" });
+        window.location.href = result.authUrl;
+        return;
+      }
+      if (result.readiness === "SETUP_REQUIRED" || result.reason === "SETUP_REQUIRED") {
+        updateAccount(account.id, {
+          connectionState: "SETUP_REQUIRED",
+          lastErrorSummary: result.message || "Setup required",
+        });
+        setSetupMessage(result.instructions || result.message || "Provider setup required.");
+        return;
+      }
+      if (result.readiness === "PROVIDER_REVIEW_REQUIRED") {
+        setSetupMessage(result.message || result.reviewNotes || "Available after provider approval.");
+        return;
+      }
+      setSetupMessage(result.error || result.message || "Connect failed.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const runDisconnect = async (account) => {
+    setBusyId(account.id);
+    try {
+      await connectionAction("disconnect", account.id, { provider: providerSlug(account.platform) });
+      updateAccount(account.id, {
+        connectionState: "UNCONNECTED",
+        lastErrorSummary: "",
+      });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const runRefresh = async (account) => {
+    setBusyId(account.id);
+    try {
+      const sync = await connectionAction("refresh", account.id);
+      if (sync.account) {
+        updateAccount(account.id, {
+          ...sync.account,
+          // never copy secrets if somehow present
+          accessToken: undefined,
+          refreshToken: undefined,
+        });
+      }
+      const analytics = await refreshAccountAnalytics(account.id, { includeContent: true });
+      if (!analytics.ok) {
+        setSetupMessage(analytics.error || "Analytics refresh failed.");
+      }
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const validate = (data) => {
     const next = {};
@@ -89,9 +207,14 @@ export default function AccountsPage() {
     <PageShell dense>
       <PageHeader
         title="Accounts"
-        description="Your social profiles. Connections stay Manual until a real provider sign-in exists."
+        description="Connect real providers when credentials exist. Manual accounts stay valid. Never fake Connected."
       />
 
+      {setupMessage ? (
+        <div className="rounded-xl border border-rl_warning/40 bg-rl_warning/10 px-4 py-3 text-sm text-rl_text whitespace-pre-wrap">
+          {setupMessage}
+        </div>
+      ) : null}
       <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-rl_border bg-rl_surface/40 p-5">
         <h2 className="rl-label">{editingId ? "Edit account" : "Add account"}</h2>
         <div className="grid gap-4 md:grid-cols-2">
@@ -234,10 +357,15 @@ export default function AccountsPage() {
         account={selected}
         campaigns={campaigns}
         content={content}
+        busy={busyId === selected?.id}
         onClose={() => setSelectedId(null)}
         onEdit={startEdit}
         onDelete={setPendingDelete}
         onToggleActive={(account) => updateAccount(account.id, { active: account.active === false })}
+        onConnect={runConnect}
+        onReconnect={runConnect}
+        onRefresh={runRefresh}
+        onDisconnect={runDisconnect}
       />
 
       <ConfirmDialog
@@ -257,15 +385,30 @@ export default function AccountsPage() {
   );
 }
 
-function AccountDetailSheet({ account, campaigns, content, onClose, onEdit, onDelete, onToggleActive }) {
+function AccountDetailSheet({
+  account,
+  campaigns,
+  content,
+  busy,
+  onClose,
+  onEdit,
+  onDelete,
+  onToggleActive,
+  onConnect,
+  onReconnect,
+  onRefresh,
+  onDisconnect,
+}) {
   if (!account) return null;
 
   const connection = account.connectionState || "MANUAL_ONLY";
   const health = healthFor(connection);
-  const needsReconnect = ["ERROR", "AUTH_EXPIRED"].includes(connection);
+  const needsReconnect = ["ERROR", "AUTH_EXPIRED", "RECONNECT_REQUIRED"].includes(connection);
+  const canConnect = !["CONNECTED", "UNSUPPORTED"].includes(connection);
+  const media = publishMediaSupport(account.platform);
   const usedCampaigns = campaigns.filter((campaign) => (campaign.accountIds || []).includes(account.id));
   const recentPosts = content
-    .filter((item) => (item.accountIds || []).includes(account.id) && ["SCHEDULED", "PUBLISHED", "READY"].includes(item.status))
+    .filter((item) => (item.accountIds || []).includes(account.id) && ["SCHEDULED", "PUBLISHED", "READY", "FAILED"].includes(item.status))
     .sort((a, b) => String(b.publishedAt || b.scheduledAt || b.updatedAt).localeCompare(String(a.publishedAt || a.scheduledAt || a.updatedAt)))
     .slice(0, 5);
 
@@ -278,13 +421,28 @@ function AccountDetailSheet({ account, campaigns, content, onClose, onEdit, onDe
       width="md"
       footer={(
         <div className="flex flex-wrap gap-2">
+          {canConnect && (
+            <button type="button" className="rl-btn" disabled={busy} onClick={() => onConnect(account)}>
+              {busy ? "Working…" : connection === "SETUP_REQUIRED" ? "Retry setup" : "Connect"}
+            </button>
+          )}
           {needsReconnect && (
-            <button type="button" className="rl-btn" onClick={() => onEdit(account)}>
+            <button type="button" className="rl-btn" disabled={busy} onClick={() => onReconnect(account)}>
               Reconnect
             </button>
           )}
+          {connection === "CONNECTED" && (
+            <>
+              <button type="button" className="rl-btn-ghost" disabled={busy} onClick={() => onRefresh(account)}>
+                Refresh
+              </button>
+              <button type="button" className="rl-btn-ghost" disabled={busy} onClick={() => onDisconnect(account)}>
+                Disconnect
+              </button>
+              <Link to="/analytics" className="rl-btn-ghost" onClick={onClose}>Open analytics</Link>
+            </>
+          )}
           <button type="button" className="rl-btn-ghost" onClick={() => onEdit(account)}>Edit</button>
-          <Link to="/settings" className="rl-btn-ghost" onClick={onClose}>Settings</Link>
           <button type="button" className="rl-btn-ghost" onClick={() => onToggleActive(account)}>
             {account.active === false ? "Activate" : "Deactivate"}
           </button>
@@ -299,12 +457,36 @@ function AccountDetailSheet({ account, campaigns, content, onClose, onEdit, onDe
           <p className="rl-label">Connection</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge value={connection} label={health.label} tone={health.tone} />
-            <span className="text-sm text-rl_muted">{health.label}</span>
           </div>
           <p className="mt-2 text-sm text-rl_textSecondary">{softCapabilityLine(account.platform)}</p>
-          {needsReconnect && (
-            <p className="mt-2 text-sm text-rl_danger">Sign-in needs attention before publishing from this profile.</p>
+          <p className="mt-1 text-sm text-rl_muted">
+            Last sync: {account.lastSuccessfulSync || account.lastSync ? formatStamp(account.lastSuccessfulSync || account.lastSync) : "—"}
+            {" · "}
+            Analytics: {account.analyticsFreshness ? formatStamp(account.analyticsFreshness) : "—"}
+          </p>
+          <p className="mt-1 text-sm text-rl_muted">
+            Publishing: {PUBLISH_PERMISSION_LABELS[account.publishPermission] || account.publishPermission}
+            {" · "}
+            Analytics: {connection === "CONNECTED" ? "Available when provider permits" : "Manual / unavailable"}
+          </p>
+          {(account.lastErrorSummary || account.connectionError) && (
+            <p className="mt-2 text-sm text-rl_danger">{account.lastErrorSummary || account.connectionError}</p>
           )}
+          {needsReconnect && (
+            <p className="mt-2 text-sm text-rl_danger">
+              {account.platform} needs to be reconnected.
+            </p>
+          )}
+        </div>
+
+        <div>
+          <p className="rl-label">Publish capabilities</p>
+          <ul className="mt-2 space-y-1 text-sm text-rl_textSecondary">
+            <li>Image {media.image ? "✓" : "✕"}</li>
+            <li>Video / Reel {media.video ? "✓" : "✕"}</li>
+            <li>Text-only {media.text ? "✓" : "✕"}</li>
+            <li>Schedule {media.schedule ? "✓" : "✕"}</li>
+          </ul>
         </div>
 
         <div>
@@ -337,7 +519,7 @@ function AccountDetailSheet({ account, campaigns, content, onClose, onEdit, onDe
                     {item.title || "Untitled"}
                   </Link>
                   <span className="shrink-0 text-xs text-rl_muted">
-                    {formatStamp(item.publishedAt || item.scheduledAt || item.updatedAt)}
+                    {item.status} · {formatStamp(item.publishedAt || item.scheduledAt || item.updatedAt)}
                   </span>
                 </li>
               ))}

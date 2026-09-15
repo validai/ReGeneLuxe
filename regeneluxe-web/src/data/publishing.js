@@ -1,4 +1,4 @@
-import { hasCapability } from "./connectors/registry.js";
+import { hasCapability, requestProviderPublish } from "./connectors/registry.js";
 import { saveContent, saveQueueJob, saveActivity } from "./collectionRepository.js";
 import { recordEvent } from "./events.js";
 
@@ -55,10 +55,23 @@ export function requestPublish(content, account) {
     });
     return { ok: true, pendingApproval: true, content: next };
   }
+  // AUTO_PUBLISH with live connection — enqueue durable provider job (never fake success).
+  if (account.connectionState === "CONNECTED" && account.publishPermission === "AUTO_PUBLISH") {
+    return {
+      ok: true,
+      queued: true,
+      asyncPublish: () => requestProviderPublish({
+        contentId: content.id,
+        accountId: account.id,
+        approved: true,
+      }),
+      message: "Publishing through provider pipeline…",
+    };
+  }
   return {
     ok: false,
     manual: true,
-    error: "Provider publish is not wired for this connection yet.",
+    error: "Unavailable through current connection. Publish on the platform, then mark it published here.",
   };
 }
 

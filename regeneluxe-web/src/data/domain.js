@@ -6,8 +6,10 @@ export const CONNECTION_STATES = [
   "CONNECTING",
   "CONNECTED",
   "AUTH_EXPIRED",
+  "RECONNECT_REQUIRED",
   "ERROR",
   "UNSUPPORTED",
+  "SETUP_REQUIRED",
 ];
 
 export const CONNECTION_LABELS = {
@@ -16,8 +18,10 @@ export const CONNECTION_LABELS = {
   CONNECTING: "Connecting",
   CONNECTED: "Connected",
   AUTH_EXPIRED: "Sign-in expired",
+  RECONNECT_REQUIRED: "Reconnect required",
   ERROR: "Connection error",
   UNSUPPORTED: "Unavailable",
+  SETUP_REQUIRED: "Setup required",
 };
 
 export const CAPABILITIES = {

@@ -1,3 +1,4 @@
+/** @vitest-environment node */
 import { afterAll, describe, expect, it } from "vitest";
 import { createServer } from "node:http";
 import { apiPort, uiPort, SERVICE_NAME } from "./config.js";

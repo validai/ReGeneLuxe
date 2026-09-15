@@ -10,6 +10,7 @@ import MetricCard from "../components/app/MetricCard.jsx";
 import { useAppData } from "../hooks/useAppData.js";
 import { saveSnapshot } from "../data/collectionRepository.js";
 import { ANALYTICS_METRICS } from "../data/domain.js";
+import { refreshAccountAnalytics } from "../data/connectors/registry.js";
 import { buildAccountBaseline, compareAgainstBaseline, formatFactLine, platformTotals } from "../data/performanceCompare.js";
 import { formatStamp, toDateKey } from "../utils/dates.js";
 
@@ -32,7 +33,33 @@ export default function AnalyticsPage() {
   const [campaignId, setCampaignId] = useState("");
   const [showManual, setShowManual] = useState(false);
   const [rangeAnchor] = useState(() => Date.now());
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshNote, setRefreshNote] = useState("");
 
+  const connectedAccounts = useMemo(
+    () => accounts.filter((account) => account.connectionState === "CONNECTED"),
+    [accounts],
+  );
+
+  const runProviderRefresh = async () => {
+    const targetId = workingAccountId || connectedAccounts[0]?.id;
+    if (!targetId) {
+      setRefreshNote("Connect an account before refreshing provider analytics.");
+      return;
+    }
+    setRefreshing(true);
+    setRefreshNote("");
+    try {
+      const result = await refreshAccountAnalytics(targetId, { includeContent: true });
+      if (!result.ok) {
+        setRefreshNote(result.error || "Refresh failed.");
+      } else {
+        setRefreshNote("Provider refresh completed or queued. Historical snapshots are preserved.");
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const grouped = useMemo(() => {
     const cutoff = range === "7" ? rangeAnchor - 7 * 86400000 : range === "30" ? rangeAnchor - 30 * 86400000 : null;
     return snapshots
@@ -148,7 +175,21 @@ export default function AnalyticsPage() {
 
   return (
     <PageShell>
-      <PageHeader title="Analytics" description="What happened. Missing values stay empty — never invented zeros." />
+      <PageHeader
+        title="Analytics"
+        description="What happened. Missing values stay empty — never invented zeros."
+        actions={(
+          <button type="button" className="rl-btn-ghost" disabled={refreshing} onClick={runProviderRefresh}>
+            {refreshing ? "Refreshing…" : "Refresh analytics"}
+          </button>
+        )}
+      />
+      {refreshNote ? <p className="text-sm text-rl_muted">{refreshNote}</p> : null}
+      {summary.freshness || summary.source ? (
+        <p className="text-xs uppercase tracking-[0.12em] text-rl_muted">
+          Source: {summary.source || "—"} · Last updated: {summary.freshness ? formatStamp(summary.freshness) : "—"}
+        </p>
+      ) : null}
 
       <FilterBar
         showClear={filtersActive}

@@ -53,20 +53,20 @@ export function processQueueJob(jobId, { forceManual = false } = {}) {
     return { ok: true, pendingApproval: true, content: next, job: waiting };
   }
 
-  if (!forceManual && hasCapability(account, "PUBLISH_POST")) {
-    // Capability declared for CONNECTED accounts, but no live adapter executes yet.
+  if (!forceManual && hasCapability(account, "PUBLISH_POST") && account.connectionState === "CONNECTED") {
     const waiting = saveQueueJob({
       ...job,
-      state: "manual_required",
-      manualFallback: true,
-      providerResult: "Provider publish is not wired for this connection yet.",
+      state: "provider_queued",
+      manualFallback: false,
+      providerResult: "Queued for provider publish via /api/publish.",
       failureReason: "",
     });
     return {
-      ok: false,
-      manual: true,
-      error: "Unavailable through current connection. Publish on the platform, then confirm here.",
+      ok: true,
+      queued: true,
+      provider: true,
       job: waiting,
+      message: "Queued for provider publish. Confirm from Queue or wait for the job worker.",
     };
   }
 

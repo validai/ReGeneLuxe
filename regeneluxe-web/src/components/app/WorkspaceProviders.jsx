@@ -44,7 +44,20 @@ export default function WorkspaceProviders({ children }) {
         setSyncBanner(null);
       }
     });
-    return () => { cancelled = true; };
+    // Durable job worker tick — non-blocking; continues when providers/cloud/AI fail.
+    const tick = () => {
+      fetch("/api/jobs/tick", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: 3 }),
+      }).catch(() => {});
+    };
+    tick();
+    const timer = window.setInterval(tick, 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, []);
 
   useEffect(() => {
