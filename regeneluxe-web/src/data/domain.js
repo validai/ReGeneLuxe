@@ -176,6 +176,7 @@ export function emptyContentItem(partial = {}) {
     analyticsIds: Array.isArray(partial.analyticsIds) ? partial.analyticsIds : [],
     provenance: partial.provenance || "MANUAL",
     notes: partial.notes || "",
+    managedProfileId: partial.managedProfileId || null,
   };
 }
 
@@ -195,6 +196,7 @@ export function emptyInteraction(partial = {}) {
     sentiment: partial.sentiment || "",
     replyState: partial.replyState || "none",
     source: partial.source || "PROVIDER",
+    managedProfileId: partial.managedProfileId || null,
   };
 }
 
@@ -209,6 +211,7 @@ export function emptySnapshot(partial = {}) {
     source: METRIC_SOURCES.includes(partial.source) ? partial.source : "MANUAL",
     metrics: { ...(partial.metrics || {}) },
     freshness: partial.freshness || partial.recordedAt || nowIso(),
+    managedProfileId: partial.managedProfileId || null,
   };
 }
 
@@ -226,6 +229,7 @@ export function emptyQueueJob(partial = {}) {
     failureReason: partial.failureReason || "",
     manualFallback: Boolean(partial.manualFallback),
     createdAt: partial.createdAt || nowIso(),
+    managedProfileId: partial.managedProfileId || null,
   };
 }
 
@@ -254,6 +258,7 @@ export function emptyDecision(partial = {}) {
     confidence: partial.confidence ?? null,
     evidenceRefs: Array.isArray(partial.evidenceRefs) ? partial.evidenceRefs : [],
     source: partial.source || "AI_INTERPRETATION",
+    managedProfileId: partial.managedProfileId || null,
   };
 }
 
@@ -265,6 +270,7 @@ export function emptyActivity(partial = {}) {
     message: partial.message || "",
     timestamp: partial.timestamp || nowIso(),
     source: partial.source || "MANUAL",
+    managedProfileId: partial.managedProfileId || null,
   };
 }
 

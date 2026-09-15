@@ -9,21 +9,22 @@ import {
   bridgeReplaceAll,
   isSqliteAuthority,
 } from "./repoBridge.js";
+import { filterByActiveProfile, stampProfile } from "./profileScope.js";
 
 function accountNeedsMigration(item) {
   return !item || typeof item !== "object" || typeof item.active !== "boolean" || !item.connectionState;
 }
 
-export function listAccounts() {
+export function listAccounts(options = {}) {
   const raw = bridgeList("accounts", STORAGE_KEYS.accounts, []);
   if (!Array.isArray(raw)) return [];
   const filtered = raw.filter((item) => item && typeof item === "object" && item.id);
   if (!isSqliteAuthority() && filtered.some(accountNeedsMigration)) {
     const migrated = filtered.map(migrateAccountRecord);
     bridgeReplaceAll("accounts", STORAGE_KEYS.accounts, migrated);
-    return migrated;
+    return filterByActiveProfile(migrated, options);
   }
-  return filtered.map(migrateAccountRecord);
+  return filterByActiveProfile(filtered.map(migrateAccountRecord), options);
 }
 
 export function getAccount(id) {
@@ -32,7 +33,7 @@ export function getAccount(id) {
 }
 
 export function createAccount(partial = {}) {
-  const account = emptyAccount(partial);
+  const account = emptyAccount(stampProfile(partial));
   if (isSqliteAuthority()) {
     bridgeUpsert("accounts", STORAGE_KEYS.accounts, account);
   } else {

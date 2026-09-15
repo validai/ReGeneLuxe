@@ -19,38 +19,32 @@ import {
   replaceActivity,
 } from "./collectionRepository.js";
 import { readString, STORAGE_KEYS, replaceAll } from "./storage.js";
-
-const SECRET_KEYS = ["apiKey", "accessToken", "refreshToken", "token", "secret", "password"];
+import { stripSecretFields } from "./secretFields.js";
+import { listCollection } from "./operationalStore.js";
+import { publicOperator, publicManagedProfile } from "./profileModels.js";
 
 function stripSecrets(value) {
-  if (!value || typeof value !== "object") return value;
-  const clone = Array.isArray(value) ? value.map(stripSecrets) : { ...value };
-  if (!Array.isArray(clone)) {
-    SECRET_KEYS.forEach((key) => {
-      delete clone[key];
-    });
-    Object.keys(clone).forEach((key) => {
-      clone[key] = stripSecrets(clone[key]);
-    });
-  }
-  return clone;
+  return stripSecretFields(value);
 }
 
 export function exportBackup() {
+  const unscoped = { scoped: false };
   return stripSecrets({
     app: "ReGeneLuxe",
     kind: "local-backup",
     schemaVersion: SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
-    accounts: listAccounts(),
-    campaigns: listCampaigns(),
+    accounts: listAccounts(unscoped),
+    campaigns: listCampaigns(unscoped),
     settings: getSettings(),
-    content: listContent(),
-    inbox: listInbox(),
-    analytics: listSnapshots(),
-    queue: listQueue(),
-    decisions: listDecisions(),
-    activity: listActivity(),
+    content: listContent(unscoped),
+    inbox: listInbox(unscoped),
+    analytics: listSnapshots(unscoped),
+    queue: listQueue(unscoped),
+    decisions: listDecisions(unscoped),
+    activity: listActivity(undefined, unscoped),
+    operators: (listCollection("operators") || []).map((row) => publicOperator(row)),
+    managedProfiles: (listCollection("managed_profiles") || []).map((row) => publicManagedProfile(row)),
     activeCampaignId: getActiveCampaignId(),
   });
 }

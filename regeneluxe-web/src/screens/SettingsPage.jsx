@@ -12,6 +12,7 @@ import { updateSettings, resetAllLocalData } from "../data/settingsRepository.js
 import { downloadBackupFile, importBackup, validateBackup } from "../data/backupService.js";
 import { getRuntimeStatus, getRuntimeHealth, saveRuntimeSecret } from "../data/runtimeClient.js";
 import { fetchDbHealth } from "../data/durableBootstrap.js";
+import { useProfileSession } from "../components/app/ProfileSession.jsx";
 
 const THEMES = [
   { id: "dark", label: "Dark" },
@@ -27,6 +28,7 @@ function explainRuntime(runtime) {
 
 export default function SettingsPage() {
   const { settings, campaigns, accounts } = useAppData();
+  const { operator, activeProfile, connections } = useProfileSession();
   const [importError, setImportError] = useState("");
   const [importOk, setImportOk] = useState("");
   const [resetOpen, setResetOpen] = useState(false);
@@ -38,6 +40,15 @@ export default function SettingsPage() {
   const [runtimeNote, setRuntimeNote] = useState("");
 
   const [dbHealth, setDbHealth] = useState(null);
+  const [connectionNote, setConnectionNote] = useState("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (hash) {
+      document.querySelector(hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,6 +112,98 @@ export default function SettingsPage() {
         title="Settings"
         description="Local-first durable store. Cloud sync is optional and never required to work."
       />
+
+      {operator ? (
+        <section id="account" className="rl-panel space-y-3 p-5">
+          <h2 className="text-sm font-semibold text-rl_text">Account &amp; Security</h2>
+          <ul className="space-y-2 text-sm text-rl_muted">
+            <li>Operator · Signed in with Google</li>
+            <li>Name · {operator.name || "—"}</li>
+            <li>Email · {operator.email || "—"}</li>
+          </ul>
+          <p className="text-xs text-rl_muted">
+            Google sign-in does not grant Gmail or YouTube access.
+          </p>
+        </section>
+      ) : null}
+
+      <section id="connections" className="rl-panel space-y-4 p-5">
+        <h2 className="text-sm font-semibold text-rl_text">Connections</h2>
+        <p className="text-sm text-rl_muted">
+          Google Account is authentication. Gmail and YouTube are separate authorizations.
+        </p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-3">
+            <div className="flex min-w-0 items-center gap-3">
+              {operator?.avatarUrl ? (
+                <img src={operator.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
+              ) : (
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-rl_surfaceActive text-xs font-semibold">
+                  {(operator?.name || "G").slice(0, 1)}
+                </span>
+              )}
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-rl_text">Google Account</p>
+                <p className="truncate text-xs text-rl_muted">
+                  {operator ? `${operator.name || "Operator"} · ${operator.email}` : "Not signed in"}
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-rl_ok">
+              {connections?.googleAccount?.status === "CONNECTED" || operator ? "Connected" : "Not connected"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-3">
+            <div>
+              <p className="text-sm font-medium text-rl_text">Gmail</p>
+              <p className="text-xs text-rl_muted">Mailbox access is not requested at sign-in.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-rl_warning">Not connected</span>
+              <button
+                type="button"
+                className="rl-btn-ghost px-3 py-1.5 text-xs"
+                onClick={async () => {
+                  const result = await fetch("/api/connections/google", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ kind: "GMAIL" }),
+                  }).then((response) => response.json()).catch(() => ({}));
+                  setConnectionNote(result.message || "Gmail connection opens in the next phase.");
+                }}
+              >
+                Connect
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-3">
+            <div>
+              <p className="text-sm font-medium text-rl_text">YouTube</p>
+              <p className="text-xs text-rl_muted">Channel attach is separate from Google login.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-rl_warning">Not connected</span>
+              <button
+                type="button"
+                className="rl-btn-ghost px-3 py-1.5 text-xs"
+                onClick={async () => {
+                  const result = await fetch("/api/connections/google", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ kind: "YOUTUBE" }),
+                  }).then((response) => response.json()).catch(() => ({}));
+                  setConnectionNote(result.message || "YouTube connection opens in the next phase.");
+                }}
+              >
+                Connect
+              </button>
+            </div>
+          </div>
+        </div>
+        {connectionNote ? <p className="text-xs text-rl_muted">{connectionNote}</p> : null}
+      </section>
 
       <section className="rl-panel space-y-3 p-5">
         <h2 className="text-sm font-semibold text-rl_text">Theme</h2>
@@ -201,6 +304,8 @@ export default function SettingsPage() {
           Local SQLite is the operational source of truth.
         </p>
         <ul className="space-y-2 text-sm text-rl_muted">
+          <li>Operator · {operator ? "Signed in with Google" : "Not signed in"}</li>
+          <li>Active profile · {activeProfile?.displayName || "—"}</li>
           <li>
             Local database ·{" "}
             {dbHealth?.ok === false || dbHealth?.local?.healthy === false
@@ -236,7 +341,7 @@ export default function SettingsPage() {
               : "—"}
           </li>
           <li>
-            Pending changes · {dbHealth?.sync?.pendingOutbox ?? 0}
+            Pending operations · {dbHealth?.sync?.pendingOutbox ?? 0}
           </li>
         </ul>
         <button

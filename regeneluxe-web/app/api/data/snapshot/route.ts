@@ -5,6 +5,7 @@ import {
   list,
   getMeta,
 } from "../../../../server/db/index.js";
+import { publicOperator, publicManagedProfile } from "../../../../src/data/profileModels.js";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,9 @@ async function snapshot() {
     settingsRows,
     uiPrefs,
     campaignSnapshots,
+    operators,
+    managedProfiles,
+    profileConnections,
   ] = await Promise.all([
     list(COLLECTIONS.campaigns),
     list(COLLECTIONS.accounts),
@@ -36,6 +40,9 @@ async function snapshot() {
     list(COLLECTIONS.settings),
     list(COLLECTIONS.ui_prefs),
     list(COLLECTIONS.campaign_snapshots),
+    list(COLLECTIONS.operators),
+    list(COLLECTIONS.managed_profiles),
+    list(COLLECTIONS.profile_connections),
   ]);
 
   const settings = settingsRows[0] || null;
@@ -56,8 +63,12 @@ async function snapshot() {
     settings,
     uiPrefs: prefs,
     campaignSnapshots,
+    operators: operators.map((row: Record<string, unknown>) => publicOperator(row)),
+    managedProfiles: managedProfiles.map((row: Record<string, unknown>) => publicManagedProfile(row)),
+    profileConnections,
     activeCampaignId: await getMeta("active_campaign_id"),
     workingAccountId: await getMeta("working_account_id"),
+    activeProfileId: await getMeta("active_profile_id"),
     migration: await getMeta("localstorage_migration"),
   };
 }

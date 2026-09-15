@@ -1,3 +1,5 @@
+import { AI_EXCLUDED_FIELDS } from "../secretFields.js";
+
 export function validateCampaignPlan(plan) {
   if (!plan || typeof plan !== "object") {
     return { ok: false, missing: ["plan"] };
@@ -50,8 +52,7 @@ export function sanitizeAiContext(context) {
   const clone = JSON.parse(JSON.stringify(context || {}));
   const strip = (object) => {
     if (!object || typeof object !== "object") return;
-    ["apiKey", "accessToken", "refreshToken", "token", "secret", "password", "clientSecret", "authorization", "Authorization",
-      "access_token", "refresh_token", "client_secret", "api_key"].forEach((key) => {
+    AI_EXCLUDED_FIELDS.forEach((key) => {
       if (key in object) delete object[key];
     });
     Object.values(object).forEach((value) => {

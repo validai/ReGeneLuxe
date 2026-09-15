@@ -5,20 +5,10 @@ import { SCHEMA_VERSION } from "./migrations.js";
 import { backupsDir, ensureDirs } from "./paths.js";
 import { list, replaceAll, setMeta } from "./repository.js";
 import { COLLECTIONS } from "./collections.js";
-
-const SECRET_KEYS = ["apiKey", "accessToken", "refreshToken", "token", "secret", "password"];
+import { stripSecretFields } from "../../src/data/secretFields.js";
 
 function stripSecrets(value) {
-  if (!value || typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map(stripSecrets);
-  const clone = { ...value };
-  for (const key of SECRET_KEYS) {
-    delete clone[key];
-  }
-  for (const key of Object.keys(clone)) {
-    clone[key] = stripSecrets(clone[key]);
-  }
-  return clone;
+  return stripSecretFields(value);
 }
 
 const EXPORT_COLLECTIONS = Object.values(COLLECTIONS);

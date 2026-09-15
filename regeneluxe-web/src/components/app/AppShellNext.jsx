@@ -9,6 +9,8 @@ import { useAppData } from "../../hooks/useAppData.js";
 import { setWorkingAccountId, accountOptionLabel } from "../../data/workingContext.js";
 import { getSidebarCollapsed, setSidebarCollapsed } from "../../data/uiPrefs.js";
 import { getRuntimeStatus } from "../../data/runtimeClient.js";
+import ProfileSwitcher from "./ProfileSwitcher.jsx";
+import OperatorMenu from "./OperatorMenu.jsx";
 
 /**
  * Native App Router shell — structure preserved; visual language refreshed.
@@ -106,6 +108,8 @@ export default function AppShellNext({ children, onOpenCommand }) {
           </button>
         </div>
 
+        <ProfileSwitcher collapsed={collapsed} />
+
         {accounts.length > 0 && (
           <div className={`pb-3 ${collapsed ? "px-1.5" : "px-3"}`}>
             <label className="block">
@@ -149,6 +153,7 @@ export default function AppShellNext({ children, onOpenCommand }) {
         </nav>
 
         <div className="mt-auto space-y-1 border-t border-rl_border px-2 py-3">
+          <OperatorMenu collapsed={collapsed} />
           <Link
             href="/queue"
             title="Queue"
@@ -210,6 +215,9 @@ export default function AppShellNext({ children, onOpenCommand }) {
               Create
             </button>
           </div>
+        </div>
+        <div className="px-3 pb-2 lg:hidden">
+          <ProfileSwitcher />
         </div>
         {accounts.length > 0 && (
           <div className="px-3 pb-2">

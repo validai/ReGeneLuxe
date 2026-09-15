@@ -10,6 +10,7 @@ import {
   bridgeReplaceAll,
   isSqliteAuthority,
 } from "./repoBridge.js";
+import { filterByActiveProfile, stampProfile } from "./profileScope.js";
 
 const KEY_MAP = {
   content: STORAGE_KEYS.content,
@@ -21,7 +22,7 @@ const KEY_MAP = {
 };
 
 function upsert(collection, storageKey, factory, item) {
-  const record = factory({ ...item, updatedAt: nowIso() });
+  const record = factory(stampProfile({ ...item, updatedAt: nowIso() }));
   if (isSqliteAuthority()) {
     return bridgeUpsert(collection, storageKey, record);
   }
@@ -33,8 +34,8 @@ function upsert(collection, storageKey, factory, item) {
   return record;
 }
 
-export function listContent() {
-  const existing = bridgeList("content", KEY_MAP.content, []);
+export function listContent(options = {}) {
+  const existing = filterByActiveProfile(bridgeList("content", KEY_MAP.content, []), options);
   if (existing.length) return existing.map((item) => emptyContentItem(item));
 
   if (isSqliteAuthority()) return [];
@@ -78,8 +79,8 @@ export function replaceContent(list) {
   return bridgeReplaceAll("content", KEY_MAP.content, Array.isArray(list) ? list.map((item) => emptyContentItem(item)) : []);
 }
 
-export function listInbox() {
-  return bridgeList("inbox", KEY_MAP.inbox, []).map((item) => emptyInteraction(item));
+export function listInbox(options = {}) {
+  return filterByActiveProfile(bridgeList("inbox", KEY_MAP.inbox, []), options).map((item) => emptyInteraction(item));
 }
 
 export function saveInteraction(partial) {
@@ -90,8 +91,8 @@ export function replaceInbox(list) {
   return bridgeReplaceAll("inbox", KEY_MAP.inbox, Array.isArray(list) ? list.map((item) => emptyInteraction(item)) : []);
 }
 
-export function listSnapshots() {
-  return bridgeList("analytics", KEY_MAP.analytics, []).map((item) => emptySnapshot(item));
+export function listSnapshots(options = {}) {
+  return filterByActiveProfile(bridgeList("analytics", KEY_MAP.analytics, []), options).map((item) => emptySnapshot(item));
 }
 
 export function saveSnapshot(partial) {
@@ -115,8 +116,8 @@ export function replaceSnapshots(list) {
   return bridgeReplaceAll("analytics", KEY_MAP.analytics, Array.isArray(list) ? list.map((item) => emptySnapshot(item)) : []);
 }
 
-export function listQueue() {
-  return bridgeList("queue", KEY_MAP.queue, []).map((item) => emptyQueueJob(item));
+export function listQueue(options = {}) {
+  return filterByActiveProfile(bridgeList("queue", KEY_MAP.queue, []), options).map((item) => emptyQueueJob(item));
 }
 
 export function saveQueueJob(partial) {
@@ -127,8 +128,8 @@ export function replaceQueue(list) {
   return bridgeReplaceAll("queue", KEY_MAP.queue, Array.isArray(list) ? list.map((item) => emptyQueueJob(item)) : []);
 }
 
-export function listDecisions() {
-  return bridgeList("decisions", KEY_MAP.decisions, []).map((item) => emptyDecision(item));
+export function listDecisions(options = {}) {
+  return filterByActiveProfile(bridgeList("decisions", KEY_MAP.decisions, []), options).map((item) => emptyDecision(item));
 }
 
 export function saveDecision(partial) {
@@ -139,8 +140,8 @@ export function replaceDecisions(list) {
   return bridgeReplaceAll("decisions", KEY_MAP.decisions, Array.isArray(list) ? list.map((item) => emptyDecision(item)) : []);
 }
 
-export function listActivity(campaignId) {
-  const all = bridgeList("activity", KEY_MAP.activity, []).map((item) => emptyActivity(item));
+export function listActivity(campaignId, options = {}) {
+  const all = filterByActiveProfile(bridgeList("activity", KEY_MAP.activity, []), options).map((item) => emptyActivity(item));
   return campaignId ? all.filter((item) => item.campaignId === campaignId) : all;
 }
 

@@ -23,7 +23,7 @@
 - Missing on one side → insert
 
 ### Mutable
-`campaigns`, `accounts`, `content`, `settings`, `queue`, `inbox`, `campaign_snapshots`, `approvals`, `attention`, `experiments`, `publications`
+`campaigns`, `accounts`, `content`, `settings`, `queue`, `inbox`, `campaign_snapshots`, `approvals`, `attention`, `experiments`, `publications`, `operators`, `managed_profiles`, `profile_connections`
 
 - Compare `revision`
 - Higher revision wins

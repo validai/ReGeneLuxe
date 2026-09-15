@@ -16,6 +16,7 @@ export const STORAGE_KEYS = {
   events: "rl_events_v1",
   workingAccountId: "rl_working_account_id",
   campaignSnapshots: "rl_campaign_snapshots_v1",
+  activeProfileId: "rl_active_profile_id",
 };
 
 export function hasStorage() {

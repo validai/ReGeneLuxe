@@ -19,6 +19,9 @@ const NATIVE_PAGES = [
   "app/(workspace)/accounts/page.tsx",
   "app/(workspace)/settings/page.tsx",
   "app/(workspace)/queue/page.tsx",
+  "app/signin/page.tsx",
+  "app/access-not-authorized/page.tsx",
+  "app/setup/profile/page.tsx",
 ];
 
 describe("native App Router peel", () => {
@@ -53,6 +56,6 @@ describe("native App Router peel", () => {
   it("keeps same-origin API route handlers", () => {
     const apiDir = path.join(root, "app/api");
     const routes = readdirSync(apiDir);
-    expect(routes).toEqual(expect.arrayContaining(["health", "status", "secrets", "ai"]));
+    expect(routes).toEqual(expect.arrayContaining(["health", "status", "secrets", "ai", "auth"]));
   });
 });

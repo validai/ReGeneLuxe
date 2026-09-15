@@ -247,6 +247,7 @@ export function emptyCampaign(partial = {}) {
     platforms: Array.isArray(partial.platforms) ? partial.platforms : [],
     website: partial.website || "",
     timezone: partial.timezone || "",
+    managedProfileId: partial.managedProfileId || null,
   };
 }
 
@@ -328,11 +329,13 @@ export function emptyAccount(partial = {}) {
     defaultCta: partial.defaultCta || "",
     createdAt: partial.createdAt || timestamp,
     updatedAt: partial.updatedAt || timestamp,
+    managedProfileId: partial.managedProfileId || null,
   };
 }
 
 export function emptySettings(partial = {}) {
   return {
+    id: partial.id || "app",
     defaultPlatforms: Array.isArray(partial.defaultPlatforms) ? partial.defaultPlatforms : [],
     theme: partial.theme || "dark",
     aiMode: AI_MODES.includes(partial.aiMode) ? partial.aiMode : "ASSISTED",

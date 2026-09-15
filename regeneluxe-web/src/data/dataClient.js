@@ -3,16 +3,10 @@
  * Never sends secrets.
  */
 
+import { stripSecretFields } from "./secretFields.js";
+
 function stripSecrets(record) {
-  if (!record || typeof record !== "object") return record;
-  const next = { ...record };
-  delete next.accessToken;
-  delete next.refreshToken;
-  delete next.token;
-  delete next.apiKey;
-  delete next.clientSecret;
-  delete next.authorization;
-  return next;
+  return stripSecretFields(record);
 }
 
 export async function apiUpsertRecord(collection, record) {

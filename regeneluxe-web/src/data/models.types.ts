@@ -284,9 +284,10 @@ export interface Campaign {
   results: CampaignResult[];
   iteration: CampaignIteration;
   targeting: CampaignTargeting;
-  platforms: Platform[];
-  website: string;
-  timezone: string;
+    platforms: Platform[];
+    website: string;
+    timezone: string;
+    managedProfileId?: string | null;
 }
 
 export interface Account {
@@ -318,6 +319,7 @@ export interface Account {
   defaultCta: string;
   createdAt: string;
   updatedAt: string;
+  managedProfileId?: string | null;
 }
 
 export interface AppSettings {
@@ -325,4 +327,34 @@ export interface AppSettings {
   theme: string;
   aiMode: AiMode;
   schemaVersion: number;
+}
+
+export interface Operator {
+  id: string;
+  googleSub: string;
+  email: string;
+  emailVerified: boolean;
+  name: string;
+  avatarUrl: string;
+  activeProfileId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt: string;
+}
+
+export interface ManagedProfile {
+  id: string;
+  ownerOperatorId: string;
+  displayName: string;
+  slug: string;
+  status: "ACTIVE" | "INACTIVE" | (string & {});
+  avatarUrl: string;
+  primaryEmail: string;
+  website: string | null;
+  primaryPublicUrl: string;
+  timezone: string;
+  shortDescription: string;
+  platforms: Platform[];
+  createdAt: string;
+  updatedAt: string;
 }

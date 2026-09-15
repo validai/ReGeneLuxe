@@ -21,6 +21,9 @@ export const COLLECTIONS = {
   campaign_changes: "campaign_changes",
   publications: "publications",
   publication_attempts: "publication_attempts",
+  operators: "operators",
+  managed_profiles: "managed_profiles",
+  profile_connections: "profile_connections",
 };
 
 export const MUTABLE_COLLECTIONS = new Set([
@@ -35,6 +38,9 @@ export const MUTABLE_COLLECTIONS = new Set([
   COLLECTIONS.attention,
   COLLECTIONS.experiments,
   COLLECTIONS.publications,
+  COLLECTIONS.operators,
+  COLLECTIONS.managed_profiles,
+  COLLECTIONS.profile_connections,
 ]);
 
 export const APPEND_ONLY_COLLECTIONS = new Set([

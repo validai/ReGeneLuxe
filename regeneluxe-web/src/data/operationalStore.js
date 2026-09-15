@@ -111,6 +111,11 @@ export function hydrateFromSnapshot(data) {
 
   if (data.activeCampaignId != null) setMetaValue("active_campaign_id", data.activeCampaignId);
   if (data.workingAccountId != null) setMetaValue("working_account_id", data.workingAccountId);
+  if (data.activeProfileId != null) setMetaValue("active_profile_id", data.activeProfileId);
+
+  replaceCollection("operators", data.operators || []);
+  replaceCollection("managed_profiles", data.managedProfiles || data.managed_profiles || []);
+  replaceCollection("profile_connections", data.profileConnections || data.profile_connections || []);
 }
 
 function normalizeSnapshots(raw) {

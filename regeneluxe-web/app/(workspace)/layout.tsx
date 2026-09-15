@@ -1,6 +1,8 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import WorkspaceProviders from "../../src/components/app/WorkspaceProviders";
 import Skeleton from "../../src/components/app/Skeleton";
+import { requireOperator, loadConnectionState } from "../../server/auth/workspaceSession.js";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +16,28 @@ function RouteFallback() {
   );
 }
 
-export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
+export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
+  const result = await requireOperator();
+  if (!result.ok) {
+    redirect(result.status === 503 ? "/signin?error=database" : "/signin");
+  }
+  if (result.profiles.length === 0) {
+    redirect("/setup/profile");
+  }
+
+  const connections = await loadConnectionState(result.operator, result.activeProfile);
+
   return (
-    <WorkspaceProviders>
+    <WorkspaceProviders
+      operator={result.publicOperator}
+      profiles={result.publicProfiles}
+      activeProfile={result.publicActiveProfile}
+      connections={{
+        googleAccount: connections.googleAccount,
+        gmail: connections.gmail,
+        youtube: connections.youtube,
+      }}
+    >
       <Suspense fallback={<RouteFallback />}>
         {children}
       </Suspense>

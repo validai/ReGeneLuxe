@@ -11,12 +11,13 @@ import {
   bridgeSetMeta,
   isSqliteAuthority,
 } from "./repoBridge.js";
+import { filterByActiveProfile, stampProfile } from "./profileScope.js";
 
 function loadList() {
   return bridgeList("campaigns", STORAGE_KEYS.campaigns, []);
 }
 
-export function listCampaigns() {
+export function listCampaigns(options = {}) {
   const raw = loadList();
   if (!Array.isArray(raw)) return [];
 
@@ -24,10 +25,10 @@ export function listCampaigns() {
     const migrated = migrateCampaigns(raw);
     bridgeReplaceAll("campaigns", STORAGE_KEYS.campaigns, migrated);
     markSchemaCurrent();
-    return migrated;
+    return filterByActiveProfile(migrated, options);
   }
 
-  return raw;
+  return filterByActiveProfile(raw, options);
 }
 
 export function getCampaign(id) {
@@ -40,7 +41,7 @@ export function saveCampaigns(campaigns) {
 }
 
 export function createCampaign(partial = {}) {
-  const campaign = emptyCampaign(partial);
+  const campaign = emptyCampaign(stampProfile(partial));
   if (isSqliteAuthority()) {
     bridgeUpsert("campaigns", STORAGE_KEYS.campaigns, campaign);
   } else {

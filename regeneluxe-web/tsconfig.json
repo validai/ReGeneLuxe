@@ -30,6 +30,10 @@
   },
   "include": [
     "next-env.d.ts",
+    "auth.ts",
+    "auth.config.ts",
+    "proxy.ts",
+    "types/**/*.ts",
     "app/**/*.ts",
     "app/**/*.tsx",
     "src/**/*.ts",

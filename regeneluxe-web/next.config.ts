@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
       { source: "/start", destination: "/campaigns", permanent: false },
       { source: "/drafting-room", destination: "/content", permanent: false },
       { source: "/campaign/new", destination: "/campaigns", permanent: false },
-      { source: "/login", destination: "/", permanent: false },
+      { source: "/login", destination: "/signin", permanent: false },
       { source: "/gate", destination: "/", permanent: false },
       { source: "/thank-you", destination: "/", permanent: false },
     ];

@@ -12,12 +12,27 @@ import {
   bootstrapDurableStore,
   getLastSyncStatus,
 } from "../../data/durableBootstrap.js";
+import { ProfileSessionProvider } from "./ProfileSession.jsx";
+import { setActiveProfileId } from "../../data/profileScope.js";
 
 /**
  * Native App Router chrome: shell, toasts, theme, command palette, shortcuts.
  * Boots local SQLite as the operational authority (non-blocking first paint).
+ * @param {{
+ *   children: import("react").ReactNode,
+ *   operator?: object | null,
+ *   profiles?: object[],
+ *   activeProfile?: object | null,
+ *   connections?: object | null,
+ * }} props
  */
-export default function WorkspaceProviders({ children }) {
+export default function WorkspaceProviders({
+  children,
+  operator = null,
+  profiles = [],
+  activeProfile = null,
+  connections = null,
+}) {
   const { settings } = useAppData();
   const [commandOpen, setCommandOpen] = useState(false);
   const [syncBanner, setSyncBanner] = useState(null);
@@ -26,6 +41,10 @@ export default function WorkspaceProviders({ children }) {
   useEffect(() => {
     applyTheme(settings.theme);
   }, [settings.theme]);
+
+  useEffect(() => {
+    if (activeProfile?.id) setActiveProfileId(activeProfile.id);
+  }, [activeProfile?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,6 +149,12 @@ export default function WorkspaceProviders({ children }) {
 
   return (
     <ErrorBoundary>
+      <ProfileSessionProvider
+        operator={operator}
+        profiles={profiles}
+        activeProfile={activeProfile}
+        connections={connections}
+      >
       <ToastProvider>
         <div className="min-h-screen bg-rl_bg text-rl_text">
           {syncBanner ? (
@@ -148,6 +173,7 @@ export default function WorkspaceProviders({ children }) {
           ) : null}
         </div>
       </ToastProvider>
+      </ProfileSessionProvider>
     </ErrorBoundary>
   );
 }
