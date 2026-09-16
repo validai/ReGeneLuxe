@@ -159,10 +159,30 @@ export default function WorkspaceProviders({
         <div className="min-h-screen bg-rl_bg text-rl_text">
           {syncBanner ? (
             <div
-              className="border-b border-rl_border bg-rl_surface px-4 py-1.5 text-center text-[11px] uppercase tracking-[0.14em] text-rl_muted"
+              className="flex items-center justify-center gap-3 border-b border-rl_border bg-rl_surface px-4 py-1.5 text-center text-[11px] text-rl_muted"
               role="status"
             >
-              {syncBanner}
+              <span>{syncBanner}</span>
+              {syncBanner.toLowerCase().includes("pending") ? (
+                <button
+                  type="button"
+                  className="rounded-full border border-rl_border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-rl_text hover:border-rl_accent"
+                  onClick={async () => {
+                    await fetch("/api/sync", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ pull: true, push: true }),
+                    }).catch(() => {});
+                    const health = await fetch("/api/db/health").then((res) => res.json()).catch(() => ({}));
+                    const sync = health?.sync;
+                    if (sync?.state === "SYNCED" || !(sync?.pendingOutbox > 0)) setSyncBanner(null);
+                    else setSyncBanner("Cloud sync pending");
+                  }}
+                >
+                  Sync now
+                </button>
+              ) : null}
+              <a href="/settings#data" className="underline-offset-2 hover:underline">Details</a>
             </div>
           ) : null}
           <AppShellNext onOpenCommand={() => setCommandOpen(true)}>

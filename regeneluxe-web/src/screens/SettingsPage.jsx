@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "@/nav";
 import PageShell from "../components/app/PageShell.jsx";
 import PageHeader from "../components/app/PageHeader.jsx";
 import FormField, { fieldClass } from "../components/app/FormField.jsx";
@@ -13,6 +14,8 @@ import { downloadBackupFile, importBackup, validateBackup } from "../data/backup
 import { getRuntimeStatus, getRuntimeHealth, saveRuntimeSecret } from "../data/runtimeClient.js";
 import { fetchDbHealth } from "../data/durableBootstrap.js";
 import { useProfileSession } from "../components/app/ProfileSession.jsx";
+import { displayConnectionState, formatHandle } from "../data/connectionStatus.js";
+import StatusBadge from "../components/app/StatusBadge.jsx";
 
 const THEMES = [
   { id: "dark", label: "Dark" },
@@ -28,7 +31,8 @@ function explainRuntime(runtime) {
 
 export default function SettingsPage() {
   const { settings, campaigns, accounts } = useAppData();
-  const { operator, activeProfile, connections } = useProfileSession();
+  const { operator, activeProfile } = useProfileSession();
+  const [providers, setProviders] = useState([]);
   const [importError, setImportError] = useState("");
   const [importOk, setImportOk] = useState("");
   const [resetOpen, setResetOpen] = useState(false);
@@ -52,12 +56,13 @@ export default function SettingsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getRuntimeStatus(), getRuntimeHealth(), fetchDbHealth()])
-      .then(([status, nextHealth, nextDb]) => {
+    Promise.all([getRuntimeStatus(), getRuntimeHealth(), fetchDbHealth(), fetch("/api/connections").then((res) => res.json()).catch(() => ({}))])
+      .then(([status, nextHealth, nextDb, connectionBody]) => {
         if (cancelled) return;
         setRuntime(status);
         setHealth(nextHealth);
         setDbHealth(nextDb);
+        if (Array.isArray(connectionBody?.providers)) setProviders(connectionBody.providers);
       })
       .finally(() => {
         if (!cancelled) setRuntimeLoading(false);
@@ -110,18 +115,73 @@ export default function SettingsPage() {
     <PageShell width="narrow" className="space-y-8">
       <PageHeader
         title="Settings"
-        description="Local-first durable store. Cloud sync is optional and never required to work."
+        description="Control center for the active profile, operator sign-in, connections, and local data."
       />
+
+      <nav className="flex flex-wrap gap-2 text-xs" aria-label="Settings sections">
+        {[
+          ["#profile", "Profile"],
+          ["#connections", "Connections"],
+          ["#account", "Account & Security"],
+          ["#data", "Data & Sync"],
+          ["#preferences", "Preferences"],
+        ].map(([href, label]) => (
+          <a key={href} href={href} className="rounded-full border border-rl_border px-3 py-1.5 text-rl_muted hover:text-rl_text">
+            {label}
+          </a>
+        ))}
+      </nav>
+
+      {activeProfile ? (
+        <section id="profile" className="rl-panel space-y-4 p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {activeProfile.avatarUrl ? (
+                <img src={activeProfile.avatarUrl} alt="" className="h-12 w-12 rounded-full object-cover" />
+              ) : (
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-rl_surfaceActive text-sm font-semibold">
+                  {(activeProfile.displayName || "?").slice(0, 1)}
+                </span>
+              )}
+              <div>
+                <h2 className="text-sm font-semibold text-rl_text">{activeProfile.displayName}</h2>
+                <p className="text-xs text-rl_muted">Active profile</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link to="/settings/profile" className="rl-btn-ghost px-3 py-1.5 text-xs">Edit profile</Link>
+              <Link to="/settings/profile" className="rl-btn-ghost px-3 py-1.5 text-xs">Change image</Link>
+            </div>
+          </div>
+          <ul className="space-y-1 text-sm text-rl_muted">
+            <li>Primary email · {activeProfile.primaryEmail || "—"}</li>
+            <li>Primary public link · {activeProfile.primaryPublicUrl || "—"}</li>
+            <li>Website · {activeProfile.website || "—"}</li>
+            <li>Platforms · {(activeProfile.platforms || []).join(", ") || "—"}</li>
+            <li>Status · {activeProfile.status === "INACTIVE" ? "Inactive" : "Active"}</li>
+          </ul>
+        </section>
+      ) : null}
 
       {operator ? (
         <section id="account" className="rl-panel space-y-3 p-5">
           <h2 className="text-sm font-semibold text-rl_text">Account &amp; Security</h2>
-          <ul className="space-y-2 text-sm text-rl_muted">
-            <li>Operator · Signed in with Google</li>
-            <li>Name · {operator.name || "—"}</li>
-            <li>Email · {operator.email || "—"}</li>
-          </ul>
+          <div className="flex items-center gap-3">
+            {operator?.avatarUrl ? (
+              <img src={operator.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
+            ) : (
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-rl_surfaceActive text-sm font-semibold">
+                {(operator?.name || "G").slice(0, 1)}
+              </span>
+            )}
+            <div>
+              <p className="text-sm font-medium text-rl_text">{operator.name || "Operator"}</p>
+              <p className="text-xs text-rl_muted">{operator.email}</p>
+              <p className="text-xs text-rl_ok">Signed in with Google · Session active</p>
+            </div>
+          </div>
           <p className="text-xs text-rl_muted">
+            This is the ReGeneLuxe operator, not the {activeProfile?.displayName || "active"} profile email.
             Google sign-in does not grant Gmail or YouTube access.
           </p>
         </section>
@@ -130,7 +190,7 @@ export default function SettingsPage() {
       <section id="connections" className="rl-panel space-y-4 p-5">
         <h2 className="text-sm font-semibold text-rl_text">Connections</h2>
         <p className="text-sm text-rl_muted">
-          Google Account is authentication. Gmail and YouTube are separate authorizations.
+          External services for the active profile. Signed in is operator Google auth. Connected is provider OAuth.
         </p>
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-3">
@@ -150,7 +210,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <span className="text-xs font-semibold uppercase tracking-[0.12em] text-rl_ok">
-              {connections?.googleAccount?.status === "CONNECTED" || operator ? "Connected" : "Not connected"}
+              Signed in
             </span>
           </div>
 
@@ -201,12 +261,39 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+          {["Instagram", "Facebook", "Threads", "TikTok", "X", "SoundCloud", "LinkedIn"].map((platform) => {
+            const account = accounts.find((item) => item.platform === platform);
+            const provider = providers.find((item) => (
+              item.displayName === platform || item.provider === platform.toLowerCase()
+            ));
+            const view = displayConnectionState(
+              account || { connectionState: provider?.readiness === "UNSUPPORTED" ? "UNSUPPORTED" : "UNCONNECTED" },
+              { providerReadiness: provider?.readiness || "" },
+            );
+            return (
+              <div key={platform} className="flex items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-rl_text">{platform}</p>
+                  <p className="truncate text-xs text-rl_muted">
+                    {account ? `${formatHandle(account.handle) || account.displayName} · ${view.hint}` : view.hint}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <StatusBadge value={view.code} label={view.label} />
+                  <Link to={account ? "/accounts" : "/accounts"} className="rl-btn-ghost px-3 py-1.5 text-xs">
+                    {account ? "Manage" : "Add"}
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
         </div>
         {connectionNote ? <p className="text-xs text-rl_muted">{connectionNote}</p> : null}
       </section>
 
-      <section className="rl-panel space-y-3 p-5">
-        <h2 className="text-sm font-semibold text-rl_text">Theme</h2>
+      <section id="preferences" className="rl-panel space-y-3 p-5">
+        <h2 className="text-sm font-semibold text-rl_text">Preferences</h2>
+        <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-rl_muted">Theme</h3>
         <p className="text-sm text-rl_muted">Dark is the designed workspace. Light and system are optional.</p>
         <div className="flex flex-wrap gap-2">
           {THEMES.map((theme) => (
@@ -297,8 +384,8 @@ export default function SettingsPage() {
         {runtimeNote && <p className="text-xs text-rl_muted">{runtimeNote}</p>}
       </section>
 
-      <section className="rl-panel space-y-3 p-5">
-        <h2 className="text-sm font-semibold text-rl_text">Data &amp; sync</h2>
+      <section id="data" className="rl-panel space-y-3 p-5">
+        <h2 className="text-sm font-semibold text-rl_text">Data &amp; Sync</h2>
         <p className="text-sm text-rl_muted">
           Schema version {SCHEMA_VERSION}. {campaigns.length} campaigns, {accounts.length} accounts.
           Local SQLite is the operational source of truth.

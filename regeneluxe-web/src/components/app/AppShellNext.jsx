@@ -113,16 +113,19 @@ export default function AppShellNext({ children, onOpenCommand }) {
         {accounts.length > 0 && (
           <div className={`pb-3 ${collapsed ? "px-1.5" : "px-3"}`}>
             <label className="block">
-              <span className="sr-only">Account</span>
+              <span className={collapsed ? "sr-only" : "mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-rl_muted"}>
+                Social accounts
+              </span>
               <select
                 className="rl-input py-1.5 text-xs"
                 value={workingAccountId}
                 onChange={(event) => setWorkingAccountId(event.target.value)}
+                aria-label="Social accounts for this profile"
                 title={workingAccountId
                   ? accountOptionLabel(accounts.find((a) => a.id === workingAccountId) || {})
-                  : "All accounts"}
+                  : "All social accounts"}
               >
-                <option value="">All accounts</option>
+                <option value="">All social accounts</option>
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {collapsed ? (account.platform?.[0] || "?") : accountOptionLabel(account)}
@@ -222,13 +225,14 @@ export default function AppShellNext({ children, onOpenCommand }) {
         {accounts.length > 0 && (
           <div className="px-3 pb-2">
             <label className="block">
-              <span className="sr-only">Account</span>
+              <span className="sr-only">Social accounts for this profile</span>
               <select
                 className="rl-input py-1.5 text-xs"
                 value={workingAccountId}
                 onChange={(event) => setWorkingAccountId(event.target.value)}
+                aria-label="Social accounts for this profile"
               >
-                <option value="">All accounts</option>
+                <option value="">All social accounts</option>
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {accountOptionLabel(account)}

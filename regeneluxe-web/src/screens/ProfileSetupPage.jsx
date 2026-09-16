@@ -10,6 +10,7 @@ import { guessTimezone, listIanaTimezones } from "../data/timezones.js";
 import {
   PROFILE_IMAGE_ACCEPT,
   formatBytesAsKb,
+  loadImageDimensions,
   validateImageDimensions,
   validateProfileImageFile,
 } from "../data/profileImage.js";
@@ -23,24 +24,6 @@ import {
   validateProfileSlug,
   validateRequiredHttpUrl,
 } from "../data/profileForm.js";
-
-function loadImageDimensions(file) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => {
-      const width = image.naturalWidth || image.width;
-      const height = image.naturalHeight || image.height;
-      URL.revokeObjectURL(url);
-      resolve({ width, height });
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("decode"));
-    };
-    image.src = url;
-  });
-}
 
 export default function ProfileSetupPage({ operator }) {
   const router = useRouter();

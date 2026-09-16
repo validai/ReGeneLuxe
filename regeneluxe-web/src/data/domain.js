@@ -17,11 +17,12 @@ export const CONNECTION_LABELS = {
   UNCONNECTED: "Not connected",
   CONNECTING: "Connecting",
   CONNECTED: "Connected",
-  AUTH_EXPIRED: "Sign-in expired",
+  AUTH_EXPIRED: "Reconnect required",
   RECONNECT_REQUIRED: "Reconnect required",
-  ERROR: "Connection error",
-  UNSUPPORTED: "Unavailable",
+  ERROR: "Reconnect required",
+  UNSUPPORTED: "Unsupported",
   SETUP_REQUIRED: "Setup required",
+  PROVIDER_REVIEW_REQUIRED: "Provider review required",
 };
 
 export const CAPABILITIES = {

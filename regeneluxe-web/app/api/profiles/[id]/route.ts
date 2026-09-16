@@ -8,7 +8,8 @@ import {
 } from "../../../../server/db/managedProfileRepository.js";
 import { setMeta } from "../../../../server/db/index.js";
 import { publicOperator } from "../../../../src/data/profileModels.js";
-import { sanitizeAvatarUrl } from "../../../../src/data/profileImage.js";
+import { saveProfileImageBuffer } from "../../../../server/media/store.js";
+import { readProfileInput } from "../../../../server/profiles/readProfileInput.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,7 +23,7 @@ export async function GET(_request: Request, { params }: Params) {
   }
   const { id } = await params;
   const profile = await getManagedProfile(id);
-  if (!result.ok || !profile || profile.ownerOperatorId !== result.operator.id) {
+  if (!profile || profile.ownerOperatorId !== result.operator.id) {
     return NextResponse.json({ ok: false, error: "Profile not found." }, { status: 404 });
   }
   return NextResponse.json({ ok: true, profile: toPublicProfile(profile) });
@@ -38,21 +39,48 @@ export async function PATCH(request: Request, { params }: Params) {
   if (!profile || profile.ownerOperatorId !== result.operator.id) {
     return NextResponse.json({ ok: false, error: "Profile not found." }, { status: 404 });
   }
-  const body = await request.json().catch(() => ({}));
   try {
-    const patch = { ...body };
-    if (Object.prototype.hasOwnProperty.call(body, "avatarUrl")) {
-      patch.avatarUrl = sanitizeAvatarUrl(body.avatarUrl);
+    const input = await readProfileInput(request);
+    const patch: Record<string, unknown> = {};
+    if (input.mode === "form") {
+      Object.assign(patch, {
+        displayName: input.displayName,
+        slug: input.slug,
+        primaryEmail: input.primaryEmail,
+        website: input.website,
+        primaryPublicUrl: input.primaryPublicUrl,
+        timezone: input.timezone,
+        shortDescription: input.shortDescription,
+        platforms: input.platforms,
+        status: input.status || profile.status,
+      });
     } else {
-      delete patch.avatarUrl;
+      const jsonKeys = ["displayName", "slug", "primaryEmail", "website", "primaryPublicUrl", "timezone", "shortDescription", "platforms", "status"] as const;
+      for (const key of jsonKeys) {
+        if (input[key] !== undefined) patch[key] = input[key];
+      }
+    }
+    if (input.removeAvatar) {
+      patch.avatarUrl = "";
+      patch.avatarMediaId = "";
+    } else if (input.avatarFile) {
+      const buffer = Buffer.from(await input.avatarFile.arrayBuffer());
+      const saved = await saveProfileImageBuffer({
+        buffer,
+        mimeType: input.avatarFile.type,
+        originalName: input.avatarFile.name,
+      });
+      patch.avatarUrl = saved.url;
+      patch.avatarMediaId = saved.id;
+    } else if (input.avatarUrl !== undefined) {
+      patch.avatarUrl = input.avatarUrl;
     }
     const saved = await updateManagedProfile(id, patch);
     return NextResponse.json({ ok: true, profile: toPublicProfile(saved) });
   } catch (error) {
-    return NextResponse.json({
-      ok: false,
-      error: error instanceof Error ? error.message : "Could not update profile.",
-    }, { status: 400 });
+    const message = error instanceof Error ? error.message : "Could not update profile.";
+    const status = /required|supported|Maximum|pixels|read this image/i.test(message) ? 400 : 500;
+    return NextResponse.json({ ok: false, error: message }, { status });
   }
 }
 
@@ -69,11 +97,11 @@ export async function POST(request: Request, { params }: Params) {
   try {
     const operator = await setActiveProfileForOperator(result.operator.id, id);
     await setMeta("active_profile_id", id);
-    const profile = await getManagedProfile(id);
+    const next = await getManagedProfile(id);
     return NextResponse.json({
       ok: true,
       operator: publicOperator(operator),
-      activeProfile: toPublicProfile(profile),
+      activeProfile: toPublicProfile(next),
     });
   } catch (error) {
     return NextResponse.json({

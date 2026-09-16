@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from "./storage.js";
 import { bridgeGetMeta, bridgeSetMeta } from "./repoBridge.js";
+import { socialAccountFilterLabel } from "./connectionStatus.js";
 
 export function getWorkingAccountId() {
   return bridgeGetMeta("working_account_id", STORAGE_KEYS.workingAccountId) || "";
@@ -20,7 +21,7 @@ export function filterByWorkingAccount(items, accounts, workingAccountId, getAcc
   });
 }
 
-export function accountOptionLabel(account) {
-  if (!account) return "All accounts";
-  return `${account.platform} — ${account.handle || account.displayName || "Untitled"}`;
+export function accountOptionLabel(account, options = {}) {
+  if (!account) return "All social accounts";
+  return socialAccountFilterLabel(account, options);
 }

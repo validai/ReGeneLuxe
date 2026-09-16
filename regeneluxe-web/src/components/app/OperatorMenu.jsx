@@ -44,6 +44,7 @@ export default function OperatorMenu({ collapsed = false }) {
         {!collapsed && (
           <span className="min-w-0">
             <span className="block truncate font-medium text-rl_text">{operator.name || "Operator"}</span>
+            <span className="block truncate text-[11px] text-rl_text">Signed in with Google</span>
             <span className="block truncate text-[11px]">{operator.email}</span>
           </span>
         )}

@@ -18,6 +18,7 @@ const NATIVE_PAGES = [
   "app/(workspace)/analytics/page.tsx",
   "app/(workspace)/accounts/page.tsx",
   "app/(workspace)/settings/page.tsx",
+  "app/(workspace)/settings/profile/page.tsx",
   "app/(workspace)/queue/page.tsx",
   "app/signin/page.tsx",
   "app/access-not-authorized/page.tsx",

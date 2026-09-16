@@ -14,7 +14,7 @@ const STATIC_ACTIONS = [
   { id: "queue", label: "Open Queue", hint: "Go", run: (navigate) => navigate("/queue") },
   { id: "content", label: "Open Content", hint: "Go", run: (navigate) => navigate("/content") },
   { id: "campaigns", label: "Open Campaigns", hint: "Go", run: (navigate) => navigate("/campaigns") },
-  { id: "settings", label: "Open Settings", hint: "Go", run: (navigate) => navigate("/settings") },
+  { id: "settings-profile", label: "Edit profile", hint: "Settings", run: (navigate) => navigate("/settings/profile") },
   { id: "dashboard", label: "Open Dashboard", hint: "Go", run: (navigate) => navigate("/") },
   { id: "all-accounts", label: "All accounts", hint: "Filter", run: () => setWorkingAccountId("") },
 ];

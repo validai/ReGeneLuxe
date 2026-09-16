@@ -23,6 +23,7 @@ const CampaignWorkspace = lazy(() => import("./screens/CampaignWorkspace.jsx"));
 const InboxPage = lazy(() => import("./screens/InboxPage.jsx"));
 const AccountsPage = lazy(() => import("./screens/AccountsPage.jsx"));
 const SettingsPage = lazy(() => import("./screens/SettingsPage.jsx"));
+const ProfileSettingsPage = lazy(() => import("./screens/ProfileSettingsPage.jsx"));
 
 function RouteFallback() {
   return (
@@ -136,6 +137,7 @@ export default function App() {
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/accounts" element={<AccountsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings/profile" element={<ProfileSettingsPage />} />
               <Route path="/dashboard" element={<Navigate to="/" replace />} />
               <Route path="/start" element={<Navigate to="/campaigns" replace />} />
               <Route path="/drafting-room" element={<Navigate to="/content" replace />} />

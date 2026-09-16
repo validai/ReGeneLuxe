@@ -20,6 +20,8 @@ import {
 } from "../data/connectors/registry.js";
 import { formatStamp } from "../utils/dates.js";
 import { useToast } from "../components/app/useToast.js";
+import { parseSocialIdentity } from "../data/socialAccountUrl.js";
+import { displayConnectionState, formatHandle } from "../data/connectionStatus.js";
 
 const blank = () => emptyAccount({
   platform: "Instagram",
@@ -31,14 +33,15 @@ const blank = () => emptyAccount({
 
 const HEALTH = {
   CONNECTED: { label: "Connected", tone: "bg-rl_ok/15 text-rl_ok" },
-  AUTH_EXPIRED: { label: "Needs attention", tone: "bg-rl_warning/15 text-rl_warning" },
+  AUTH_EXPIRED: { label: "Reconnect required", tone: "bg-rl_warning/15 text-rl_warning" },
   RECONNECT_REQUIRED: { label: "Reconnect required", tone: "bg-rl_warning/15 text-rl_warning" },
-  ERROR: { label: "Error", tone: "bg-rl_danger/15 text-rl_danger" },
+  ERROR: { label: "Reconnect required", tone: "bg-rl_danger/15 text-rl_danger" },
   MANUAL_ONLY: { label: "Manual", tone: "bg-rl_surfaceSoft text-rl_muted" },
   UNCONNECTED: { label: "Not connected", tone: "bg-rl_warning/15 text-rl_warning" },
   CONNECTING: { label: "Connecting", tone: "bg-rl_warning/15 text-rl_warning" },
   SETUP_REQUIRED: { label: "Setup required", tone: "bg-rl_warning/15 text-rl_warning" },
   UNSUPPORTED: { label: "Unsupported", tone: "bg-rl_surfaceSoft text-rl_muted" },
+  PROVIDER_REVIEW_REQUIRED: { label: "Provider review required", tone: "bg-rl_warning/15 text-rl_warning" },
 };
 
 function healthFor(connectionState) {
@@ -71,8 +74,33 @@ export default function AccountsPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [setupMessage, setSetupMessage] = useState("");
+  const [identityInput, setIdentityInput] = useState("");
+  const [detection, setDetection] = useState(null);
+  const [providers, setProviders] = useState([]);
 
   const selected = accounts.find((account) => account.id === selectedId) || null;
+
+  const readinessFor = (platform) => {
+    const id = String(platform || "").toLowerCase().replace("twitter", "x");
+    return providers.find((item) => item.provider === id || item.displayName === platform)?.readiness || "";
+  };
+
+  const applyIdentity = (value) => {
+    setIdentityInput(value);
+    const looksUrl = /[./]/.test(value) && !value.trim().startsWith("@");
+    const parsed = parseSocialIdentity(value, looksUrl ? {} : { platform: draft.platform });
+    setDetection(parsed);
+    if (!parsed.ok) return;
+    setDraft((current) => ({
+      ...current,
+      platform: parsed.platform || current.platform,
+      handle: parsed.handle ? `@${String(parsed.handle).replace(/^@/, "")}` : current.handle,
+      profileUrl: parsed.profileUrl || current.profileUrl,
+      displayName: current.displayName || parsed.displayName || parsed.handle || "",
+      connectionState: "MANUAL_ONLY",
+      connectionMethod: "MANUAL",
+    }));
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -106,6 +134,15 @@ export default function AccountsPage() {
     const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}`;
     window.history.replaceState({}, "", next);
   }, [toast]);
+
+  useEffect(() => {
+    fetch("/api/connections")
+      .then((res) => res.json())
+      .then((body) => {
+        if (Array.isArray(body?.providers)) setProviders(body.providers);
+      })
+      .catch(() => {});
+  }, []);
 
   const runConnect = async (account) => {
     setBusyId(account.id);
@@ -188,9 +225,13 @@ export default function AccountsPage() {
     if (Object.keys(nextErrors).length) return;
 
     if (editingId) {
-      updateAccount(editingId, draft);
+      updateAccount(editingId, { ...draft, connectionState: draft.connectionState || "MANUAL_ONLY" });
     } else {
-      createAccount(draft);
+      createAccount({
+        ...draft,
+        connectionState: "MANUAL_ONLY",
+        connectionMethod: "MANUAL",
+      });
     }
     setDraft(blank());
     setEditingId(null);
@@ -199,6 +240,8 @@ export default function AccountsPage() {
   const startEdit = (account) => {
     setEditingId(account.id);
     setDraft({ ...account });
+    setIdentityInput(account.profileUrl || account.handle || "");
+    setDetection(parseSocialIdentity(account.profileUrl || account.handle || "", { platform: account.platform }));
     setErrors({});
     setSelectedId(null);
   };
@@ -207,7 +250,7 @@ export default function AccountsPage() {
     <PageShell dense>
       <PageHeader
         title="Accounts"
-        description="Connect real providers when credentials exist. Manual accounts stay valid. Never fake Connected."
+        description="Social accounts belong to the active profile. Pasting a URL identifies the account. It does not connect it."
       />
 
       {setupMessage ? (
@@ -217,13 +260,35 @@ export default function AccountsPage() {
       ) : null}
       <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-rl_border bg-rl_surface/40 p-5">
         <h2 className="rl-label">{editingId ? "Edit account" : "Add account"}</h2>
+        <FormField id="acc-identity" label="Profile / channel URL or handle">
+          <input
+            id="acc-identity"
+            className={fieldClass}
+            placeholder="https://www.instagram.com/example or @example"
+            value={identityInput}
+            onChange={(event) => applyIdentity(event.target.value)}
+          />
+        </FormField>
+        {detection?.ok && detection.platform ? (
+          <p className="text-sm text-rl_text">
+            Detected: {detection.platform} {formatHandle(detection.handle)}
+            <span className="ml-2 text-xs text-rl_muted">Manual until you connect</span>
+          </p>
+        ) : null}
+        {detection && !detection.ok && identityInput.trim() ? (
+          <p className="text-sm text-rl_warning">{detection.error}</p>
+        ) : null}
         <div className="grid gap-4 md:grid-cols-2">
           <FormField id="acc-platform" label="Platform" error={errors.platform}>
             <select
               id="acc-platform"
               className={fieldClass}
               value={draft.platform}
-              onChange={(e) => setDraft({ ...draft, platform: e.target.value })}
+              onChange={(e) => {
+                const platform = e.target.value;
+                setDraft({ ...draft, platform });
+                if (identityInput) applyIdentity(identityInput);
+              }}
             >
               {PLATFORMS.map((platform) => (
                 <option key={platform} value={platform}>{platform}</option>
@@ -238,7 +303,7 @@ export default function AccountsPage() {
           </FormField>
         </div>
         <p className="rl-meta">
-          Connection: {healthFor(draft.connectionState).label}. {softCapabilityLine(draft.platform)}
+          Connection: {displayConnectionState(draft, { providerReadiness: readinessFor(draft.platform) }).label}. {softCapabilityLine(draft.platform)} URL detection never marks an account Connected.
         </p>
         <div className="flex items-center justify-between rounded-xl border border-rl_border px-4 py-3">
           <div>
@@ -322,8 +387,8 @@ export default function AccountsPage() {
         <ul className="divide-y divide-rl_border border-y border-rl_border">
           {accounts.map((account) => {
             const usedBy = campaigns.filter((campaign) => (campaign.accountIds || []).includes(account.id)).length;
-            const connection = account.connectionState || "MANUAL_ONLY";
-            const health = healthFor(connection);
+            const view = displayConnectionState(account, { providerReadiness: readinessFor(account.platform) });
+            const health = HEALTH[view.code] || HEALTH.MANUAL_ONLY;
             return (
               <li key={account.id}>
                 <button
@@ -334,18 +399,22 @@ export default function AccountsPage() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-sm font-semibold text-rl_text">
-                        {account.displayName || account.handle || "Untitled account"}
+                        {account.platform}
                       </h2>
-                      <StatusBadge label={account.active !== false ? "Active" : "Inactive"} />
-                      <StatusBadge value={connection} label={health.label} tone={health.tone} />
+                      <StatusBadge value={view.code} label={health.label} tone={health.tone} />
                     </div>
-                    <p className="mt-1 text-sm text-rl_muted">
-                      {account.platform} · {account.handle || "no handle"}
-                      {account.followerCount ? ` · ${account.followerCount} followers` : ""}
+                    <p className="mt-1 text-sm text-rl_text">
+                      {formatHandle(account.handle) || account.displayName || "No handle"}
+                    </p>
+                    <p className="mt-0.5 text-sm text-rl_muted">
+                      {view.hint}
+                      {view.code === "CONNECTED" && (account.lastSuccessfulSync || account.lastSync)
+                        ? ` · Last synced ${formatStamp(account.lastSuccessfulSync || account.lastSync)}`
+                        : ""}
                       {` · ${usedBy} campaign${usedBy === 1 ? "" : "s"}`}
                     </p>
                   </div>
-                  <span className="text-[11px] uppercase tracking-[0.12em] text-rl_muted">Details</span>
+                  <span className="text-[11px] uppercase tracking-[0.12em] text-rl_muted">Manage</span>
                 </button>
               </li>
             );
@@ -423,7 +492,7 @@ function AccountDetailSheet({
         <div className="flex flex-wrap gap-2">
           {canConnect && (
             <button type="button" className="rl-btn" disabled={busy} onClick={() => onConnect(account)}>
-              {busy ? "Working…" : connection === "SETUP_REQUIRED" ? "Retry setup" : "Connect"}
+              {busy ? "Working…" : connection === "SETUP_REQUIRED" ? "Retry setup" : `Connect ${account.platform}`}
             </button>
           )}
           {needsReconnect && (
