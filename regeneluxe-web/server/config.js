@@ -2,7 +2,9 @@
  * Shared identity / port helpers for ReGeneLuxe.
  *
  * Canonical (cutover complete):
- *   npm run dev → Next.js UI + API at http://127.0.0.1:5174/
+ *   One Next.js process. One port. Never 5175.
+ *   npm run dev → reuse or start Next.js UI + API at http://127.0.0.1:5174/
+ *   npm run dev:status → report who owns 5174
  *   /api is served by Next Route Handlers on the same origin.
  *
  * Vite is not a product runtime. Vitest may still use Vite as a test runner only.

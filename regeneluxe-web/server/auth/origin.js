@@ -60,6 +60,10 @@ export function googleCallbackUrl() {
   return `${getCanonicalOrigin()}/api/auth/callback/google`;
 }
 
+export function gmailCallbackUrl() {
+  return `${getCanonicalOrigin()}/api/oauth/gmail/callback`;
+}
+
 export function toCanonicalPath(url, baseUrl = getCanonicalOrigin()) {
   if (!url) return baseUrl;
   if (url.startsWith("/")) return `${baseUrl}${url}`;

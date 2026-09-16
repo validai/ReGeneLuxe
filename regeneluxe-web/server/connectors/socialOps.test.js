@@ -86,6 +86,21 @@ describe("connector registry", () => {
     expect(getConnector("instagram").resolveReadiness()).toBe("SETUP_REQUIRED");
     expect(getConnector("youtube").resolveReadiness()).toBe("SETUP_REQUIRED");
   });
+
+  it("reports Snapchat, Twitch, and Kick as UNSUPPORTED without inventing OAuth", async () => {
+    for (const id of ["snapchat", "twitch", "kick"]) {
+      const connector = getConnector(id);
+      expect(connector.resolveReadiness()).toBe("UNSUPPORTED");
+      expect(connector.capabilities).toEqual([]);
+      const auth = await connector.beginAuth();
+      expect(auth.ok).toBe(false);
+      expect(auth.reason).toBe("UNSUPPORTED");
+    }
+    const defs = listProviderDefinitions();
+    expect(defs.find((d) => d.provider === "snapchat")?.readiness).toBe("UNSUPPORTED");
+    expect(defs.find((d) => d.provider === "twitch")?.readiness).toBe("UNSUPPORTED");
+    expect(defs.find((d) => d.provider === "kick")?.readiness).toBe("UNSUPPORTED");
+  });
 });
 
 describe("analytics normalization", () => {

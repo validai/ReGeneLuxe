@@ -2,7 +2,7 @@ import { auth } from "../../auth";
 import { initDb, setMeta } from "../db/index.js";
 import { getOperator } from "../db/operatorRepository.js";
 import { listProfilesForOperator, listProfileConnections } from "../db/managedProfileRepository.js";
-import { publicOperator, publicManagedProfile, resolveActiveProfile } from "../../src/data/profileModels.js";
+import { publicOperator, publicManagedProfile, publicProfileConnection, resolveActiveProfile } from "../../src/data/profileModels.js";
 
 export async function requireOperator() {
   const session = await auth();
@@ -41,6 +41,8 @@ export async function loadConnectionState(operator, activeProfile) {
   const profileConnections = activeProfile
     ? await listProfileConnections(activeProfile.id)
     : [];
+  const gmailRow = profileConnections.find((row) => row.kind === "GMAIL");
+  const youtubeRow = profileConnections.find((row) => row.kind === "YOUTUBE");
   return {
     googleAccount: {
       kind: "GOOGLE_ACCOUNT",
@@ -49,14 +51,18 @@ export async function loadConnectionState(operator, activeProfile) {
       email: operator?.email || "",
       avatarUrl: operator?.avatarUrl || "",
     },
-    gmail: {
+    gmail: publicProfileConnection(gmailRow) || {
       kind: "GMAIL",
-      status: profileConnections.find((row) => row.kind === "GMAIL")?.status || "NOT_CONNECTED",
+      provider: "gmail",
+      status: "NOT_CONNECTED",
+      connectionState: "NOT_CONNECTED",
+      email: "",
+      displayLabel: "Gmail",
     },
     youtube: {
       kind: "YOUTUBE",
-      status: profileConnections.find((row) => row.kind === "YOUTUBE")?.status || "NOT_CONNECTED",
+      status: youtubeRow?.status || "NOT_CONNECTED",
     },
-    profileConnections,
+    profileConnections: profileConnections.map((row) => publicProfileConnection(row)).filter(Boolean),
   };
 }

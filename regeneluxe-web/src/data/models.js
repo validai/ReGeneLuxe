@@ -14,8 +14,32 @@ export const PLATFORMS = [
   "Facebook",
   "SoundCloud",
   "LinkedIn",
+  "Snapchat",
+  "Twitch",
+  "Kick",
   "Other",
 ];
+
+/** Connector IDs stored on the server registry. Display names above stay canonical in the domain model. */
+export const PLATFORM_IDS = {
+  Instagram: "instagram",
+  YouTube: "youtube",
+  TikTok: "tiktok",
+  X: "x",
+  Threads: "threads",
+  Facebook: "facebook",
+  SoundCloud: "soundcloud",
+  LinkedIn: "linkedin",
+  Snapchat: "snapchat",
+  Twitch: "twitch",
+  Kick: "kick",
+  Other: "other",
+};
+
+/** Settings Connections rows. YouTube has its own Google card; Other is a catch-all identity. */
+export const SOCIAL_CONNECTION_PLATFORMS = PLATFORMS.filter(
+  (platform) => platform !== "YouTube" && platform !== "Other",
+);
 
 export const ASSET_TYPES = [
   "feed post",
@@ -76,6 +100,9 @@ export const PLATFORM_METRICS = {
   Facebook: ["reach", "impressions", "likes", "comments", "shares", "clicks", "followersGained"],
   SoundCloud: ["plays", "likes", "comments", "shares", "streams"],
   LinkedIn: ["impressions", "likes", "comments", "shares", "clicks", "followersGained"],
+  Snapchat: ["views", "impressions", "likes", "shares", "saves", "followersGained"],
+  Twitch: ["views", "watchTime", "followersGained"],
+  Kick: ["views", "watchTime", "followersGained"],
   Other: RESULT_METRIC_KEYS,
 };
 

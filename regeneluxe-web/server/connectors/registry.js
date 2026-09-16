@@ -18,6 +18,9 @@ const PLATFORM_ALIASES = {
   Threads: "threads",
   SoundCloud: "soundcloud",
   LinkedIn: "linkedin",
+  Snapchat: "snapchat",
+  Twitch: "twitch",
+  Kick: "kick",
   Other: "other",
   Mock: "mock",
   instagram: "instagram",
@@ -27,23 +30,30 @@ const PLATFORM_ALIASES = {
   x: "x",
   threads: "threads",
   soundcloud: "soundcloud",
+  linkedin: "linkedin",
+  snapchat: "snapchat",
+  twitch: "twitch",
+  kick: "kick",
   mock: "mock",
 };
 
-function linkedInStub() {
+function unsupportedStub({ provider, displayName, reservedRails = false }) {
+  const message = reservedRails
+    ? `${displayName} connector rails reserved — not implemented in this sprint.`
+    : `No authenticated ${displayName} connector yet. Manual accounts can be planned and marked published.`;
   return {
-    provider: "linkedin",
-    displayName: "LinkedIn",
-    capabilities: expandCapabilities(["READ_PROFILE", "PUBLISH_TEXT"]),
+    provider,
+    displayName,
+    capabilities: reservedRails ? expandCapabilities(["READ_PROFILE", "PUBLISH_TEXT"]) : [],
     readiness: PROVIDER_READINESS.UNSUPPORTED,
-    setupInstructions: "LinkedIn connector rails reserved — not implemented in this sprint.",
+    setupInstructions: message,
     resolveReadiness: () => PROVIDER_READINESS.UNSUPPORTED,
     async beginAuth() {
       return {
         ok: false,
         readiness: PROVIDER_READINESS.UNSUPPORTED,
         reason: "UNSUPPORTED",
-        message: "LinkedIn is not supported yet.",
+        message: `${displayName} is not supported yet.`,
       };
     },
     async execute() {
@@ -60,7 +70,10 @@ const CORE = {
   x: xConnector,
   threads: threadsConnector,
   soundcloud: soundcloudConnector,
-  linkedin: linkedInStub(),
+  linkedin: unsupportedStub({ provider: "linkedin", displayName: "LinkedIn", reservedRails: true }),
+  snapchat: unsupportedStub({ provider: "snapchat", displayName: "Snapchat" }),
+  twitch: unsupportedStub({ provider: "twitch", displayName: "Twitch" }),
+  kick: unsupportedStub({ provider: "kick", displayName: "Kick" }),
 };
 
 function allowMock() {

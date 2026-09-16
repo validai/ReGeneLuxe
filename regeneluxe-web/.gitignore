@@ -28,4 +28,5 @@ out
 
 # Local runtime secrets — never commit
 server/.secrets.json
+server/.secrets.key
 .regeneluxe/

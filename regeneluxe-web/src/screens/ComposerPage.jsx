@@ -9,7 +9,7 @@ import { useAppData } from "../hooks/useAppData.js";
 import { emptyContentItem, emptyVariant } from "../data/domain.js";
 import { saveContent, getContent } from "../data/collectionRepository.js";
 import { scheduleContent, requestPublish, markPublished } from "../data/publishing.js";
-import { publishMediaSupport } from "../data/connectors/registry.js";
+import { publishMediaSupport, declaredCapabilities } from "../data/connectors/registry.js";
 import { ASSET_TYPES } from "../data/models.js";
 import { recordEvent } from "../data/events.js";
 
@@ -158,6 +158,13 @@ export default function ComposerPage() {
     () => accounts.filter((account) => form.accountIds.includes(account.id)),
     [accounts, form.accountIds]
   );
+
+  const canAttemptProviderPublish = useMemo(() => {
+    if (selectedAccounts.length === 0) return true;
+    return selectedAccounts.some((account) => (
+      declaredCapabilities(account.platform).some((cap) => String(cap).startsWith("PUBLISH"))
+    ));
+  }, [selectedAccounts]);
 
   const variantTabs = useMemo(() => {
     const tabs = [{ id: "base", label: "Base" }];
@@ -684,8 +691,9 @@ export default function ComposerPage() {
                             <span className="ml-1.5 text-rl_muted">{account.handle || account.displayName}</span>
                           </div>
                           <p className="mt-0.5 text-xs text-rl_muted">
-                            Image {media.image ? "✓" : "✕"} · Video {media.video ? "✓" : "✕"} · Text {media.text ? "✓" : "✕"}
-                            {account.connectionState !== "CONNECTED" ? " · manual until connected" : ""}
+                            {declaredCapabilities(account.platform).length === 0
+                              ? "Manual account · no authenticated connector"
+                              : `Image ${media.image ? "✓" : "✕"} · Video ${media.video ? "✓" : "✕"} · Text ${media.text ? "✓" : "✕"}${account.connectionState !== "CONNECTED" ? " · manual until connected" : ""}`}
                           </p>
                         </li>
                       );
@@ -730,6 +738,7 @@ export default function ComposerPage() {
             >
               Schedule
             </button>
+            {canAttemptProviderPublish ? (
             <button
               type="button"
               className="rl-btn-ghost"
@@ -751,6 +760,7 @@ export default function ComposerPage() {
             >
               Publish
             </button>
+            ) : null}
             <button
               type="button"
               className="rl-btn-ghost"

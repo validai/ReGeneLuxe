@@ -3,6 +3,7 @@ import {
   canonicalRequestUrl,
   getCanonicalOrigin,
   googleCallbackUrl,
+  gmailCallbackUrl,
   isLoopbackHostname,
   shouldRedirectLocalhostAlias,
   toCanonicalPath,
@@ -29,6 +30,7 @@ describe("canonical auth origin", () => {
     process.env.AUTH_URL = "http://localhost:5174";
     expect(getCanonicalOrigin()).toBe("http://127.0.0.1:5174");
     expect(googleCallbackUrl()).toBe("http://127.0.0.1:5174/api/auth/callback/google");
+    expect(gmailCallbackUrl()).toBe("http://127.0.0.1:5174/api/oauth/gmail/callback");
   });
 
   it("keeps an explicit 127.0.0.1 AUTH_URL", () => {

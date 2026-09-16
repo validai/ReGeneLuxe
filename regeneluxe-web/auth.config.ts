@@ -2,6 +2,7 @@ import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 import { isPublicPath } from "./server/auth/publicPaths.js";
 import { getCanonicalOrigin, toCanonicalPath } from "./server/auth/origin.js";
+import { OPERATOR_GOOGLE_SCOPES } from "./server/auth/googleScopes.js";
 
 /**
  * Edge-safe Auth.js config. Do not import SQLite/libsql here.
@@ -22,7 +23,7 @@ export const authConfig = {
     Google({
       authorization: {
         params: {
-          scope: "openid profile email",
+          scope: OPERATOR_GOOGLE_SCOPES,
           prompt: "select_account",
         },
       },

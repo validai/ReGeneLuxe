@@ -31,6 +31,7 @@ const TONES = {
   CONNECTED: "bg-rl_ok/15 text-rl_ok",
   MANUAL_ONLY: "bg-rl_surfaceSoft text-rl_muted",
   UNCONNECTED: "bg-rl_warning/15 text-rl_warning",
+  NOT_CONNECTED: "bg-rl_warning/15 text-rl_warning",
   SETUP_REQUIRED: "bg-rl_warning/15 text-rl_warning",
   RECONNECT_REQUIRED: "bg-rl_warning/15 text-rl_warning",
   PROVIDER_REVIEW_REQUIRED: "bg-rl_warning/15 text-rl_warning",

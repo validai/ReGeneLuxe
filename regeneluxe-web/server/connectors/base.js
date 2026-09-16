@@ -104,7 +104,7 @@ export function baseConnector({
       return envCredentials(provider, envKeys);
     },
 
-    async beginAuth({ accountId, returnTo } = {}) {
+    async beginAuth(input = {}) {
       const status = this.resolveReadiness();
       if (status === PROVIDER_READINESS.SETUP_REQUIRED) {
         return setupRequired(displayName || provider, setupInstructions);
@@ -120,7 +120,7 @@ export function baseConnector({
       if (status === PROVIDER_READINESS.UNSUPPORTED) {
         return unavailable("This provider is not supported yet.");
       }
-      return this._beginAuth({ accountId, returnTo });
+      return this._beginAuth(input);
     },
 
     async completeAuth(input) {

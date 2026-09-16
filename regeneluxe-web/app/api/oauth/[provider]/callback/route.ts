@@ -4,10 +4,12 @@ import { consumeOAuthState, friendlyOAuthError } from "../../../../../server/con
 import { initDb, get, upsert, COLLECTIONS } from "../../../../../server/db/index.js";
 import { nowIso } from "../../../../../src/data/ids.js";
 import { syncConnectedAccount } from "../../../../../server/connectors/syncAccount.js";
+import { requireOperator } from "../../../../../server/auth/workspaceSession.js";
+import { completeGmailAuth, gmailSettingsRedirect } from "../../../../../server/connectors/gmailConnection.js";
 
 export const dynamic = "force-dynamic";
 
-function redirectTo(path: string, params: Record<string, string>) {
+function redirectTo(path: string, params: Record<string, string> = {}) {
   const origin = process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174";
   const url = new URL(path, origin);
   Object.entries(params).forEach(([key, value]) => {
@@ -27,6 +29,18 @@ export async function GET(
   const state = url.searchParams.get("state") || "";
   const error = url.searchParams.get("error") || "";
   const errorDescription = url.searchParams.get("error_description") || "";
+
+  if (provider === "gmail") {
+    const authz = await requireOperator();
+    const result = await completeGmailAuth({
+      code,
+      state,
+      error,
+      errorDescription,
+      operator: authz.ok ? authz.operator : null,
+    });
+    return NextResponse.redirect(result.redirectTo || gmailSettingsRedirect({ gmail: "error" }));
+  }
 
   try {
     await initDb();

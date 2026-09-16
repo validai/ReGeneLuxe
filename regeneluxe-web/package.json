@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev -H 127.0.0.1 -p 5174",
+    "dev": "node scripts/canonical-dev.mjs",
+    "dev:status": "node scripts/canonical-dev.mjs --status",
+    "dev:next": "next dev -H 127.0.0.1 -p 5174",
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 5174",
     "typecheck": "tsc --noEmit",

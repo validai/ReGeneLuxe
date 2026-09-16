@@ -7,15 +7,16 @@ import ConfirmDialog from "../components/app/ConfirmDialog.jsx";
 import ChoiceChip from "../components/choices/ChoiceChip.jsx";
 import Skeleton from "../components/app/Skeleton.jsx";
 import { useAppData } from "../hooks/useAppData.js";
-import { SCHEMA_VERSION, PLATFORMS } from "../data/models.js";
+import { SCHEMA_VERSION, PLATFORMS, SOCIAL_CONNECTION_PLATFORMS } from "../data/models.js";
 import { AI_MODES, AI_MODE_LABELS } from "../data/domain.js";
 import { updateSettings, resetAllLocalData } from "../data/settingsRepository.js";
 import { downloadBackupFile, importBackup, validateBackup } from "../data/backupService.js";
 import { getRuntimeStatus, getRuntimeHealth, saveRuntimeSecret } from "../data/runtimeClient.js";
 import { fetchDbHealth } from "../data/durableBootstrap.js";
 import { useProfileSession } from "../components/app/ProfileSession.jsx";
-import { displayConnectionState, formatHandle } from "../data/connectionStatus.js";
+import { displayConnectionState, displayProfileConnection, formatHandle } from "../data/connectionStatus.js";
 import StatusBadge from "../components/app/StatusBadge.jsx";
+import { PlatformIcon } from "../components/app/Icon.jsx";
 
 const THEMES = [
   { id: "dark", label: "Dark" },
@@ -31,7 +32,7 @@ function explainRuntime(runtime) {
 
 export default function SettingsPage() {
   const { settings, campaigns, accounts } = useAppData();
-  const { operator, activeProfile } = useProfileSession();
+  const { operator, activeProfile, connections, refresh } = useProfileSession();
   const [providers, setProviders] = useState([]);
   const [importError, setImportError] = useState("");
   const [importOk, setImportOk] = useState("");
@@ -44,15 +45,27 @@ export default function SettingsPage() {
   const [runtimeNote, setRuntimeNote] = useState("");
 
   const [dbHealth, setDbHealth] = useState(null);
-  const [connectionNote, setConnectionNote] = useState("");
+  const [connectionNote, setConnectionNote] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const params = new URLSearchParams(window.location.search);
+    const gmail = params.get("gmail");
+    if (gmail === "connected") return "Gmail connected for the active profile.";
+    if (gmail === "error") return params.get("message") || "Gmail connection failed.";
+    return "";
+  });
+  const gmailConnection = connections?.gmail || { status: "NOT_CONNECTED" };
+  const gmailView = displayProfileConnection(gmailConnection);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const gmail = params.get("gmail");
+    if (gmail === "connected") refresh?.();
     const hash = window.location.hash;
-    if (hash) {
-      document.querySelector(hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (hash || gmail) {
+      document.querySelector(hash || "#connections")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, []);
+  }, [refresh]);
 
   useEffect(() => {
     let cancelled = false;
@@ -215,26 +228,86 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-3">
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-rl_text">Gmail</p>
-              <p className="text-xs text-rl_muted">Mailbox access is not requested at sign-in.</p>
+              <p className="truncate text-xs text-rl_muted">
+                {gmailView.code === "CONNECTED" && gmailConnection.email
+                  ? gmailConnection.email
+                  : gmailView.hint}
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-rl_warning">Not connected</span>
-              <button
-                type="button"
-                className="rl-btn-ghost px-3 py-1.5 text-xs"
-                onClick={async () => {
-                  const result = await fetch("/api/connections/google", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ kind: "GMAIL" }),
-                  }).then((response) => response.json()).catch(() => ({}));
-                  setConnectionNote(result.message || "Gmail connection opens in the next phase.");
-                }}
-              >
-                Connect
-              </button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <StatusBadge value={gmailView.code} label={gmailView.label} />
+              {gmailView.code === "CONNECTED" ? (
+                <>
+                  <button
+                    type="button"
+                    className="rl-btn-ghost px-3 py-1.5 text-xs"
+                    onClick={async () => {
+                      const result = await fetch("/api/connections/google", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ kind: "GMAIL", action: "refresh" }),
+                      }).then((response) => response.json()).catch(() => ({}));
+                      if (result.ok) {
+                        setConnectionNote("Gmail connection verified.");
+                        await refresh?.();
+                      } else {
+                        setConnectionNote(result.error || "Gmail needs to be reconnected.");
+                        await refresh?.();
+                      }
+                    }}
+                  >
+                    Refresh
+                  </button>
+                  <button
+                    type="button"
+                    className="rl-btn-ghost px-3 py-1.5 text-xs"
+                    onClick={async () => {
+                      const result = await fetch("/api/connections/google", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ kind: "GMAIL", action: "disconnect" }),
+                      }).then((response) => response.json()).catch(() => ({}));
+                      if (result.ok) {
+                        setConnectionNote("Gmail disconnected. The active profile was kept.");
+                        await refresh?.();
+                      } else {
+                        setConnectionNote(result.error || "Could not disconnect Gmail.");
+                      }
+                    }}
+                  >
+                    Disconnect
+                  </button>
+                </>
+              ) : (
+                <>
+                  <a href="/api/oauth/gmail/start" className="rl-btn-ghost px-3 py-1.5 text-xs">
+                    {gmailView.code === "NOT_CONNECTED" ? "Connect Gmail" : "Reconnect Gmail"}
+                  </a>
+                  {gmailView.code !== "NOT_CONNECTED" ? (
+                    <button
+                      type="button"
+                      className="rl-btn-ghost px-3 py-1.5 text-xs"
+                      onClick={async () => {
+                        const result = await fetch("/api/connections/google", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ kind: "GMAIL", action: "disconnect" }),
+                        }).then((response) => response.json()).catch(() => ({}));
+                        if (result.ok) {
+                          setConnectionNote("Gmail disconnected. The active profile was kept.");
+                          await refresh?.();
+                        } else {
+                          setConnectionNote(result.error || "Could not disconnect Gmail.");
+                        }
+                      }}
+                    >
+                      Disconnect
+                    </button>
+                  ) : null}
+                </>
+              )}
             </div>
           </div>
 
@@ -261,7 +334,7 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
-          {["Instagram", "Facebook", "Threads", "TikTok", "X", "SoundCloud", "LinkedIn"].map((platform) => {
+          {SOCIAL_CONNECTION_PLATFORMS.map((platform) => {
             const account = accounts.find((item) => item.platform === platform);
             const provider = providers.find((item) => (
               item.displayName === platform || item.provider === platform.toLowerCase()
@@ -273,7 +346,10 @@ export default function SettingsPage() {
             return (
               <div key={platform} className="flex items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-rl_text">{platform}</p>
+                  <p className="flex items-center gap-2 text-sm font-medium text-rl_text">
+                    <PlatformIcon platform={platform} size="sm" />
+                    {platform}
+                  </p>
                   <p className="truncate text-xs text-rl_muted">
                     {account ? `${formatHandle(account.handle) || account.displayName} · ${view.hint}` : view.hint}
                   </p>

@@ -13,6 +13,9 @@ export type Platform =
   | "Facebook"
   | "SoundCloud"
   | "LinkedIn"
+  | "Snapchat"
+  | "Twitch"
+  | "Kick"
   | "Other"
   | (string & {});
 

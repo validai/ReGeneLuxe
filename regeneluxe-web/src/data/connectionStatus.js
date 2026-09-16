@@ -8,7 +8,8 @@ export const CONNECTION_HINTS = {
   RECONNECT_REQUIRED: "Provider auth expired or was revoked.",
   AUTH_EXPIRED: "Provider auth expired or was revoked.",
   PROVIDER_REVIEW_REQUIRED: "Integration exists but provider approval blocks activation.",
-  UNSUPPORTED: "Not supported",
+  UNSUPPORTED: "Not connected",
+  MANUAL_UNSUPPORTED: "Manual account available. No authenticated connector yet.",
   CONNECTING: "Authorization in progress.",
   ERROR: "Provider auth expired or was revoked.",
 };
@@ -43,7 +44,15 @@ export function displayConnectionState(account, { providerReadiness = "" } = {})
       hint: CONNECTION_HINTS.RECONNECT_REQUIRED,
     };
   }
-  if (state === "UNSUPPORTED" || providerReadiness === "UNSUPPORTED") {
+  const unsupportedConnector = state === "UNSUPPORTED" || providerReadiness === "UNSUPPORTED";
+  if (unsupportedConnector && state === "MANUAL_ONLY") {
+    return {
+      code: "MANUAL_ONLY",
+      label: CONNECTION_LABELS.MANUAL_ONLY,
+      hint: CONNECTION_HINTS.MANUAL_UNSUPPORTED,
+    };
+  }
+  if (unsupportedConnector) {
     return {
       code: "UNSUPPORTED",
       label: CONNECTION_LABELS.UNSUPPORTED,
@@ -75,6 +84,36 @@ export function displayConnectionState(account, { providerReadiness = "" } = {})
     code: "MANUAL_ONLY",
     label: CONNECTION_LABELS.MANUAL_ONLY,
     hint: CONNECTION_HINTS.MANUAL_ONLY,
+  };
+}
+
+export function displayProfileConnection(connection) {
+  const status = connection?.status || connection?.connectionState || "NOT_CONNECTED";
+  if (status === "CONNECTED") {
+    return {
+      code: "CONNECTED",
+      label: CONNECTION_LABELS.CONNECTED,
+      hint: CONNECTION_HINTS.CONNECTED,
+    };
+  }
+  if (status === "RECONNECT_REQUIRED" || status === "AUTH_EXPIRED") {
+    return {
+      code: "RECONNECT_REQUIRED",
+      label: CONNECTION_LABELS.RECONNECT_REQUIRED,
+      hint: CONNECTION_HINTS.RECONNECT_REQUIRED,
+    };
+  }
+  if (status === "ERROR") {
+    return {
+      code: "ERROR",
+      label: CONNECTION_LABELS.ERROR,
+      hint: CONNECTION_HINTS.ERROR,
+    };
+  }
+  return {
+    code: "NOT_CONNECTED",
+    label: CONNECTION_LABELS.NOT_CONNECTED || CONNECTION_LABELS.UNCONNECTED,
+    hint: "Mailbox access is not requested at sign-in.",
   };
 }
 

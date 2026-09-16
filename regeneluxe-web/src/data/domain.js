@@ -15,6 +15,7 @@ export const CONNECTION_STATES = [
 export const CONNECTION_LABELS = {
   MANUAL_ONLY: "Manual",
   UNCONNECTED: "Not connected",
+  NOT_CONNECTED: "Not connected",
   CONNECTING: "Connecting",
   CONNECTED: "Connected",
   AUTH_EXPIRED: "Reconnect required",

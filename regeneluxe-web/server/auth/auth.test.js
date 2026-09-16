@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { isEmailAllowed, parseAllowedEmails } from "./allowlist.js";
 import { isPublicPath, shouldRedirectToSignIn } from "./publicPaths.js";
 import { authErrorMessage } from "./errors.js";
+import { OPERATOR_GOOGLE_SCOPES, GMAIL_CONNECTION_SCOPES, GMAIL_READONLY_SCOPE } from "./googleScopes.js";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 describe("pilot allowlist", () => {
   it("parses comma-separated emails", () => {
@@ -36,6 +40,10 @@ describe("route protection", () => {
     expect(shouldRedirectToSignIn("/api/auth/callback/google", false)).toBe(false);
     expect(shouldRedirectToSignIn("/api/health", false)).toBe(false);
     expect(shouldRedirectToSignIn("/api/oauth/youtube/callback", false)).toBe(false);
+    expect(shouldRedirectToSignIn("/api/oauth/gmail/callback", false)).toBe(false);
+    expect(shouldRedirectToSignIn("/api/oauth/gmail/start", false)).toBe(false);
+    expect(isPublicPath("/api/oauth/gmail/callback")).toBe(true);
+    expect(isPublicPath("/api/auth/callback/google")).toBe(true);
   });
 
   it("does not create a public-path loop for signed-in operators", () => {
@@ -59,5 +67,19 @@ describe("auth error copy", () => {
     expect(authErrorMessage("database")).toMatch(/local database/i);
     expect(authErrorMessage("expired")).toMatch(/session expired/i);
     expect(authErrorMessage("sync")).toMatch(/cloud sync/i);
+  });
+});
+
+describe("operator Google scopes stay separate from Gmail", () => {
+  it("does not request gmail.readonly at Auth.js sign-in", () => {
+    expect(OPERATOR_GOOGLE_SCOPES.split(/\s+/)).toEqual(["openid", "profile", "email"]);
+    expect(OPERATOR_GOOGLE_SCOPES).not.toMatch(/gmail/i);
+    expect(GMAIL_CONNECTION_SCOPES).toContain(GMAIL_READONLY_SCOPE);
+    expect(GMAIL_CONNECTION_SCOPES).toContain("openid");
+    const configPath = join(dirname(fileURLToPath(import.meta.url)), "../../auth.config.ts");
+    const config = readFileSync(configPath, "utf8");
+    expect(config).toContain("OPERATOR_GOOGLE_SCOPES");
+    expect(config).not.toContain("gmail.readonly");
+    expect(config).not.toContain("/api/oauth/gmail/callback");
   });
 });

@@ -14,6 +14,8 @@ export const PROFILE_CONNECTION_KINDS = {
 export const PROFILE_CONNECTION_STATES = {
   CONNECTED: "CONNECTED",
   NOT_CONNECTED: "NOT_CONNECTED",
+  RECONNECT_REQUIRED: "RECONNECT_REQUIRED",
+  ERROR: "ERROR",
 };
 
 export function slugifyProfileName(name) {
@@ -113,17 +115,56 @@ export function publicManagedProfile(profile) {
 export function emptyProfileConnection(partial = {}) {
   const timestamp = nowIso();
   const kind = partial.kind || PROFILE_CONNECTION_KINDS.SOCIAL;
+  const status = PROFILE_CONNECTION_STATES[partial.status]
+    || PROFILE_CONNECTION_STATES[partial.connectionState]
+    || partial.status
+    || PROFILE_CONNECTION_STATES.NOT_CONNECTED;
+  const mailbox = partial.mailbox && typeof partial.mailbox === "object"
+    ? {
+      emailAddress: partial.mailbox.emailAddress || "",
+      messagesTotal: partial.mailbox.messagesTotal ?? null,
+      threadsTotal: partial.mailbox.threadsTotal ?? null,
+      historyId: partial.mailbox.historyId != null ? String(partial.mailbox.historyId) : "",
+    }
+    : null;
   return {
     id: partial.id || createId("pcn"),
     managedProfileId: partial.managedProfileId || "",
     ownerOperatorId: partial.ownerOperatorId || "",
     kind,
     provider: partial.provider || kind.toLowerCase(),
-    status: partial.status || PROFILE_CONNECTION_STATES.NOT_CONNECTED,
+    status,
+    connectionState: partial.connectionState || status,
     displayLabel: partial.displayLabel || "",
     notes: partial.notes || "",
+    googleAccountSub: partial.googleAccountSub || "",
+    email: partial.email || "",
+    grantedScopes: Array.isArray(partial.grantedScopes) ? partial.grantedScopes : [],
+    connectedAt: partial.connectedAt || null,
+    lastSyncAt: partial.lastSyncAt || null,
+    mailbox,
     createdAt: partial.createdAt || timestamp,
     updatedAt: partial.updatedAt || timestamp,
+  };
+}
+
+export function publicProfileConnection(row) {
+  if (!row) return null;
+  const status = row.status || row.connectionState || PROFILE_CONNECTION_STATES.NOT_CONNECTED;
+  return {
+    id: row.id || "",
+    managedProfileId: row.managedProfileId || "",
+    kind: row.kind || "",
+    provider: row.provider || String(row.kind || "").toLowerCase(),
+    status,
+    connectionState: status,
+    displayLabel: row.displayLabel || "",
+    email: row.email || "",
+    googleAccountSub: row.googleAccountSub || "",
+    grantedScopes: Array.isArray(row.grantedScopes) ? row.grantedScopes : [],
+    connectedAt: row.connectedAt || null,
+    lastSyncAt: row.lastSyncAt || null,
+    updatedAt: row.updatedAt || null,
   };
 }
 

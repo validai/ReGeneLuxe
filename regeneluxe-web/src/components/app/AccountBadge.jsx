@@ -1,4 +1,5 @@
 import { resolveAccount } from "../../data/accountRepository.js";
+import { PlatformIcon } from "./Icon.jsx";
 
 export default function AccountBadge({ accountId, accounts, fallback = "Account removed" }) {
   const account = resolveAccount(accountId, accounts);
@@ -12,6 +13,7 @@ export default function AccountBadge({ accountId, accounts, fallback = "Account 
 
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-rl_surfaceSoft px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-rl_text">
+      <PlatformIcon platform={account.platform} size="sm" />
       {account.platform}
       <span className="text-rl_muted">{account.handle || account.displayName}</span>
     </span>

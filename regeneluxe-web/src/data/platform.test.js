@@ -33,6 +33,17 @@ describe("connectors", () => {
     const account = emptyAccount({ platform: "YouTube", connectionState: "CONNECTED" });
     expect(hasCapability(account, "READ_PROFILE")).toBe(true);
   });
+
+  it("does not declare publish capabilities for Snapchat, Twitch, or Kick", () => {
+    for (const platform of ["Snapchat", "Twitch", "Kick"]) {
+      expect(declaredCapabilities(platform)).toEqual([]);
+      const account = emptyAccount({ platform, connectionState: "MANUAL_ONLY" });
+      expect(availableCapabilities(account)).toEqual([]);
+      expect(hasCapability(account, "PUBLISH_POST")).toBe(false);
+      const connected = emptyAccount({ platform, connectionState: "CONNECTED" });
+      expect(hasCapability(connected, "PUBLISH_POST")).toBe(false);
+    }
+  });
 });
 
 describe("content and publishing", () => {

@@ -21,6 +21,9 @@ export const PlatformSchema = z.enum([
   "Facebook",
   "SoundCloud",
   "LinkedIn",
+  "Snapchat",
+  "Twitch",
+  "Kick",
   "Other",
 ]);
 

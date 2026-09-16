@@ -19,6 +19,9 @@ const PLATFORM_ABBR = {
   Facebook: "FB",
   SoundCloud: "SC",
   LinkedIn: "LI",
+  Snapchat: "SN",
+  Twitch: "TW",
+  Kick: "KK",
   Other: "·",
 };
 

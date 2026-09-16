@@ -1,6 +1,6 @@
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import AccessNotAuthorizedPage from "./AccessNotAuthorizedPage.jsx";
 import SignInPage from "./SignInPage.jsx";
 import ProfileSettingsPage from "./ProfileSettingsPage.jsx";
@@ -8,6 +8,7 @@ import ProfileSetupPage from "./ProfileSetupPage.jsx";
 import { ProfileSessionProvider } from "../components/app/ProfileSession.jsx";
 import OperatorMenu from "../components/app/OperatorMenu.jsx";
 import ProfileSwitcher from "../components/app/ProfileSwitcher.jsx";
+import SettingsPage from "./SettingsPage.jsx";
 
 vi.mock("../../app/actions/auth", () => ({
   signInWithGoogle: () => {},
@@ -184,6 +185,13 @@ describe("profile setup image and field diagnostics", () => {
     render(<ProfileSetupPage />);
     expect(screen.queryByText(/enter a complete url/i)).not.toBeInTheDocument();
   });
+
+  it("offers Snapchat, Twitch, and Kick as main platforms", () => {
+    render(<ProfileSetupPage />);
+    expect(screen.getByRole("button", { name: "Snapchat" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Twitch" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Kick" })).toBeInTheDocument();
+  });
 });
 
 describe("profile settings edit", () => {
@@ -230,6 +238,9 @@ describe("profile settings edit", () => {
     expect(screen.getByLabelText(/profile name/i)).toHaveValue("DJ Coast");
     expect(screen.getByRole("button", { name: /change image/i })).toBeInTheDocument();
     expect(screen.queryByText(/create the first managed profile/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Snapchat" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Twitch" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Kick" })).toBeInTheDocument();
   });
 
   it("replaces a profile image through the validated picker", async () => {
@@ -256,5 +267,116 @@ describe("profile settings edit", () => {
     fireEvent.click(screen.getByRole("button", { name: /remove image/i }));
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /change image/i }).length).toBeGreaterThan(0);
+  });
+});
+
+describe("settings Gmail connection chrome", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ ok: true, providers: [] }),
+    })));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("shows Connect Gmail when the active profile mailbox is not connected", () => {
+    render(
+      <MemoryRouter>
+        <ProfileSessionProvider
+          operator={{ id: "opr_1", name: "Valid", email: "validsstudio@gmail.com" }}
+          profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
+          activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
+          connections={{
+            googleAccount: { status: "CONNECTED", email: "validsstudio@gmail.com" },
+            gmail: { kind: "GMAIL", status: "NOT_CONNECTED" },
+            youtube: { kind: "YOUTUBE", status: "NOT_CONNECTED" },
+          }}
+        >
+          <SettingsPage />
+        </ProfileSessionProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Gmail")).toBeInTheDocument();
+    expect(screen.getAllByText("Not connected").length).toBeGreaterThan(0);
+    const connect = screen.getByRole("link", { name: /connect gmail/i });
+    expect(connect).toHaveAttribute("href", "/api/oauth/gmail/start");
+  });
+
+  it("shows the connected mailbox with Refresh and Disconnect", () => {
+    render(
+      <MemoryRouter>
+        <ProfileSessionProvider
+          operator={{ id: "opr_1", name: "Valid", email: "validsstudio@gmail.com" }}
+          profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
+          activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
+          connections={{
+            gmail: {
+              kind: "GMAIL",
+              status: "CONNECTED",
+              email: "djcoast239@gmail.com",
+            },
+          }}
+        >
+          <SettingsPage />
+        </ProfileSessionProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("djcoast239@gmail.com")).toBeInTheDocument();
+    expect(screen.getByText("Connected")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /refresh/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /disconnect/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /connect gmail/i })).not.toBeInTheDocument();
+  });
+
+  it("offers Reconnect Gmail after a refresh failure", () => {
+    render(
+      <MemoryRouter>
+        <ProfileSessionProvider
+          operator={{ id: "opr_1", name: "Valid", email: "validsstudio@gmail.com" }}
+          profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
+          activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
+          connections={{
+            gmail: { kind: "GMAIL", status: "RECONNECT_REQUIRED", email: "djcoast239@gmail.com" },
+          }}
+        >
+          <SettingsPage />
+        </ProfileSessionProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("link", { name: /reconnect gmail/i })).toHaveAttribute("href", "/api/oauth/gmail/start");
+  });
+
+  it("lists Snapchat, Twitch, and Kick as unsupported social connections", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        ok: true,
+        providers: [
+          { provider: "snapchat", displayName: "Snapchat", readiness: "UNSUPPORTED", capabilities: [] },
+          { provider: "twitch", displayName: "Twitch", readiness: "UNSUPPORTED", capabilities: [] },
+          { provider: "kick", displayName: "Kick", readiness: "UNSUPPORTED", capabilities: [] },
+        ],
+      }),
+    })));
+    render(
+      <MemoryRouter>
+        <ProfileSessionProvider
+          operator={{ id: "opr_1", name: "Valid", email: "validsstudio@gmail.com" }}
+          profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
+          activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
+        >
+          <SettingsPage />
+        </ProfileSessionProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getAllByText("Snapchat").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Twitch").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Kick").length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getAllByText("Unsupported").length).toBeGreaterThanOrEqual(3);
+    });
   });
 });

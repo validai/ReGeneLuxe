@@ -22,6 +22,7 @@ import { formatStamp } from "../utils/dates.js";
 import { useToast } from "../components/app/useToast.js";
 import { parseSocialIdentity } from "../data/socialAccountUrl.js";
 import { displayConnectionState, formatHandle } from "../data/connectionStatus.js";
+import { PlatformIcon } from "../components/app/Icon.jsx";
 
 const blank = () => emptyAccount({
   platform: "Instagram",
@@ -398,7 +399,8 @@ export default function AccountsPage() {
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-sm font-semibold text-rl_text">
+                      <h2 className="flex items-center gap-2 text-sm font-semibold text-rl_text">
+                        <PlatformIcon platform={account.platform} size="sm" />
                         {account.platform}
                       </h2>
                       <StatusBadge value={view.code} label={health.label} tone={health.tone} />
@@ -427,6 +429,7 @@ export default function AccountsPage() {
         campaigns={campaigns}
         content={content}
         busy={busyId === selected?.id}
+        providerReadiness={selected ? readinessFor(selected.platform) : ""}
         onClose={() => setSelectedId(null)}
         onEdit={startEdit}
         onDelete={setPendingDelete}
@@ -459,6 +462,7 @@ function AccountDetailSheet({
   campaigns,
   content,
   busy,
+  providerReadiness = "",
   onClose,
   onEdit,
   onDelete,
@@ -470,10 +474,12 @@ function AccountDetailSheet({
 }) {
   if (!account) return null;
 
-  const connection = account.connectionState || "MANUAL_ONLY";
-  const health = healthFor(connection);
-  const needsReconnect = ["ERROR", "AUTH_EXPIRED", "RECONNECT_REQUIRED"].includes(connection);
-  const canConnect = !["CONNECTED", "UNSUPPORTED"].includes(connection);
+  const view = displayConnectionState(account, { providerReadiness });
+  const health = healthFor(view.code);
+  const needsReconnect = ["ERROR", "AUTH_EXPIRED", "RECONNECT_REQUIRED"].includes(view.code);
+  const canConnect = view.code !== "CONNECTED"
+    && view.code !== "UNSUPPORTED"
+    && providerReadiness !== "UNSUPPORTED";
   const media = publishMediaSupport(account.platform);
   const usedCampaigns = campaigns.filter((campaign) => (campaign.accountIds || []).includes(account.id));
   const recentPosts = content
@@ -492,7 +498,7 @@ function AccountDetailSheet({
         <div className="flex flex-wrap gap-2">
           {canConnect && (
             <button type="button" className="rl-btn" disabled={busy} onClick={() => onConnect(account)}>
-              {busy ? "Working…" : connection === "SETUP_REQUIRED" ? "Retry setup" : `Connect ${account.platform}`}
+              {busy ? "Working…" : view.code === "SETUP_REQUIRED" ? "Retry setup" : `Connect ${account.platform}`}
             </button>
           )}
           {needsReconnect && (
@@ -500,7 +506,7 @@ function AccountDetailSheet({
               Reconnect
             </button>
           )}
-          {connection === "CONNECTED" && (
+          {view.code === "CONNECTED" && (
             <>
               <button type="button" className="rl-btn-ghost" disabled={busy} onClick={() => onRefresh(account)}>
                 Refresh
@@ -525,8 +531,9 @@ function AccountDetailSheet({
         <div>
           <p className="rl-label">Connection</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <StatusBadge value={connection} label={health.label} tone={health.tone} />
+            <StatusBadge value={view.code} label={health.label} tone={health.tone} />
           </div>
+          <p className="mt-2 text-sm text-rl_textSecondary">{view.hint}</p>
           <p className="mt-2 text-sm text-rl_textSecondary">{softCapabilityLine(account.platform)}</p>
           <p className="mt-1 text-sm text-rl_muted">
             Last sync: {account.lastSuccessfulSync || account.lastSync ? formatStamp(account.lastSuccessfulSync || account.lastSync) : "—"}
@@ -536,7 +543,7 @@ function AccountDetailSheet({
           <p className="mt-1 text-sm text-rl_muted">
             Publishing: {PUBLISH_PERMISSION_LABELS[account.publishPermission] || account.publishPermission}
             {" · "}
-            Analytics: {connection === "CONNECTED" ? "Available when provider permits" : "Manual / unavailable"}
+            Analytics: {view.code === "CONNECTED" ? "Available when provider permits" : "Manual / unavailable"}
           </p>
           {(account.lastErrorSummary || account.connectionError) && (
             <p className="mt-2 text-sm text-rl_danger">{account.lastErrorSummary || account.connectionError}</p>

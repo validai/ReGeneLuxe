@@ -50,6 +50,43 @@ describe("social account URL parser", () => {
     expect(parsed.handle).toBe("djcoast");
   });
 
+  it("normalizes Snapchat add URLs", () => {
+    const www = parseSocialIdentity("https://www.snapchat.com/add/djcoast");
+    expect(www.ok).toBe(true);
+    expect(www.platform).toBe("Snapchat");
+    expect(www.handle).toBe("djcoast");
+    expect(www.profileUrl).toBe("https://www.snapchat.com/add/djcoast");
+    expect(www.connectionState).toBe("MANUAL_ONLY");
+    const bare = parseSocialIdentity("https://snapchat.com/add/djcoast");
+    expect(bare.platform).toBe("Snapchat");
+    expect(bare.handle).toBe("djcoast");
+    expect(bare.profileUrl).toBe("https://www.snapchat.com/add/djcoast");
+  });
+
+  it("normalizes Twitch channel URLs", () => {
+    const www = parseSocialIdentity("https://www.twitch.tv/djcoast");
+    expect(www.ok).toBe(true);
+    expect(www.platform).toBe("Twitch");
+    expect(www.handle).toBe("djcoast");
+    expect(www.profileUrl).toBe("https://www.twitch.tv/djcoast");
+    expect(www.connectionState).toBe("MANUAL_ONLY");
+    const bare = parseSocialIdentity("https://twitch.tv/djcoast");
+    expect(bare.platform).toBe("Twitch");
+    expect(bare.handle).toBe("djcoast");
+  });
+
+  it("normalizes Kick channel URLs", () => {
+    const bare = parseSocialIdentity("https://kick.com/djcoast");
+    expect(bare.ok).toBe(true);
+    expect(bare.platform).toBe("Kick");
+    expect(bare.handle).toBe("djcoast");
+    expect(bare.profileUrl).toBe("https://kick.com/djcoast");
+    expect(bare.connectionState).toBe("MANUAL_ONLY");
+    const www = parseSocialIdentity("https://www.kick.com/djcoast");
+    expect(www.platform).toBe("Kick");
+    expect(www.handle).toBe("djcoast");
+  });
+
   it("returns a manual-platform error for unknown URLs", () => {
     const parsed = parseSocialIdentity("https://example.com/someone");
     expect(parsed.ok).toBe(false);
@@ -68,6 +105,19 @@ describe("social account URL parser", () => {
     const parsed = parseSocialIdentity("instagram.com/example");
     expect(urlDetectionDoesNotConnect(parsed)).toBe(true);
     expect(parsed.connectionState).not.toBe("CONNECTED");
+  });
+
+  it("never marks Snapchat, Twitch, or Kick URL detection as CONNECTED", () => {
+    for (const url of [
+      "https://www.snapchat.com/add/djcoast",
+      "https://www.twitch.tv/djcoast",
+      "https://kick.com/djcoast",
+    ]) {
+      const parsed = parseSocialIdentity(url);
+      expect(urlDetectionDoesNotConnect(parsed)).toBe(true);
+      expect(parsed.connectionState).toBe("MANUAL_ONLY");
+      expect(parsed.connectionState).not.toBe("CONNECTED");
+    }
   });
 });
 
@@ -99,6 +149,17 @@ describe("connection state display", () => {
     expect(view.code).toBe("CONNECTED");
   });
 
+  it("labels a manual unsupported account without inventing Connected", () => {
+    const view = displayConnectionState(
+      { platform: "Twitch", connectionState: "MANUAL_ONLY" },
+      { providerReadiness: "UNSUPPORTED" },
+    );
+    expect(view.label).toBe("Manual");
+    expect(view.code).toBe("MANUAL_ONLY");
+    expect(view.code).not.toBe("CONNECTED");
+    expect(view.hint).toMatch(/no authenticated connector yet/i);
+  });
+
   it("labels the sidebar social-account filter with explicit state", () => {
     expect(socialAccountFilterLabel({
       platform: "Instagram",
@@ -110,5 +171,23 @@ describe("connection state display", () => {
       handle: "djcoast",
       connectionState: "CONNECTED",
     })).toBe("Instagram @djcoast · Connected");
+  });
+
+  it("labels Snapchat, Twitch, and Kick in the social-account filter", () => {
+    expect(socialAccountFilterLabel({
+      platform: "Snapchat",
+      handle: "djcoast",
+      connectionState: "MANUAL_ONLY",
+    }, { providerReadiness: "UNSUPPORTED" })).toBe("Snapchat @djcoast · Manual");
+    expect(socialAccountFilterLabel({
+      platform: "Twitch",
+      handle: "@djcoast",
+      connectionState: "MANUAL_ONLY",
+    }, { providerReadiness: "UNSUPPORTED" })).toBe("Twitch @djcoast · Manual");
+    expect(socialAccountFilterLabel({
+      platform: "Kick",
+      handle: "djcoast",
+      connectionState: "MANUAL_ONLY",
+    }, { providerReadiness: "UNSUPPORTED" })).toBe("Kick @djcoast · Manual");
   });
 });

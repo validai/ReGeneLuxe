@@ -10,6 +10,9 @@ describe("domain schemas", () => {
 
   it("accepts platforms", () => {
     expect(PlatformSchema.parse("Instagram")).toBe("Instagram");
+    expect(PlatformSchema.parse("Snapchat")).toBe("Snapchat");
+    expect(PlatformSchema.parse("Twitch")).toBe("Twitch");
+    expect(PlatformSchema.parse("Kick")).toBe("Kick");
   });
 
   it("parses optional server env", () => {

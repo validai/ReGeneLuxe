@@ -31,7 +31,7 @@ export async function GET() {
     activeProfile: result.publicActiveProfile,
     connections: {
       googleAccount: connections.googleAccount,
-      gmail: { kind: "GMAIL", status: connections.gmail.status },
+      gmail: connections.gmail,
       youtube: { kind: "YOUTUBE", status: connections.youtube.status },
     },
     health: {

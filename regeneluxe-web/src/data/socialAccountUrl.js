@@ -20,6 +20,9 @@ const HOST_TO_PLATFORM = {
   "www.threads.net": "Threads",
   "soundcloud.com": "SoundCloud",
   "on.soundcloud.com": "SoundCloud",
+  "snapchat.com": "Snapchat",
+  "twitch.tv": "Twitch",
+  "kick.com": "Kick",
 };
 
 function stripWww(host) {
@@ -77,6 +80,12 @@ function canonicalFor(platform, handle, sourceUrl) {
       return `https://www.threads.net/@${id}`;
     case "SoundCloud":
       return `https://soundcloud.com/${id}`;
+    case "Snapchat":
+      return `https://www.snapchat.com/add/${id}`;
+    case "Twitch":
+      return `https://www.twitch.tv/${id}`;
+    case "Kick":
+      return `https://kick.com/${id}`;
     default:
       return sourceUrl || "";
   }
@@ -120,12 +129,44 @@ function parseFacebook(url) {
   return { platform: "Facebook", handle: name, profileUrl: canonicalFor("Facebook", name) };
 }
 
+function firstNamedSegment(pathname, skip) {
+  const parts = cleanPath(pathname).split("/").filter(Boolean);
+  const name = parts.find((part) => !skip.has(part.toLowerCase()));
+  return handleFromSegment(name || "");
+}
+
+function parseSnapchat(url) {
+  const handle = firstNamedSegment(url.pathname, new Set([
+    "add", "discover", "spotlight", "lens", "lenses", "snapcodes", "download", "create",
+  ]));
+  return { platform: "Snapchat", handle, profileUrl: canonicalFor("Snapchat", handle, url.toString()) };
+}
+
+function parseTwitch(url) {
+  const handle = firstNamedSegment(url.pathname, new Set([
+    "directory", "videos", "clips", "settings", "inventory", "drops", "following",
+    "browse", "search", "login", "signup", "p", "popout", "turbo", "subscriptions",
+  ]));
+  return { platform: "Twitch", handle, profileUrl: canonicalFor("Twitch", handle, url.toString()) };
+}
+
+function parseKick(url) {
+  const handle = firstNamedSegment(url.pathname, new Set([
+    "categories", "category", "video", "videos", "clips", "clip",
+    "browse", "search", "login", "signup", "settings",
+  ]));
+  return { platform: "Kick", handle, profileUrl: canonicalFor("Kick", handle, url.toString()) };
+}
+
 function parseFromUrl(url) {
   const host = stripWww(url.hostname);
   const platform = HOST_TO_PLATFORM[host];
   if (!platform) return null;
   if (platform === "YouTube") return parseYouTube(url);
   if (platform === "Facebook") return parseFacebook(url);
+  if (platform === "Snapchat") return parseSnapchat(url);
+  if (platform === "Twitch") return parseTwitch(url);
+  if (platform === "Kick") return parseKick(url);
   const segment = firstSegment(url.pathname);
   if (platform === "TikTok" || platform === "Threads") {
     const handle = handleFromSegment(segment);

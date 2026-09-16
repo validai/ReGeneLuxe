@@ -9,7 +9,14 @@ function store() {
   return secrets;
 }
 
-export function createOAuthState({ provider, accountId, returnTo = "/accounts" }) {
+export function createOAuthState({
+  provider,
+  accountId,
+  returnTo = "/accounts",
+  managedProfileId = null,
+  operatorId = null,
+  connectionId = null,
+} = {}) {
   const secrets = store();
   const state = randomBytes(24).toString("hex");
   secrets.oauthStates[state] = {
@@ -17,6 +24,9 @@ export function createOAuthState({ provider, accountId, returnTo = "/accounts" }
     accountId,
     returnTo,
     createdAt: Date.now(),
+    ...(managedProfileId ? { managedProfileId } : {}),
+    ...(operatorId ? { operatorId } : {}),
+    ...(connectionId ? { connectionId } : {}),
   };
   // prune expired
   const now = Date.now();

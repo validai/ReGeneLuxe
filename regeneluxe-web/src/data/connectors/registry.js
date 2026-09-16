@@ -100,6 +100,18 @@ const DEFINITIONS = {
     capabilities: ["READ_PROFILE", "CREATE_POST", "PUBLISH_POST", "PUBLISH_TEXT"],
     notes: "Rails reserved — UNSUPPORTED in this sprint.",
   },
+  Snapchat: {
+    capabilities: [],
+    notes: "No authenticated connector yet. Manual accounts stay MANUAL_ONLY.",
+  },
+  Twitch: {
+    capabilities: [],
+    notes: "No authenticated connector yet. Manual accounts stay MANUAL_ONLY.",
+  },
+  Kick: {
+    capabilities: [],
+    notes: "No authenticated connector yet. Manual accounts stay MANUAL_ONLY.",
+  },
   Other: {
     capabilities: [],
     notes: "No provider adapter for this platform.",

@@ -141,7 +141,7 @@ export async function seedDefaultProfileConnections(profile) {
       provider: kind.toLowerCase(),
       status: PROFILE_CONNECTION_STATES.NOT_CONNECTED,
       displayLabel: kind === PROFILE_CONNECTION_KINDS.GMAIL ? "Gmail" : "YouTube",
-      notes: "Authorization is separate from Google sign-in. Not connected in this phase.",
+      notes: "Authorization is separate from Google sign-in.",
     }));
     created.push(row);
   }
@@ -150,4 +150,36 @@ export async function seedDefaultProfileConnections(profile) {
 
 export function toPublicProfile(profile) {
   return publicManagedProfile(profile);
+}
+
+export async function getProfileConnectionByKind(managedProfileId, kind) {
+  const rows = await listProfileConnections(managedProfileId);
+  return rows.find((row) => row.kind === kind) || null;
+}
+
+export async function upsertProfileConnection(partial = {}) {
+  const existing = partial.id
+    ? await get(COLLECTIONS.profile_connections, partial.id)
+    : await getProfileConnectionByKind(partial.managedProfileId, partial.kind);
+  return upsert(COLLECTIONS.profile_connections, emptyProfileConnection({
+    ...existing,
+    ...partial,
+    id: existing?.id || partial.id,
+    createdAt: existing?.createdAt || partial.createdAt,
+    updatedAt: nowIso(),
+  }));
+}
+
+export async function ensureProfileConnection(profile, kind) {
+  const existing = await getProfileConnectionByKind(profile.id, kind);
+  if (existing) return existing;
+  return upsertProfileConnection({
+    managedProfileId: profile.id,
+    ownerOperatorId: profile.ownerOperatorId,
+    kind,
+    provider: String(kind || "").toLowerCase(),
+    status: PROFILE_CONNECTION_STATES.NOT_CONNECTED,
+    displayLabel: kind === PROFILE_CONNECTION_KINDS.GMAIL ? "Gmail" : "YouTube",
+    notes: "Authorization is separate from Google sign-in.",
+  });
 }

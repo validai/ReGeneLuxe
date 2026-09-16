@@ -2,14 +2,36 @@ import { NextResponse } from "next/server";
 import { getConnector, normalizeProviderId, listProviderDefinitions } from "../../../../../server/connectors/registry.js";
 import { initDb, get, upsert, COLLECTIONS } from "../../../../../server/db/index.js";
 import { nowIso } from "../../../../../src/data/ids.js";
+import { requireOperator } from "../../../../../server/auth/workspaceSession.js";
+import { startGmailAuth } from "../../../../../server/connectors/gmailConnection.js";
 
 export const dynamic = "force-dynamic";
+
+function redirectTo(path: string) {
+  const origin = process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174";
+  return NextResponse.redirect(new URL(path, origin));
+}
 
 export async function GET(
   _request: Request,
   context: { params: Promise<{ provider: string }> },
 ) {
   const { provider } = await context.params;
+  if (normalizeProviderId(provider) === "gmail") {
+    const authz = await requireOperator();
+    if (!authz.ok) {
+      return redirectTo(authz.status === 503 ? "/signin?error=database" : "/signin");
+    }
+    const started = await startGmailAuth({
+      operator: authz.operator,
+      activeProfile: authz.activeProfile,
+      returnTo: "/settings",
+    });
+    if (!started.ok || !started.authUrl) {
+      return NextResponse.redirect(started.redirectTo || `${process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174"}/settings?gmail=error`);
+    }
+    return NextResponse.redirect(started.authUrl);
+  }
   const connector = getConnector(provider);
   return NextResponse.json({
     ok: true,

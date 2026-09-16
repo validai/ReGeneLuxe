@@ -6,6 +6,7 @@ import {
   getMeta,
 } from "../../../../server/db/index.js";
 import { publicOperator, publicManagedProfile } from "../../../../src/data/profileModels.js";
+import { stripSecretFields } from "../../../../src/data/secretFields.js";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,14 @@ async function snapshot() {
     campaignSnapshots,
     operators: operators.map((row: Record<string, unknown>) => publicOperator(row)),
     managedProfiles: managedProfiles.map((row: Record<string, unknown>) => publicManagedProfile(row)),
-    profileConnections,
+    profileConnections: stripSecretFields(profileConnections).map((row: Record<string, unknown>) => {
+      const next = { ...row };
+      delete next.accessToken;
+      delete next.refreshToken;
+      delete next.token;
+      delete next.clientSecret;
+      return next;
+    }),
     activeCampaignId: await getMeta("active_campaign_id"),
     workingAccountId: await getMeta("working_account_id"),
     activeProfileId: await getMeta("active_profile_id"),
