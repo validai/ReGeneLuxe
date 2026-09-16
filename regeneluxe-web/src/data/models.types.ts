@@ -349,6 +349,7 @@ export interface ManagedProfile {
   slug: string;
   status: "ACTIVE" | "INACTIVE" | (string & {});
   avatarUrl: string;
+  avatarMediaId?: string;
   primaryEmail: string;
   website: string | null;
   primaryPublicUrl: string;

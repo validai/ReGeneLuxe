@@ -8,6 +8,7 @@ import {
 } from "../../../../server/db/managedProfileRepository.js";
 import { setMeta } from "../../../../server/db/index.js";
 import { publicOperator } from "../../../../src/data/profileModels.js";
+import { sanitizeAvatarUrl } from "../../../../src/data/profileImage.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -39,7 +40,13 @@ export async function PATCH(request: Request, { params }: Params) {
   }
   const body = await request.json().catch(() => ({}));
   try {
-    const saved = await updateManagedProfile(id, body);
+    const patch = { ...body };
+    if (Object.prototype.hasOwnProperty.call(body, "avatarUrl")) {
+      patch.avatarUrl = sanitizeAvatarUrl(body.avatarUrl);
+    } else {
+      delete patch.avatarUrl;
+    }
+    const saved = await updateManagedProfile(id, patch);
     return NextResponse.json({ ok: true, profile: toPublicProfile(saved) });
   } catch (error) {
     return NextResponse.json({

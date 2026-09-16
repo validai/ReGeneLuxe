@@ -240,4 +240,14 @@ describe("operator + managed profile persistence", () => {
     expect(emptyManagedProfile({ displayName: "X", website: "" }).website).toBeNull();
     expect(emptyManagedProfile({ displayName: "X", website: null }).website).toBeNull();
   });
+
+  it("strips inline data-URL avatars from managed profile records", () => {
+    const profile = emptyManagedProfile({
+      displayName: "X",
+      avatarUrl: "data:image/png;base64,AAAA",
+      avatarMediaId: "med_1",
+    });
+    expect(profile.avatarUrl).toBe("");
+    expect(profile.avatarMediaId).toBe("med_1");
+  });
 });

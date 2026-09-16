@@ -38,3 +38,5 @@ App opens from local SQLite without Turso. Edits enqueue outbox (`PENDING`). Rec
 ## Secrets
 
 Never synced: AI keys, OAuth tokens, client secrets (server vault only).
+
+Profile image bytes stay in the local media store (`.regeneluxe/media/`). `managed_profiles` syncs `avatarMediaId` and `avatarUrl` references only — never inline `data:` blobs or binary image payloads.

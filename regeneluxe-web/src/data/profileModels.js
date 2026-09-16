@@ -1,5 +1,6 @@
 import { createId, nowIso } from "./ids.js";
 import { PLATFORMS } from "./models.js";
+import { sanitizeAvatarUrl } from "./profileImage.js";
 
 export const PROFILE_STATUSES = ["ACTIVE", "INACTIVE"];
 
@@ -71,7 +72,8 @@ export function emptyManagedProfile(partial = {}) {
     displayName,
     slug: partial.slug || slugifyProfileName(displayName) || createId("profile"),
     status,
-    avatarUrl: partial.avatarUrl || "",
+    avatarUrl: sanitizeAvatarUrl(partial.avatarUrl || ""),
+    avatarMediaId: partial.avatarMediaId || "",
     primaryEmail: partial.primaryEmail || "",
     website: normalizeWebsite(partial.website),
     primaryPublicUrl: partial.primaryPublicUrl || "",
@@ -93,7 +95,8 @@ export function publicManagedProfile(profile) {
     displayName: profile.displayName || "",
     slug: profile.slug || "",
     status: profile.status || "ACTIVE",
-    avatarUrl: profile.avatarUrl || "",
+    avatarUrl: sanitizeAvatarUrl(profile.avatarUrl || ""),
+    avatarMediaId: profile.avatarMediaId || "",
     primaryEmail: profile.primaryEmail || "",
     website: profile.website ?? null,
     primaryPublicUrl: profile.primaryPublicUrl || "",
