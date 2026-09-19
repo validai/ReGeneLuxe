@@ -48,9 +48,10 @@ export async function initDb() {
 
 export async function getDbHealth() {
   const health = await checkLocalHealth();
-  const syncStatus = await sync.getSyncStatus().catch((error) => ({
-    cloudConfigured: false,
-    state: "ERROR",
+  const syncStatus = await sync.getSyncStatus({ fresh: true }).catch((error) => ({
+    cloudConfigured: Boolean(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN),
+    cloudReachable: false,
+    state: process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN ? "OFFLINE" : "ERROR",
     lastSyncAt: null,
     pendingOutbox: 0,
     pendingJobs: 0,

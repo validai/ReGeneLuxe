@@ -1,7 +1,7 @@
-/** One Google principal per ManagedProfile. Email is the operator-visible identity. */
+/** ReGeneLuxe account Google identity. Distinct from Google Cloud infrastructure ownership. */
 
-export const PILOT_GOOGLE_EMAIL = "djcoast239@gmail.com";
-export const PILOT_PROFILE_SLUG = "dj-coast";
+export const GOOGLE_ACCOUNT_MISMATCH_MESSAGE =
+  "This Google account does not match the ReGeneLuxe account currently signed in.";
 
 export function normalizeGoogleEmail(value) {
   return String(value || "").trim().toLowerCase();
@@ -13,31 +13,35 @@ export function googleEmailsMatch(left, right) {
   return Boolean(a && b && a === b);
 }
 
-export function googleIdentityMismatchMessage(boundEmail) {
-  const email = normalizeGoogleEmail(boundEmail) || "the linked Google account";
-  return `This profile is already linked to ${email}. Sign in with that Google account to continue.`;
+export function googleSubsMatch(left, right) {
+  const a = String(left || "").trim();
+  const b = String(right || "").trim();
+  return Boolean(a && b && a === b);
 }
 
-export function boundGoogleEmail(profile, fallback = "") {
-  return normalizeGoogleEmail(profile?.googleAccountEmail)
-    || normalizeGoogleEmail(fallback);
+export function displayAccountEmail(account) {
+  return normalizeGoogleEmail(account?.email);
 }
 
-export function displayGoogleIdentity(profile, operator) {
-  return boundGoogleEmail(profile, operator?.email);
+/** @deprecated use displayAccountEmail */
+export function displayOperatorEmail(operator) {
+  return displayAccountEmail(operator);
 }
 
-export function assertMatchesBoundGoogleIdentity(profile, { email = "", googleSub = "" } = {}) {
-  const boundEmail = normalizeGoogleEmail(profile?.googleAccountEmail);
-  const boundSub = String(profile?.googleAccountSub || "").trim();
-  const incomingEmail = normalizeGoogleEmail(email);
-  const incomingSub = String(googleSub || "").trim();
-
-  if (boundSub && incomingSub && boundSub !== incomingSub) {
-    return { ok: false, error: googleIdentityMismatchMessage(boundEmail || incomingEmail) };
+/**
+ * Gmail/YouTube OAuth must return the same Google principal as the signed-in account.
+ * @param {{ googleSub?: string, email?: string } | null} account
+ * @param {{ googleSub?: string, sub?: string, email?: string } | null} incoming
+ */
+export function assertMatchesSignedInGoogleAccount(account, incoming = {}) {
+  const expectedSub = String(account?.googleSub || "").trim();
+  const incomingSub = String(incoming.googleSub || incoming.sub || "").trim();
+  if (expectedSub && incomingSub && !googleSubsMatch(expectedSub, incomingSub)) {
+    return { ok: false, error: GOOGLE_ACCOUNT_MISMATCH_MESSAGE };
   }
-  if (boundEmail && incomingEmail && boundEmail !== incomingEmail) {
-    return { ok: false, error: googleIdentityMismatchMessage(boundEmail) };
+  const incomingEmail = incoming.email;
+  if (account?.email && incomingEmail && !googleEmailsMatch(account.email, incomingEmail)) {
+    return { ok: false, error: GOOGLE_ACCOUNT_MISMATCH_MESSAGE };
   }
   return { ok: true };
 }

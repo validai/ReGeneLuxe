@@ -6,6 +6,7 @@ import { nowIso } from "../../../../../src/data/ids.js";
 import { syncConnectedAccount } from "../../../../../server/connectors/syncAccount.js";
 import { requireOperator } from "../../../../../server/auth/workspaceSession.js";
 import { completeGmailAuth, gmailSettingsRedirect } from "../../../../../server/connectors/gmailConnection.js";
+import { completeYoutubeAuth } from "../../../../../server/connectors/youtubeConnection.js";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,18 @@ export async function GET(
       operator: authz.ok ? authz.operator : null,
     });
     return NextResponse.redirect(result.redirectTo || gmailSettingsRedirect({ gmail: "error" }));
+  }
+
+  if (provider === "youtube") {
+    const authz = await requireOperator();
+    const result = await completeYoutubeAuth({
+      code,
+      state,
+      error,
+      errorDescription,
+      operator: authz.ok ? authz.operator : null,
+    });
+    return NextResponse.redirect(result.redirectTo || `${process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174"}/settings?youtube=error`);
   }
 
   try {

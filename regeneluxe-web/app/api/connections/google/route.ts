@@ -6,16 +6,17 @@ import {
   refreshGmailConnection,
   startGmailAuth,
 } from "../../../../server/connectors/gmailConnection.js";
-import { displayGoogleIdentity } from "../../../../src/data/googleIdentity.js";
+import {
+  disconnectYoutubeConnection,
+  publicYoutubeForProfile,
+  selectYoutubeChannel,
+  startYoutubeAuth,
+  syncYoutubeChannel,
+} from "../../../../server/connectors/youtubeConnection.js";
+import { getProfileConnectionByKind } from "../../../../server/db/managedProfileRepository.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-const YOUTUBE_COPY = (email: string) => (
-  email
-    ? `YouTube uses ${email}. Channel attach opens in the next phase.`
-    : "YouTube uses this profile’s Google account. Channel attach opens in the next phase."
-);
 
 export async function GET() {
   const result = await requireOperator();
@@ -23,10 +24,12 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
   }
   const gmail = await publicGmailForProfile(result.activeProfile?.id);
+  const youtube = await publicYoutubeForProfile(result.activeProfile?.id);
   return NextResponse.json({
     ok: true,
+    operator: { email: result.operator.email, name: result.operator.name },
     gmail,
-    youtube: { kind: "YOUTUBE", status: "NOT_CONNECTED" },
+    youtube,
   });
 }
 
@@ -40,14 +43,38 @@ export async function POST(request: Request) {
   const action = String(body.action || "start").toLowerCase();
 
   if (kind === "YOUTUBE") {
-    const email = displayGoogleIdentity(result.activeProfile, result.operator);
-    return NextResponse.json({
-      ok: true,
-      connected: false,
-      status: "NOT_CONNECTED",
-      googleAccountEmail: email,
-      message: YOUTUBE_COPY(email),
-    });
+    if (action === "status") {
+      return NextResponse.json({ ok: true, youtube: await publicYoutubeForProfile(result.activeProfile?.id) });
+    }
+    if (action === "start") {
+      const started = await startYoutubeAuth({
+        operator: result.operator,
+        activeProfile: result.activeProfile,
+        returnTo: "/settings",
+      });
+      return NextResponse.json(started, { status: started.ok ? 200 : 400 });
+    }
+    if (action === "select") {
+      const selected = await selectYoutubeChannel({
+        operator: result.operator,
+        activeProfile: result.activeProfile,
+        channelId: body.channelId,
+      });
+      return NextResponse.json(selected, { status: selected.ok ? 200 : 400 });
+    }
+    if (action === "refresh" || action === "sync") {
+      const connection = await getProfileConnectionByKind(result.activeProfile?.id, "YOUTUBE");
+      const synced = await syncYoutubeChannel({ connection });
+      return NextResponse.json(synced, { status: synced.ok ? 200 : 400 });
+    }
+    if (action === "disconnect") {
+      const disconnected = await disconnectYoutubeConnection({
+        operator: result.operator,
+        activeProfile: result.activeProfile,
+      });
+      return NextResponse.json(disconnected, { status: disconnected.ok ? 200 : 400 });
+    }
+    return NextResponse.json({ ok: false, error: "Unknown YouTube action." }, { status: 400 });
   }
 
   if (kind !== "GMAIL") {
@@ -68,7 +95,7 @@ export async function POST(request: Request) {
     return NextResponse.json(started, { status: started.ok ? 200 : 400 });
   }
 
-  if (action === "refresh") {
+  if (action === "refresh" || action === "sync") {
     const refreshed = await refreshGmailConnection({
       operator: result.operator,
       activeProfile: result.activeProfile,

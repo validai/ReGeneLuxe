@@ -4,6 +4,7 @@ import {
   getCanonicalOrigin,
   googleCallbackUrl,
   gmailCallbackUrl,
+  youtubeCallbackUrl,
   isLoopbackHostname,
   shouldRedirectLocalhostAlias,
   toCanonicalPath,
@@ -31,6 +32,7 @@ describe("canonical auth origin", () => {
     expect(getCanonicalOrigin()).toBe("http://127.0.0.1:5174");
     expect(googleCallbackUrl()).toBe("http://127.0.0.1:5174/api/auth/callback/google");
     expect(gmailCallbackUrl()).toBe("http://127.0.0.1:5174/api/oauth/gmail/callback");
+    expect(youtubeCallbackUrl()).toBe("http://127.0.0.1:5174/api/oauth/youtube/callback");
   });
 
   it("keeps an explicit 127.0.0.1 AUTH_URL", () => {

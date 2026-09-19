@@ -89,6 +89,7 @@ export function displayConnectionState(account, { providerReadiness = "" } = {})
 
 export function displayProfileConnection(connection) {
   const status = connection?.status || connection?.connectionState || "NOT_CONNECTED";
+  const errorHint = connection?.lastErrorSummary || "";
   if (status === "CONNECTED") {
     return {
       code: "CONNECTED",
@@ -96,18 +97,25 @@ export function displayProfileConnection(connection) {
       hint: CONNECTION_HINTS.CONNECTED,
     };
   }
+  if (status === "SETUP_REQUIRED") {
+    return {
+      code: "SETUP_REQUIRED",
+      label: CONNECTION_LABELS.SETUP_REQUIRED,
+      hint: errorHint || CONNECTION_HINTS.SETUP_REQUIRED,
+    };
+  }
   if (status === "RECONNECT_REQUIRED" || status === "AUTH_EXPIRED") {
     return {
       code: "RECONNECT_REQUIRED",
       label: CONNECTION_LABELS.RECONNECT_REQUIRED,
-      hint: CONNECTION_HINTS.RECONNECT_REQUIRED,
+      hint: errorHint || CONNECTION_HINTS.RECONNECT_REQUIRED,
     };
   }
   if (status === "ERROR") {
     return {
       code: "ERROR",
       label: CONNECTION_LABELS.ERROR,
-      hint: CONNECTION_HINTS.ERROR,
+      hint: errorHint || CONNECTION_HINTS.ERROR,
     };
   }
   return {

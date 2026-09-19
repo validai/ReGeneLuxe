@@ -13,6 +13,7 @@ import { ANALYTICS_METRICS } from "../data/domain.js";
 import { refreshAccountAnalytics } from "../data/connectors/registry.js";
 import { buildAccountBaseline, compareAgainstBaseline, formatFactLine, platformTotals } from "../data/performanceCompare.js";
 import { formatStamp, toDateKey } from "../utils/dates.js";
+import { useProfileSession } from "../components/app/ProfileSession.jsx";
 
 function metricLabel(key) {
   return String(key).replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
@@ -28,6 +29,7 @@ function contentScore(metrics = {}) {
 
 export default function AnalyticsPage() {
   const { snapshots, accounts, campaigns, content, workingAccountId } = useAppData();
+  const { activeProfile, connections } = useProfileSession();
   const [draft, setDraft] = useState({ accountId: "", campaignId: "", contentId: "", source: "MANUAL", metrics: {} });
   const [range, setRange] = useState("all");
   const [campaignId, setCampaignId] = useState("");
@@ -185,6 +187,18 @@ export default function AnalyticsPage() {
         )}
       />
       {refreshNote ? <p className="text-sm text-rl_muted">{refreshNote}</p> : null}
+      {connections?.youtube?.status === "CONNECTED" ? (
+        <p className="text-sm text-rl_muted">
+          Provider: YouTube · Channel: {connections.youtube.channelTitle || connections.youtube.channelId || "Connected"}
+          {activeProfile?.displayName ? ` · Profile: ${activeProfile.displayName}` : ""}
+          {" · "}Last updated: {connections.youtube.lastSuccessfulSyncAt || connections.youtube.lastSyncAt
+            ? formatStamp(connections.youtube.lastSuccessfulSyncAt || connections.youtube.lastSyncAt)
+            : "—"}
+          {" · "}Freshness: {connections.youtube.lastSuccessfulSyncAt || connections.youtube.lastSyncAt
+            ? formatStamp(connections.youtube.lastSuccessfulSyncAt || connections.youtube.lastSyncAt)
+            : "unknown"}
+        </p>
+      ) : null}
       {summary.freshness || summary.source ? (
         <p className="text-xs uppercase tracking-[0.12em] text-rl_muted">
           Source: {summary.source || "—"} · Last updated: {summary.freshness ? formatStamp(summary.freshness) : "—"}

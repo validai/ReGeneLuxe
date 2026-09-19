@@ -24,6 +24,8 @@ export const COLLECTIONS = {
   operators: "operators",
   managed_profiles: "managed_profiles",
   profile_connections: "profile_connections",
+  gmail_messages: "gmail_messages",
+  youtube_videos: "youtube_videos",
 };
 
 export const MUTABLE_COLLECTIONS = new Set([
@@ -41,6 +43,8 @@ export const MUTABLE_COLLECTIONS = new Set([
   COLLECTIONS.operators,
   COLLECTIONS.managed_profiles,
   COLLECTIONS.profile_connections,
+  COLLECTIONS.gmail_messages,
+  COLLECTIONS.youtube_videos,
 ]);
 
 export const APPEND_ONLY_COLLECTIONS = new Set([

@@ -15,7 +15,8 @@ import { getRuntimeStatus, getRuntimeHealth, saveRuntimeSecret } from "../data/r
 import { fetchDbHealth } from "../data/durableBootstrap.js";
 import { useProfileSession } from "../components/app/ProfileSession.jsx";
 import { displayConnectionState, displayProfileConnection, formatHandle } from "../data/connectionStatus.js";
-import { displayGoogleIdentity } from "../data/googleIdentity.js";
+import { displayAccountEmail } from "../data/googleIdentity.js";
+import { displayCloudDatabaseStatus, displayCloudSyncStatus } from "../data/syncHealth.js";
 import StatusBadge from "../components/app/StatusBadge.jsx";
 import { PlatformIcon } from "../components/app/Icon.jsx";
 
@@ -24,6 +25,12 @@ const THEMES = [
   { id: "system", label: "System" },
   { id: "light", label: "Light" },
 ];
+
+function formatWhen(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
+}
 
 function explainRuntime(runtime) {
   if (!runtime.running) return runtime.error || "Local runtime is unavailable.";
@@ -50,21 +57,28 @@ export default function SettingsPage() {
     if (typeof window === "undefined") return "";
     const params = new URLSearchParams(window.location.search);
     const gmail = params.get("gmail");
+    const youtube = params.get("youtube");
     if (gmail === "connected") return "Gmail connected for the active profile.";
     if (gmail === "error") return params.get("message") || "Gmail connection failed.";
+    if (youtube === "connected") return "YouTube connected for the active profile.";
+    if (youtube === "pick") return "Choose a YouTube channel for this profile.";
+    if (youtube === "error") return params.get("message") || "YouTube connection failed.";
     return "";
   });
   const gmailConnection = connections?.gmail || { status: "NOT_CONNECTED" };
+  const youtubeConnection = connections?.youtube || { status: "NOT_CONNECTED" };
   const gmailView = displayProfileConnection(gmailConnection);
-  const googleEmail = displayGoogleIdentity(activeProfile, operator);
+  const youtubeView = displayProfileConnection(youtubeConnection);
+  const operatorEmail = displayAccountEmail(operator);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const gmail = params.get("gmail");
-    if (gmail === "connected") refresh?.();
+    const youtube = params.get("youtube");
+    if (gmail === "connected" || youtube === "connected" || youtube === "pick") refresh?.();
     const hash = window.location.hash;
-    if (hash || gmail) {
+    if (hash || gmail || youtube) {
       document.querySelector(hash || "#connections")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [refresh]);
@@ -130,11 +144,12 @@ export default function SettingsPage() {
     <PageShell width="narrow" className="space-y-8">
       <PageHeader
         title="Settings"
-        description="Control center for the active profile, Google account, connections, and local data."
+        description="Account, profile, connections, and local data."
       />
 
       <nav className="flex flex-wrap gap-2 text-xs" aria-label="Settings sections">
         {[
+          ["#account", "Account"],
           ["#profile", "Profile"],
           ["#connections", "Connections"],
           ["#data", "Data & Sync"],
@@ -145,6 +160,18 @@ export default function SettingsPage() {
           </a>
         ))}
       </nav>
+
+      <section id="account" className="rl-panel space-y-3 p-5">
+        <h2 className="text-sm font-semibold text-rl_text">Account</h2>
+        <p className="text-sm text-rl_muted">
+          Signed in with Google. This identity owns the ReGeneLuxe workspace and its profiles.
+        </p>
+        <ul className="space-y-1 text-sm text-rl_muted">
+          <li>Email · {operatorEmail || "Not signed in"}</li>
+          <li>Name · {operator?.name || "—"}</li>
+          <li>Status · {operator?.status === "INACTIVE" ? "Inactive" : "Active"}</li>
+        </ul>
+      </section>
 
       {activeProfile ? (
         <section id="profile" className="rl-panel space-y-4 p-5">
@@ -173,6 +200,14 @@ export default function SettingsPage() {
             <li>Website · {activeProfile.website || "—"}</li>
             <li>Platforms · {(activeProfile.platforms || []).join(", ") || "—"}</li>
             <li>Status · {activeProfile.status === "INACTIVE" ? "Inactive" : "Active"}</li>
+            <li>Account · {operatorEmail ? `Signed in (${operatorEmail})` : "Not signed in"}</li>
+            <li>Gmail · {gmailView.code === "CONNECTED" ? `Connected (${gmailConnection.email || gmailConnection.externalEmail || "read only"})` : gmailView.label}</li>
+            <li>
+              YouTube ·{" "}
+              {youtubeView.code === "CONNECTED" && youtubeConnection.channelTitle
+                ? `${youtubeConnection.channelTitle} — Connected`
+                : youtubeView.label}
+            </li>
           </ul>
         </section>
       ) : null}
@@ -180,30 +215,32 @@ export default function SettingsPage() {
       <section id="connections" className="rl-panel space-y-4 p-5">
         <h2 className="text-sm font-semibold text-rl_text">Connections</h2>
         <p className="text-sm text-rl_muted">
-          One Google account for this profile. Gmail and YouTube must use it.
+          Gmail and YouTube add permission for the same Google account that is signed in. Brand channels stay selectable under that account.
         </p>
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-rl_text">Google</p>
-              <p className="truncate text-xs text-rl_muted">
-                {googleEmail || "Not signed in"}
-              </p>
-            </div>
-            <StatusBadge value="CONNECTED" label="Signed in" />
-          </div>
-
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-rl_text">Gmail</p>
-              <p className="truncate text-xs text-rl_muted">
-                {gmailView.code === "CONNECTED"
-                  ? "Uses the signed-in Google account."
-                  : gmailView.hint}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="rounded-lg border border-rl_border px-3 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-rl_text">Gmail</p>
+                <p className="truncate text-xs text-rl_muted">
+                  {gmailView.code === "CONNECTED"
+                    ? `Authorized account: ${gmailConnection.email || gmailConnection.externalEmail || "Connected"}`
+                    : gmailView.hint}
+                </p>
+              </div>
               <StatusBadge value={gmailView.code} label={gmailView.label} />
+            </div>
+            {gmailView.code === "CONNECTED" ? (
+              <ul className="mt-2 space-y-1 text-xs text-rl_muted">
+                <li>Permission: Read only</li>
+                <li>Last sync: {formatWhen(gmailConnection.lastSuccessfulSyncAt || gmailConnection.lastSyncAt)}</li>
+                <li>Messages indexed: {gmailConnection.indexedCount ?? 0}</li>
+              </ul>
+            ) : null}
+            {gmailConnection.lastErrorSummary && gmailView.code !== "CONNECTED" ? (
+              <p className="mt-2 text-xs text-rl_warning">{gmailConnection.lastErrorSummary}</p>
+            ) : null}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               {gmailView.code === "CONNECTED" ? (
                 <>
                   <button
@@ -213,10 +250,10 @@ export default function SettingsPage() {
                       const result = await fetch("/api/connections/google", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ kind: "GMAIL", action: "refresh" }),
+                        body: JSON.stringify({ kind: "GMAIL", action: "sync" }),
                       }).then((response) => response.json()).catch(() => ({}));
                       if (result.ok) {
-                        setConnectionNote("Gmail connection verified.");
+                        setConnectionNote("Gmail sync finished.");
                         await refresh?.();
                       } else {
                         setConnectionNote(result.error || "Gmail needs to be reconnected.");
@@ -224,8 +261,9 @@ export default function SettingsPage() {
                       }
                     }}
                   >
-                    Refresh
+                    Sync now
                   </button>
+                  <a href="/api/oauth/gmail/start" className="rl-btn-ghost px-3 py-1.5 text-xs">Reconnect</a>
                   <button
                     type="button"
                     className="rl-btn-ghost px-3 py-1.5 text-xs"
@@ -277,27 +315,135 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-3">
-            <div>
-              <p className="text-sm font-medium text-rl_text">YouTube</p>
-              <p className="text-xs text-rl_muted">Uses the same Google account.</p>
+          <div className="rounded-lg border border-rl_border px-3 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-rl_text">YouTube</p>
+                <p className="truncate text-xs text-rl_muted">
+                  {youtubeView.code === "CONNECTED" && youtubeConnection.channelTitle
+                    ? youtubeConnection.channelTitle
+                    : youtubeView.hint}
+                </p>
+              </div>
+              <StatusBadge value={youtubeView.code} label={youtubeView.label} />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-rl_warning">Not connected</span>
-              <button
-                type="button"
-                className="rl-btn-ghost px-3 py-1.5 text-xs"
-                onClick={async () => {
-                  const result = await fetch("/api/connections/google", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ kind: "YOUTUBE" }),
-                  }).then((response) => response.json()).catch(() => ({}));
-                  setConnectionNote(result.message || "YouTube connection opens in the next phase.");
-                }}
-              >
-                Connect
-              </button>
+            {youtubeView.code === "CONNECTED" && youtubeConnection.channelId ? (
+              <ul className="mt-2 space-y-1 text-xs text-rl_muted">
+                <li>Authorized account: {youtubeConnection.email || youtubeConnection.externalEmail || "—"}</li>
+                <li>Permission: Read only</li>
+                <li>Channel ID: {youtubeConnection.channelId}</li>
+                <li>Last sync: {formatWhen(youtubeConnection.lastSuccessfulSyncAt || youtubeConnection.lastSyncAt)}</li>
+              </ul>
+            ) : null}
+            {youtubeConnection.lastErrorSummary && youtubeView.code !== "CONNECTED" ? (
+              <p className="mt-2 text-xs text-rl_warning">{youtubeConnection.lastErrorSummary}</p>
+            ) : null}
+            {(youtubeConnection.pendingChannels || []).length > 0 ? (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-rl_muted">Select a YouTube channel for this profile.</p>
+                {youtubeConnection.pendingChannels.map((channel) => (
+                  <button
+                    key={channel.id}
+                    type="button"
+                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-2 text-left"
+                    onClick={async () => {
+                      const result = await fetch("/api/connections/google", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ kind: "YOUTUBE", action: "select", channelId: channel.id }),
+                      }).then((response) => response.json()).catch(() => ({}));
+                      if (result.ok) {
+                        setConnectionNote(`${channel.title || "YouTube channel"} selected.`);
+                        await refresh?.();
+                      } else {
+                        setConnectionNote(result.error || "Could not select that channel.");
+                      }
+                    }}
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm text-rl_text">{channel.title || channel.id}</span>
+                      <span className="block truncate text-xs text-rl_muted">
+                        {[channel.handle, channel.id, channel.subscriberCount != null ? `${channel.subscriberCount} subscribers` : ""]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {youtubeView.code === "CONNECTED" && youtubeConnection.channelId ? (
+                <>
+                  <button
+                    type="button"
+                    className="rl-btn-ghost px-3 py-1.5 text-xs"
+                    onClick={async () => {
+                      const result = await fetch("/api/connections/google", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ kind: "YOUTUBE", action: "sync" }),
+                      }).then((response) => response.json()).catch(() => ({}));
+                      if (result.ok) {
+                        setConnectionNote("YouTube sync finished.");
+                        await refresh?.();
+                      } else {
+                        setConnectionNote(result.error || "YouTube needs to be reconnected.");
+                        await refresh?.();
+                      }
+                    }}
+                  >
+                    Sync now
+                  </button>
+                  <a href="/api/oauth/youtube/start" className="rl-btn-ghost px-3 py-1.5 text-xs">Reconnect</a>
+                  <button
+                    type="button"
+                    className="rl-btn-ghost px-3 py-1.5 text-xs"
+                    onClick={async () => {
+                      const result = await fetch("/api/connections/google", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ kind: "YOUTUBE", action: "disconnect" }),
+                      }).then((response) => response.json()).catch(() => ({}));
+                      if (result.ok) {
+                        setConnectionNote("YouTube disconnected. The active profile was kept.");
+                        await refresh?.();
+                      } else {
+                        setConnectionNote(result.error || "Could not disconnect YouTube.");
+                      }
+                    }}
+                  >
+                    Disconnect
+                  </button>
+                </>
+              ) : (
+                <>
+                  <a href="/api/oauth/youtube/start" className="rl-btn-ghost px-3 py-1.5 text-xs">
+                    {youtubeView.code === "NOT_CONNECTED" ? "Connect YouTube" : "Reconnect YouTube"}
+                  </a>
+                  {youtubeView.code !== "NOT_CONNECTED" ? (
+                    <button
+                      type="button"
+                      className="rl-btn-ghost px-3 py-1.5 text-xs"
+                      onClick={async () => {
+                        const result = await fetch("/api/connections/google", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ kind: "YOUTUBE", action: "disconnect" }),
+                        }).then((response) => response.json()).catch(() => ({}));
+                        if (result.ok) {
+                          setConnectionNote("YouTube disconnected. The active profile was kept.");
+                          await refresh?.();
+                        } else {
+                          setConnectionNote(result.error || "Could not disconnect YouTube.");
+                        }
+                      }}
+                    >
+                      Disconnect
+                    </button>
+                  ) : null}
+                </>
+              )}
             </div>
           </div>
           {SOCIAL_CONNECTION_PLATFORMS.map((platform) => {
@@ -433,8 +579,20 @@ export default function SettingsPage() {
           Local SQLite is the operational source of truth.
         </p>
         <ul className="space-y-2 text-sm text-rl_muted">
-          <li>Google account · {googleEmail || "Not signed in"}</li>
+          <li>Account · {operatorEmail || "Not signed in"}</li>
           <li>Active profile · {activeProfile?.displayName || "—"}</li>
+          <li>
+            Gmail ·{" "}
+            {gmailView.code === "CONNECTED"
+              ? `Connected · last sync ${formatWhen(gmailConnection.lastSuccessfulSyncAt || gmailConnection.lastSyncAt)}`
+              : gmailView.label}
+          </li>
+          <li>
+            YouTube ·{" "}
+            {youtubeView.code === "CONNECTED"
+              ? `Connected · last sync ${formatWhen(youtubeConnection.lastSuccessfulSyncAt || youtubeConnection.lastSyncAt)}`
+              : youtubeView.label}
+          </li>
           <li>
             Local database ·{" "}
             {dbHealth?.ok === false || dbHealth?.local?.healthy === false
@@ -442,26 +600,10 @@ export default function SettingsPage() {
               : "Healthy"}
           </li>
           <li>
-            Cloud database ·{" "}
-            {(() => {
-              const sync = dbHealth?.sync;
-              if (!sync?.cloudConfigured) return "Offline (not configured)";
-              if (sync.state === "ERROR") return "Error";
-              if (!sync.localHealthy) return "Error";
-              return "Connected";
-            })()}
+            Cloud database · {dbHealth ? displayCloudDatabaseStatus(dbHealth.sync) : "—"}
           </li>
           <li>
-            Sync ·{" "}
-            {(() => {
-              const sync = dbHealth?.sync;
-              if (!sync?.cloudConfigured) return "Local only";
-              if (sync.state === "SYNCED") return "Synced";
-              if (sync.state === "PENDING" || sync.pendingOutbox > 0) return "Pending";
-              if (sync.state === "SYNCING") return "Syncing";
-              if (sync.state === "ERROR" || sync.state === "CONFLICT") return sync.state === "CONFLICT" ? "Conflict" : "Error";
-              return sync.state || "Offline";
-            })()}
+            Cloud sync · {dbHealth ? displayCloudSyncStatus(dbHealth.sync) : "—"}
           </li>
           <li>
             Last sync ·{" "}

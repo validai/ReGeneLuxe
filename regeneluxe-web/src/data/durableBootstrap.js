@@ -57,10 +57,15 @@ function collectLocalStorageDump() {
 
 async function refreshSync() {
   try {
-    const response = await fetch("/api/sync");
-    if (response.ok) lastSync = await response.json();
+    const response = await fetch("/api/db/health", { cache: "no-store" });
+    if (!response.ok) return;
+    const body = await response.json().catch(() => null);
+    if (body?.sync && typeof body.sync === "object") {
+      lastSync = body.sync;
+      lastDbHealth = body;
+    }
   } catch {
-    lastSync = { state: "ERROR", cloudConfigured: false, pendingOutbox: 0, ok: false };
+    /* Keep the last known sync status. Never invent "not configured". */
   }
 }
 
@@ -145,25 +150,30 @@ export function persistCollectionToSqlite() {
 
 export async function fetchDbHealth() {
   try {
-    const response = await fetch("/api/db/health");
-    lastDbHealth = await response.json();
-    await refreshSync();
-    if (lastSync) {
-      lastDbHealth = {
-        ...lastDbHealth,
-        sync: {
-          ...(lastDbHealth.sync || {}),
-          ...lastSync,
-        },
-      };
+    const response = await fetch("/api/db/health", { cache: "no-store" });
+    const body = await response.json().catch(() => null);
+    if (!response.ok || !body || typeof body !== "object") {
+      throw new Error(body?.local?.error || body?.error || "Database health unavailable");
     }
+    lastDbHealth = body;
+    if (body.sync) lastSync = body.sync;
     return lastDbHealth;
   } catch (error) {
+    const previous = lastDbHealth?.sync || lastSync || {};
+    const configured = Boolean(previous.cloudConfigured);
     lastDbHealth = {
       ok: false,
       local: { healthy: false, error: error instanceof Error ? error.message : String(error) },
-      sync: { state: "Offline", cloudConfigured: false, pendingOutbox: 0 },
+      sync: {
+        ...previous,
+        cloudConfigured: configured,
+        cloudReachable: configured ? false : Boolean(previous.cloudReachable),
+        state: configured ? "OFFLINE" : (previous.state || "ERROR"),
+        pendingOutbox: previous.pendingOutbox ?? 0,
+        error: error instanceof Error ? error.message : String(error),
+      },
     };
+    lastSync = lastDbHealth.sync;
     return lastDbHealth;
   }
 }

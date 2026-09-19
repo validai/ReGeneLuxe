@@ -21,7 +21,7 @@ const {
   publicProviderVaultStatus,
 } = await import("../secrets/providers.js");
 const { initDb, resetDbForTests, closeDb, upsert, list, COLLECTIONS } = await import("../db/index.js");
-const { createManagedProfile, updateManagedProfile } = await import("../db/managedProfileRepository.js");
+const { createManagedProfile } = await import("../db/managedProfileRepository.js");
 const { upsertOperatorFromGoogle } = await import("../db/operatorRepository.js");
 const {
   startGmailAuth,
@@ -37,6 +37,8 @@ const { sanitizeAiContext } = await import("../../src/data/ai/validator.js");
 const { exportDatabaseSnapshot } = await import("../db/backup.js");
 
 const MAILBOX = "djcoast239@gmail.com";
+const OPERATOR_EMAIL = MAILBOX;
+const ACCOUNT_SUB = "operator-sub";
 
 function jsonResponse(status, body) {
   return {
@@ -55,11 +57,39 @@ function mockGoogleApis({
   profileStatus = 200,
   refreshStatus = 200,
   refreshToken = {},
+  messages = [{ id: "m1" }],
+  messagesStatus = 200,
+  messageDetail = {},
+  messageDetailStatus = 200,
 } = {}) {
   return vi.fn(async (url, init) => {
     const href = String(url);
+    if (href.includes("/gmail/v1/users/me/messages/") && href.includes("format=metadata")) {
+      expect(href).not.toContain("format=full");
+      return jsonResponse(messageDetailStatus, {
+        id: "m1",
+        threadId: "t1",
+        snippet: "hello from the coast",
+        internalDate: "1710000000000",
+        labelIds: ["INBOX"],
+        payload: {
+          headers: [
+            { name: "From", value: "fan@example.com" },
+            { name: "To", value: MAILBOX },
+            { name: "Subject", value: "Show tonight" },
+            { name: "Date", value: "Wed, 10 Apr 2024 12:00:00 -0400" },
+          ],
+        },
+        ...messageDetail,
+      });
+    }
     if (href.includes("/gmail/v1/users/me/messages")) {
-      throw new Error("messages must not be fetched in connection v1");
+      expect(decodeURIComponent(href)).toContain("newer_than:30d");
+      expect(href).toContain("maxResults=80");
+      return jsonResponse(messagesStatus, {
+        messages,
+        error: messagesStatus >= 400 ? { message: "Gmail API has not been used in project 1 before or it is disabled.", errors: [{ reason: "accessNotConfigured" }] } : undefined,
+      });
     }
     if (href.includes("oauth2.googleapis.com/token")) {
       const raw = init?.body;
@@ -88,7 +118,7 @@ function mockGoogleApis({
     }
     if (href.includes("oauth2/v3/userinfo")) {
       return jsonResponse(userinfoStatus, {
-        sub: "mailbox-sub-1",
+        sub: ACCOUNT_SUB,
         email: MAILBOX,
         ...userinfo,
       });
@@ -117,9 +147,9 @@ describe("gmail connection v1", () => {
     await resetDbForTests();
     await initDb();
     operator = await upsertOperatorFromGoogle({
-      googleSub: "operator-sub",
-      email: MAILBOX,
-      name: "DJ Coast",
+      googleSub: ACCOUNT_SUB,
+      email: OPERATOR_EMAIL,
+      name: "Coast Ent",
     });
     profile = await createManagedProfile(operator.id, {
       displayName: "DJ Coast",
@@ -134,7 +164,7 @@ describe("gmail connection v1", () => {
     await closeDb();
   });
 
-  it("builds a Gmail OAuth start URL with account chooser, offline access, and gmail.readonly", async () => {
+  it("builds a Gmail OAuth start URL with login_hint, consent, and gmail.readonly", async () => {
     const started = await startGmailAuth({ operator, activeProfile: profile });
     expect(started.ok).toBe(true);
     expect(started.managedProfileId).toBe(profile.id);
@@ -144,8 +174,9 @@ describe("gmail connection v1", () => {
     expect(url.searchParams.get("scope")).toBe(GMAIL_CONNECTION_SCOPE_STRING);
     expect(url.searchParams.get("scope")).toContain(GMAIL_READONLY_SCOPE);
     expect(url.searchParams.get("access_type")).toBe("offline");
-    expect(url.searchParams.get("prompt")).toBe("consent select_account");
+    expect(url.searchParams.get("prompt")).toBe("consent");
     expect(url.searchParams.get("login_hint")).toBe(MAILBOX);
+    expect(url.searchParams.get("scope")).not.toMatch(/gmail\.send|gmail\.modify|gmail\.compose/);
     expect(url.searchParams.get("redirect_uri")).toBe("http://127.0.0.1:5174/api/oauth/gmail/callback");
     expect(url.searchParams.get("redirect_uri")).not.toContain("/api/auth/callback/google");
     expect(OPERATOR_GOOGLE_SCOPES).not.toContain("gmail");
@@ -157,15 +188,28 @@ describe("gmail connection v1", () => {
     expect(consumeOAuthState(started.state).ok).toBe(false);
   });
 
-  it("hints the bound Google account and rejects a different Gmail principal", async () => {
-    profile = await updateManagedProfile(profile.id, {
-      googleAccountEmail: MAILBOX,
-      googleAccountSub: operator.googleSub,
-    });
+  it("connects Gmail for the same signed-in Google account", async () => {
     const started = await startGmailAuth({ operator, activeProfile: profile });
     expect(started.ok).toBe(true);
     expect(new URL(started.authUrl).searchParams.get("login_hint")).toBe(MAILBOX);
 
+    vi.stubGlobal("fetch", mockGoogleApis({
+      userinfo: { sub: ACCOUNT_SUB, email: MAILBOX },
+      profile: { emailAddress: MAILBOX },
+    }));
+    const result = await completeGmailAuth({
+      code: "auth-code",
+      state: started.state,
+      operator,
+    });
+    expect(result.ok).toBe(true);
+    expect(result.connection.email).toBe(MAILBOX);
+    expect(result.connection.email).toBe(operator.email);
+    expect(result.connection.managedProfileId).toBe(profile.id);
+  });
+
+  it("rejects a mismatched Google identity and does not attach Gmail", async () => {
+    const started = await startGmailAuth({ operator, activeProfile: profile });
     vi.stubGlobal("fetch", mockGoogleApis({
       userinfo: { sub: "other-sub", email: "other@gmail.com" },
       profile: { emailAddress: "other@gmail.com" },
@@ -176,8 +220,7 @@ describe("gmail connection v1", () => {
       operator,
     });
     expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/already linked to djcoast239@gmail.com/i);
-    expect(result.connectionState).not.toBe("CONNECTED");
+    expect(result.error).toBe("This Google account does not match the ReGeneLuxe account currently signed in.");
     expect(getAccountTokens("gmail", started.connectionId)?.accessToken).toBeFalsy();
   });
 
@@ -193,8 +236,10 @@ describe("gmail connection v1", () => {
     expect(result.connectionState).toBe("CONNECTED");
     expect(result.connection.managedProfileId).toBe(profile.id);
     expect(result.connection.email).toBe(MAILBOX);
-    expect(result.connection.googleAccountSub).toBe("mailbox-sub-1");
-    expect(result.connection.grantedScopes).toContain(GMAIL_READONLY_SCOPE);
+    expect(result.connection.externalEmail).toBe(MAILBOX);
+    const stored = (await list(COLLECTIONS.profile_connections)).find((row) => row.id === result.connection.id);
+    expect(stored.googleAccountSub).toBe(ACCOUNT_SUB);
+    expect(stored.grantedScopes).toContain(GMAIL_READONLY_SCOPE);
     expect(JSON.stringify(result.connection)).not.toContain("gmail-access");
     expect(JSON.stringify(result.connection)).not.toContain("gmail-refresh");
     expect(result.connection.managedProfileId).not.toBe(operator.id);
@@ -213,7 +258,7 @@ describe("gmail connection v1", () => {
       operator: stranger,
     });
     expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/operator/i);
+    expect(result.error).toMatch(/account/i);
   });
 
   it("stores tokens only in the encrypted vault", async () => {
@@ -335,14 +380,62 @@ describe("gmail connection v1", () => {
     expect(brain.gmail.email).toBe(MAILBOX);
   });
 
-  it("does not ingest messages while verifying the mailbox", async () => {
+  it("indexes a bounded metadata-only Gmail window after connect", async () => {
+    vi.stubGlobal("fetch", mockGoogleApis());
+    const started = await startGmailAuth({ operator, activeProfile: profile });
+    const result = await completeGmailAuth({ code: "auth-code", state: started.state, operator });
+    expect(result.ok).toBe(true);
+    expect(result.indexedCount).toBe(1);
+    const rows = await list(COLLECTIONS.gmail_messages);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].managedProfileId).toBe(profile.id);
+    expect(rows[0].providerMessageId).toBe("m1");
+    expect(rows[0].subject).toBe("Show tonight");
+    expect(rows[0].body).toBeUndefined();
+    expect(JSON.stringify(rows[0])).not.toContain("gmail-access");
+  });
+
+  it("surfaces SETUP REQUIRED when Gmail API is disabled", async () => {
+    vi.stubGlobal("fetch", mockGoogleApis({ messagesStatus: 403 }));
+    const started = await startGmailAuth({ operator, activeProfile: profile });
+    const result = await completeGmailAuth({ code: "auth-code", state: started.state, operator });
+    expect(result.ok).toBe(true);
+    expect(result.connectionState).toBe("SETUP_REQUIRED");
+    expect(result.connection.lastErrorSummary).toMatch(/Gmail API is not enabled/i);
+  });
+
+  it("keeps Gmail isolated to the authorizing profile", async () => {
+    vi.stubGlobal("fetch", mockGoogleApis());
+    const other = await createManagedProfile(operator.id, { displayName: "Other Act" });
+    const started = await startGmailAuth({ operator, activeProfile: profile });
+    await completeGmailAuth({ code: "auth-code", state: started.state, operator });
+    const otherMail = await list(COLLECTIONS.gmail_messages).then((rows) => rows.filter((row) => row.managedProfileId === other.id));
+    expect(otherMail).toHaveLength(0);
+    const otherStarted = await startGmailAuth({ operator, activeProfile: other });
+    expect(otherStarted.connectionId).not.toBe(started.connectionId);
+  });
+
+  it("still persists locally when Turso is unavailable", async () => {
+    process.env.TURSO_DATABASE_URL = "https://unavailable.example";
+    process.env.TURSO_AUTH_TOKEN = "dead";
+    vi.stubGlobal("fetch", mockGoogleApis());
+    const started = await startGmailAuth({ operator, activeProfile: profile });
+    const result = await completeGmailAuth({ code: "auth-code", state: started.state, operator });
+    expect(result.ok).toBe(true);
+    expect(result.connection.email).toBe(MAILBOX);
+    delete process.env.TURSO_DATABASE_URL;
+    delete process.env.TURSO_AUTH_TOKEN;
+  });
+
+  it("indexes metadata only and never stores message bodies", async () => {
     const fetchMock = mockGoogleApis();
     vi.stubGlobal("fetch", fetchMock);
     const started = await startGmailAuth({ operator, activeProfile: profile });
     await completeGmailAuth({ code: "auth-code", state: started.state, operator });
     const urls = fetchMock.mock.calls.map(([url]) => String(url));
     expect(urls.some((item) => item.includes("/users/me/profile"))).toBe(true);
-    expect(urls.some((item) => item.includes("/users/me/messages"))).toBe(false);
+    expect(urls.some((item) => item.includes("/users/me/messages"))).toBe(true);
+    expect(urls.some((item) => item.includes("format=full"))).toBe(false);
     const content = await gmailConnector._getContent();
     const messages = await gmailConnector._getMessages();
     expect(content.unavailable).toBe(true);

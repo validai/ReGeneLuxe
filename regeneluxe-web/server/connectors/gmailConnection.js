@@ -16,12 +16,8 @@ import { list } from "../db/index.js";
 import { COLLECTIONS } from "../db/collections.js";
 import { PROFILE_CONNECTION_KINDS, PROFILE_CONNECTION_STATES, publicProfileConnection } from "../../src/data/profileModels.js";
 import { nowIso } from "../../src/data/ids.js";
-import {
-  assertMatchesBoundGoogleIdentity,
-  boundGoogleEmail,
-  googleIdentityMismatchMessage,
-} from "../../src/data/googleIdentity.js";
-import { bindProfileGoogleIdentity } from "../db/googleIdentityBinding.js";
+import { countGmailMessagesForProfile, gmailBrainSignals, syncGmailMessages } from "./gmailSync.js";
+import { assertMatchesSignedInGoogleAccount } from "../../src/data/googleIdentity.js";
 
 function absolutePath(path) {
   if (!path) return `${getCanonicalOrigin()}/settings`;
@@ -51,7 +47,11 @@ function disconnectedFields() {
     connectedAt: null,
     lastSyncAt: null,
     mailbox: null,
-    notes: "Gmail must use the same Google account as this profile.",
+    notes: "Gmail is a profile connection on the signed-in ReGeneLuxe account.",
+    lastErrorCode: "",
+    lastErrorSummary: "",
+    indexedCount: 0,
+    pendingChannels: [],
     updatedAt: nowIso(),
   };
 }
@@ -69,18 +69,6 @@ export async function startGmailAuth({ operator, activeProfile, returnTo = "/set
   if (activeProfile.ownerOperatorId && activeProfile.ownerOperatorId !== operator.id) {
     return { ok: false, status: 403, error: "Gmail can only be connected for a profile you own.", redirectTo: settingsRedirect({ gmail: "error", message: "Gmail can only be connected for the active profile." }) };
   }
-  const identity = assertMatchesBoundGoogleIdentity(activeProfile, {
-    email: operator.email,
-    googleSub: operator.googleSub,
-  });
-  if (!identity.ok) {
-    return {
-      ok: false,
-      status: 403,
-      error: identity.error,
-      redirectTo: settingsRedirect({ gmail: "error", message: identity.error }),
-    };
-  }
 
   const connection = await ensureProfileConnection(activeProfile, PROFILE_CONNECTION_KINDS.GMAIL);
   const started = await gmailConnector.beginAuth({
@@ -89,7 +77,7 @@ export async function startGmailAuth({ operator, activeProfile, returnTo = "/set
     managedProfileId: activeProfile.id,
     operatorId: operator.id,
     returnTo,
-    loginHint: boundGoogleEmail(activeProfile, operator.email),
+    loginHint: operator.email || "",
   });
 
   if (!started.ok) {
@@ -149,8 +137,8 @@ export async function completeGmailAuth({
   if (stateResult.operatorId && stateResult.operatorId !== operator.id) {
     return {
       ok: false,
-      error: "Gmail connection does not belong to this operator.",
-      redirectTo: settingsRedirect({ gmail: "error", message: "Gmail connection does not belong to this operator." }),
+      error: "Gmail connection does not belong to this account.",
+      redirectTo: settingsRedirect({ gmail: "error", message: "Gmail connection does not belong to this account." }),
     };
   }
 
@@ -195,45 +183,76 @@ export async function completeGmailAuth({
     };
   }
 
-  const identity = assertMatchesBoundGoogleIdentity(profile, {
-    email: result.profile.email,
-    googleSub: result.profile.googleAccountSub,
+  const identity = assertMatchesSignedInGoogleAccount(operator, {
+    googleSub: result.profile?.googleAccountSub,
+    email: result.profile?.email,
   });
   if (!identity.ok) {
     clearAccountTokens("gmail", connection.id);
+    await upsertProfileConnection({
+      ...connection,
+      ...disconnectedFields(),
+      status: PROFILE_CONNECTION_STATES.ERROR,
+      connectionState: PROFILE_CONNECTION_STATES.ERROR,
+      lastErrorCode: "GOOGLE_ACCOUNT_MISMATCH",
+      lastErrorSummary: identity.error,
+      notes: identity.error,
+    });
     return {
       ok: false,
-      connectionState: "ERROR",
+      connectionState: PROFILE_CONNECTION_STATES.ERROR,
       error: identity.error,
-      redirectTo: settingsRedirect({ gmail: "error", message: identity.error || googleIdentityMismatchMessage(profile.googleAccountEmail) }),
+      redirectTo: settingsRedirect({ gmail: "error", message: identity.error }),
     };
   }
 
+  const attemptedAt = nowIso();
   const saved = await upsertProfileConnection({
     ...connection,
     provider: "gmail",
+    service: "GOOGLE_GMAIL",
     status: PROFILE_CONNECTION_STATES.CONNECTED,
     connectionState: PROFILE_CONNECTION_STATES.CONNECTED,
     googleAccountSub: result.profile.googleAccountSub || "",
     email: result.profile.email || "",
+    externalEmail: result.profile.email || "",
+    externalAccountId: result.profile.googleAccountSub || "",
+    permission: "readonly",
     grantedScopes: result.profile.grantedScopes || [],
     mailbox: result.profile.mailbox || null,
     connectedAt: nowIso(),
-    lastSyncAt: nowIso(),
+    lastAttemptedSyncAt: attemptedAt,
+    lastErrorCode: "",
+    lastErrorSummary: "",
     notes: "",
     updatedAt: nowIso(),
   });
-  if (!profile.googleAccountEmail || !profile.googleAccountSub) {
-    await bindProfileGoogleIdentity(profile.id, {
-      email: saved.email,
-      googleSub: saved.googleAccountSub,
-    });
-  }
+  const synced = await syncGmailMessages({ connection: saved }).catch((error) => ({
+    ok: false,
+    error: error instanceof Error ? error.message : String(error),
+    lastAttemptedSyncAt: attemptedAt,
+  }));
+  const next = await upsertProfileConnection({
+    ...saved,
+    indexedCount: synced.indexedCount || 0,
+    lastAttemptedSyncAt: synced.lastAttemptedSyncAt || attemptedAt,
+    lastSuccessfulSyncAt: synced.ok ? (synced.lastSuccessfulSyncAt || nowIso()) : saved.lastSuccessfulSyncAt,
+    lastSyncAt: synced.ok ? (synced.lastSuccessfulSyncAt || nowIso()) : saved.lastSyncAt,
+    lastErrorCode: synced.ok ? "" : (synced.code || "ERROR"),
+    lastErrorSummary: synced.ok ? "" : (synced.error || ""),
+    status: synced.connectionState === "SETUP_REQUIRED"
+      ? PROFILE_CONNECTION_STATES.SETUP_REQUIRED
+      : PROFILE_CONNECTION_STATES.CONNECTED,
+    connectionState: synced.connectionState === "SETUP_REQUIRED"
+      ? PROFILE_CONNECTION_STATES.SETUP_REQUIRED
+      : PROFILE_CONNECTION_STATES.CONNECTED,
+  });
 
   return {
     ok: true,
-    connectionState: "CONNECTED",
-    connection: publicProfileConnection(saved),
+    connectionState: next.status,
+    connection: publicProfileConnection(next),
+    indexedCount: next.indexedCount,
     redirectTo: settingsRedirect({ gmail: "connected" }),
   };
 }
@@ -313,10 +332,22 @@ export async function refreshGmailConnection({ operator, activeProfile } = {}) {
     notes: "",
     updatedAt: nowIso(),
   });
+  const attemptedAt = nowIso();
+  const synced = await syncGmailMessages({ connection: next });
+  const withSync = await upsertProfileConnection({
+    ...next,
+    lastAttemptedSyncAt: attemptedAt,
+    lastSuccessfulSyncAt: synced.ok ? (synced.lastSuccessfulSyncAt || nowIso()) : next.lastSuccessfulSyncAt,
+    lastSyncAt: synced.ok ? (synced.lastSuccessfulSyncAt || nowIso()) : next.lastSyncAt,
+    indexedCount: synced.ok ? synced.indexedCount : next.indexedCount,
+    lastErrorCode: synced.ok ? "" : (synced.code || ""),
+    lastErrorSummary: synced.ok ? "" : (synced.error || ""),
+  });
   return {
     ok: true,
     connectionState: "CONNECTED",
-    connection: publicProfileConnection(next),
+    connection: publicProfileConnection(withSync),
+    indexedCount: withSync.indexedCount,
   };
 }
 
@@ -347,12 +378,18 @@ export async function publicGmailForProfile(managedProfileId) {
   const row = managedProfileId
     ? await getProfileConnectionByKind(managedProfileId, PROFILE_CONNECTION_KINDS.GMAIL)
     : null;
-  return publicProfileConnection(row) || publicProfileConnection({
+  const publicRow = publicProfileConnection(row) || publicProfileConnection({
     kind: PROFILE_CONNECTION_KINDS.GMAIL,
     provider: "gmail",
     status: PROFILE_CONNECTION_STATES.NOT_CONNECTED,
     displayLabel: "Gmail",
+    permission: "readonly",
   });
+  if (publicRow && managedProfileId) {
+    publicRow.indexedCount = publicRow.indexedCount || await countGmailMessagesForProfile(managedProfileId);
+    publicRow.brain = gmailBrainSignals(publicRow, publicRow.indexedCount);
+  }
+  return publicRow;
 }
 
 /** Defense: tokens must never appear on ordinary connection rows. */

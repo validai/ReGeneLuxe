@@ -79,12 +79,20 @@ describe("connector registry", () => {
   });
 
   it("marks Meta/YouTube SETUP_REQUIRED without env credentials", () => {
+    const previousGoogleId = process.env.AUTH_GOOGLE_ID;
+    const previousGoogleSecret = process.env.AUTH_GOOGLE_SECRET;
     delete process.env.META_APP_ID;
     delete process.env.META_APP_SECRET;
     delete process.env.GOOGLE_CLIENT_ID;
     delete process.env.GOOGLE_CLIENT_SECRET;
+    delete process.env.AUTH_GOOGLE_ID;
+    delete process.env.AUTH_GOOGLE_SECRET;
     expect(getConnector("instagram").resolveReadiness()).toBe("SETUP_REQUIRED");
     expect(getConnector("youtube").resolveReadiness()).toBe("SETUP_REQUIRED");
+    if (previousGoogleId == null) delete process.env.AUTH_GOOGLE_ID;
+    else process.env.AUTH_GOOGLE_ID = previousGoogleId;
+    if (previousGoogleSecret == null) delete process.env.AUTH_GOOGLE_SECRET;
+    else process.env.AUTH_GOOGLE_SECRET = previousGoogleSecret;
   });
 
   it("reports Snapchat, Twitch, and Kick as UNSUPPORTED without inventing OAuth", async () => {

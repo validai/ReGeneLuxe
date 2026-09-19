@@ -39,17 +39,17 @@ export default function SignInPage({ errorMessage = "", signedOut = false }) {
                 This workspace is no longer active in this browser.
               </p>
               <p className="text-sm leading-6 text-rl_textSecondary">
-                Sign back in with the Google account linked to this workspace to continue.
+                Sign in to your ReGeneLuxe account to continue.
               </p>
             </div>
           ) : (
             <p className="text-center text-sm text-rl_textSecondary">
-              Private access. Sign in with the Google account linked to this workspace.
+              Sign in to your ReGeneLuxe account.
             </p>
           )}
           {signedOut ? (
             <p className="text-center text-xs text-rl_muted">
-              Only the linked Google account can access this workspace.
+              Use the Google account that owns this ReGeneLuxe workspace.
             </p>
           ) : null}
           {errorMessage && !signedOut ? (

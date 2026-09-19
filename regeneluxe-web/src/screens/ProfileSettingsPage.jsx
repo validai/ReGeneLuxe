@@ -29,7 +29,7 @@ import { useProfileSession } from "../components/app/ProfileSession.jsx";
 
 export default function ProfileSettingsPage() {
   const router = useRouter();
-  const { activeProfile, refresh } = useProfileSession();
+  const { activeProfile, refresh, operator, connections } = useProfileSession();
   const timezones = useMemo(() => listIanaTimezones(), []);
   const fileInputRef = useRef(null);
   const [displayName, setDisplayName] = useState(activeProfile?.displayName || "");
@@ -201,7 +201,7 @@ export default function ProfileSettingsPage() {
     <PageShell width="narrow" className="space-y-8">
       <PageHeader
         title="Edit profile"
-        description={`${activeProfile.displayName} · Active profile. This is not the signed-in Google operator.`}
+        description={`${activeProfile.displayName} · Active profile. Separate from the signed-in ReGeneLuxe account.`}
       />
 
       <form className="rl-panel space-y-5 p-6" onSubmit={onSubmit} noValidate>
@@ -211,6 +211,17 @@ export default function ProfileSettingsPage() {
           </p>
         ) : null}
         {savedNote ? <p className="text-sm text-rl_ok">{savedNote}</p> : null}
+
+        <ul className="space-y-1 text-sm text-rl_muted">
+          <li>Account · {operator?.email ? `Signed in (${operator.email})` : "Not signed in"}</li>
+          <li>Gmail · {connections?.gmail?.status === "CONNECTED" ? "Connected" : "Not connected"}</li>
+          <li>
+            YouTube ·{" "}
+            {connections?.youtube?.status === "CONNECTED" && connections?.youtube?.channelTitle
+              ? `${connections.youtube.channelTitle} — Connected`
+              : connections?.youtube?.status === "CONNECTED" ? "Connected" : "Not connected"}
+          </li>
+        </ul>
 
         <FormField
           id="profile-image"

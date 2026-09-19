@@ -5,7 +5,7 @@ import Link from "next/link";
 import { SignOut, GearSix, PlugsConnected } from "@phosphor-icons/react";
 import { useProfileSession } from "./ProfileSession.jsx";
 import { signOutOperator } from "../../../app/actions/auth";
-import { displayGoogleIdentity } from "../../data/googleIdentity.js";
+import { displayAccountEmail } from "../../data/googleIdentity.js";
 
 export default function OperatorMenu({ collapsed = false }) {
   const { operator, activeProfile } = useProfileSession();
@@ -23,7 +23,8 @@ export default function OperatorMenu({ collapsed = false }) {
 
   if (!operator) return null;
 
-  const googleEmail = displayGoogleIdentity(activeProfile, operator);
+  const googleEmail = displayAccountEmail(operator);
+  const accountName = operator.name || activeProfile?.displayName || "Account";
   const initial = (googleEmail || "?").slice(0, 1).toUpperCase();
 
   return (
@@ -36,8 +37,8 @@ export default function OperatorMenu({ collapsed = false }) {
         aria-haspopup="menu"
         title={googleEmail}
       >
-        {activeProfile?.avatarUrl || operator.avatarUrl ? (
-          <img src={activeProfile?.avatarUrl || operator.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+        {operator.avatarUrl ? (
+          <img src={operator.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
         ) : (
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-rl_surfaceActive text-xs font-semibold text-rl_text">
             {initial}
@@ -45,8 +46,9 @@ export default function OperatorMenu({ collapsed = false }) {
         )}
         {!collapsed && (
           <span className="min-w-0">
-            <span className="block truncate font-medium text-rl_text">{googleEmail}</span>
-            <span className="block truncate text-[11px]">Signed in</span>
+            <span className="block truncate font-medium text-rl_text">{accountName}</span>
+            <span className="block truncate text-[11px]">{googleEmail}</span>
+            <span className="block truncate text-[11px]">Signed in with Google</span>
           </span>
         )}
       </button>
@@ -56,13 +58,13 @@ export default function OperatorMenu({ collapsed = false }) {
           className="absolute bottom-full left-2 right-2 z-50 mb-2 overflow-hidden rounded-xl border border-rl_border bg-rl_surfaceRaised shadow-lg"
         >
           <Link
-            href="/settings#connections"
+            href="/settings#account"
             role="menuitem"
             className="flex items-center gap-2 px-3 py-2.5 text-sm text-rl_text hover:bg-rl_surfaceHover"
             onClick={() => setOpen(false)}
           >
             <GearSix size={16} />
-            Google account
+            Account
           </Link>
           <Link
             href="/settings#connections"

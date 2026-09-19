@@ -53,6 +53,7 @@ describe("auth and profile chrome", () => {
   it("renders Google sign-in without a password form", () => {
     render(<SignInPage />);
     expect(screen.getByRole("button", { name: /continue with google/i })).toBeInTheDocument();
+    expect(screen.getByText(/sign in to your regeneluxe account/i)).toBeInTheDocument();
     expect(screen.getByText(/social campaign command center/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /signed out/i })).not.toBeInTheDocument();
@@ -63,8 +64,7 @@ describe("auth and profile chrome", () => {
     expect(screen.getByRole("heading", { name: /^signed out$/i })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(/successfully signed out of regeneluxe/i);
     expect(screen.getByRole("status")).toHaveTextContent(/no longer active in this browser/i);
-    expect(screen.getByRole("status")).toHaveTextContent(/google account linked to this workspace/i);
-    expect(screen.getByText(/only the linked google account can access this workspace/i)).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(/sign in to your regeneluxe account/i);
     expect(screen.getByRole("button", { name: /continue with google/i })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByText(/private access/i)).not.toBeInTheDocument();
@@ -80,7 +80,7 @@ describe("auth and profile chrome", () => {
   it("renders an access-not-authorized screen", () => {
     render(<AccessNotAuthorizedPage />);
     expect(screen.getByRole("heading", { name: /access not authorized/i })).toBeInTheDocument();
-    expect(screen.getByText(/sign in with the google account linked to this profile/i)).toBeInTheDocument();
+    expect(screen.getByText(/sign in with an approved google account/i)).toBeInTheDocument();
   });
 
   it("shows the active managed profile identity when only one profile exists", () => {
@@ -121,20 +121,20 @@ describe("auth and profile chrome", () => {
     expect(screen.getByRole("combobox", { name: /switch profile/i })).toBeInTheDocument();
   });
 
-  it("labels the signed-in Google identity without a second operator account", () => {
+  it("labels the signed-in Google account separately from the profile", () => {
     render(
       <ProfileSessionProvider
-        operator={{ id: "opr_1", name: "DJ Coast", email: "djcoast239@gmail.com" }}
-        profiles={[{ id: "prf_1", displayName: "DJ Coast", googleAccountEmail: "djcoast239@gmail.com" }]}
-        activeProfile={{ id: "prf_1", displayName: "DJ Coast", googleAccountEmail: "djcoast239@gmail.com" }}
+        operator={{ id: "opr_1", name: "Coast Ent", email: "djcoast239@gmail.com" }}
+        profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
+        activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
       >
         <OperatorMenu />
       </ProfileSessionProvider>,
     );
+    expect(screen.getByText("Coast Ent")).toBeInTheDocument();
     expect(screen.getByText("djcoast239@gmail.com")).toBeInTheDocument();
-    expect(screen.getByText("Signed in")).toBeInTheDocument();
+    expect(screen.getByText("Signed in with Google")).toBeInTheDocument();
     expect(screen.queryByText("validsstudio@gmail.com")).not.toBeInTheDocument();
-    expect(screen.queryByText("Signed in with Google")).not.toBeInTheDocument();
   });
 });
 
@@ -307,9 +307,9 @@ describe("settings Gmail connection chrome", () => {
     render(
       <MemoryRouter>
         <ProfileSessionProvider
-          operator={{ id: "opr_1", name: "DJ Coast", email: "djcoast239@gmail.com" }}
+          operator={{ id: "opr_1", name: "Coast Ent", email: "djcoast239@gmail.com" }}
           profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
-          activeProfile={{ id: "prf_1", displayName: "DJ Coast", googleAccountEmail: "djcoast239@gmail.com" }}
+          activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
           connections={{
             googleAccount: { status: "CONNECTED", email: "djcoast239@gmail.com" },
             gmail: { kind: "GMAIL", status: "NOT_CONNECTED" },
@@ -320,20 +320,22 @@ describe("settings Gmail connection chrome", () => {
         </ProfileSessionProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByText("Gmail")).toBeInTheDocument();
-    expect(screen.getByText("Google")).toBeInTheDocument();
-    expect(screen.getAllByText("djcoast239@gmail.com").length).toBeGreaterThan(0);
-    expect(screen.queryByText("validsstudio@gmail.com")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /account/i })).toBeInTheDocument();
+    expect(screen.queryByText("Google operator")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/djcoast239@gmail.com/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/validsstudio@gmail.com/)).not.toBeInTheDocument();
+    expect(screen.getAllByText("Gmail").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("YouTube").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Not connected").length).toBeGreaterThan(0);
-    const connect = screen.getByRole("link", { name: /connect gmail/i });
-    expect(connect).toHaveAttribute("href", "/api/oauth/gmail/start");
+    expect(screen.getByRole("link", { name: /connect gmail/i })).toHaveAttribute("href", "/api/oauth/gmail/start");
+    expect(screen.getByRole("link", { name: /connect youtube/i })).toHaveAttribute("href", "/api/oauth/youtube/start");
   });
 
-  it("shows the connected mailbox with Refresh and Disconnect", () => {
+  it("shows the connected mailbox with Sync now, Reconnect, and Disconnect", () => {
     render(
       <MemoryRouter>
         <ProfileSessionProvider
-          operator={{ id: "opr_1", name: "DJ Coast", email: "djcoast239@gmail.com" }}
+          operator={{ id: "opr_1", name: "Coast Ent", email: "djcoast239@gmail.com" }}
           profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
           activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
           connections={{
@@ -341,17 +343,24 @@ describe("settings Gmail connection chrome", () => {
               kind: "GMAIL",
               status: "CONNECTED",
               email: "djcoast239@gmail.com",
+              permission: "readonly",
+              indexedCount: 12,
+              lastSuccessfulSyncAt: "2024-04-01T00:00:00.000Z",
             },
+            youtube: { kind: "YOUTUBE", status: "NOT_CONNECTED" },
           }}
         >
           <SettingsPage />
         </ProfileSessionProvider>
       </MemoryRouter>,
     );
-    expect(screen.getAllByText("djcoast239@gmail.com").length).toBeGreaterThan(0);
-    expect(screen.queryByText("validsstudio@gmail.com")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/djcoast239@gmail.com/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Authorized account: djcoast239@gmail.com/i)).toBeInTheDocument();
+    expect(screen.getByText(/Permission: Read only/i)).toBeInTheDocument();
+    expect(screen.getByText(/Messages indexed: 12/i)).toBeInTheDocument();
     expect(screen.getByText("Connected")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /refresh/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /sync now/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /reconnect/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /disconnect/i })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /connect gmail/i })).not.toBeInTheDocument();
   });
@@ -360,11 +369,12 @@ describe("settings Gmail connection chrome", () => {
     render(
       <MemoryRouter>
         <ProfileSessionProvider
-          operator={{ id: "opr_1", name: "DJ Coast", email: "djcoast239@gmail.com" }}
+          operator={{ id: "opr_1", name: "Coast Ent", email: "djcoast239@gmail.com" }}
           profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
           activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
           connections={{
             gmail: { kind: "GMAIL", status: "RECONNECT_REQUIRED", email: "djcoast239@gmail.com" },
+            youtube: { kind: "YOUTUBE", status: "NOT_CONNECTED" },
           }}
         >
           <SettingsPage />
@@ -372,6 +382,115 @@ describe("settings Gmail connection chrome", () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole("link", { name: /reconnect gmail/i })).toHaveAttribute("href", "/api/oauth/gmail/start");
+  });
+
+  it("lets the operator pick Coast Entertainment from discovered channels", () => {
+    render(
+      <MemoryRouter>
+        <ProfileSessionProvider
+          operator={{ id: "opr_1", name: "Coast Ent", email: "djcoast239@gmail.com" }}
+          profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
+          activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
+          connections={{
+            gmail: { kind: "GMAIL", status: "NOT_CONNECTED" },
+            youtube: {
+              kind: "YOUTUBE",
+              status: "CONNECTED",
+              pendingChannels: [
+                { id: "UCother", title: "Other Channel", handle: "@other" },
+                { id: "UCCoast", title: "Coast Entertainment", handle: "@CoastEntertainment", subscriberCount: 41 },
+              ],
+            },
+          }}
+        >
+          <SettingsPage />
+        </ProfileSessionProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Coast Entertainment")).toBeInTheDocument();
+    expect(screen.getByText(/@CoastEntertainment/)).toBeInTheDocument();
+  });
+
+  it("shows Connected and Synced when Turso health is configured", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url) => {
+      if (String(url).includes("/api/db/health")) {
+        return {
+          ok: true,
+          json: async () => ({
+            ok: true,
+            local: { healthy: true },
+            sync: {
+              cloudConfigured: true,
+              cloudReachable: true,
+              state: "SYNCED",
+              pendingOutbox: 0,
+              lastSyncAt: "2026-09-19T21:06:24.112Z",
+              localHealthy: true,
+            },
+          }),
+        };
+      }
+      return { ok: true, json: async () => ({ ok: true, providers: [] }) };
+    }));
+    render(
+      <MemoryRouter>
+        <ProfileSessionProvider
+          operator={{ id: "opr_1", name: "Coast Ent", email: "djcoast239@gmail.com" }}
+          profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
+          activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
+        >
+          <SettingsPage />
+        </ProfileSessionProvider>
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      expect(screen.getByText(/Cloud database · Connected/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Cloud sync · Synced/i)).toBeInTheDocument();
+    expect(screen.getByText(/Pending operations · 0/)).toBeInTheDocument();
+    expect(screen.queryByText(/Offline \(not configured\)/i)).not.toBeInTheDocument();
+  });
+
+  it("refreshes cloud sync status after Sync now", async () => {
+    let synced = false;
+    vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+      if (String(url).includes("/api/sync") && String(init?.method || "GET").toUpperCase() === "POST") {
+        synced = true;
+        return { ok: true, json: async () => ({ ok: true }) };
+      }
+      if (String(url).includes("/api/db/health")) {
+        return {
+          ok: true,
+          json: async () => ({
+            ok: true,
+            local: { healthy: true },
+            sync: synced
+              ? { cloudConfigured: true, cloudReachable: true, state: "SYNCED", pendingOutbox: 0, localHealthy: true }
+              : { cloudConfigured: true, cloudReachable: true, state: "PENDING", pendingOutbox: 2, localHealthy: true },
+          }),
+        };
+      }
+      return { ok: true, json: async () => ({ ok: true, providers: [] }) };
+    }));
+    render(
+      <MemoryRouter>
+        <ProfileSessionProvider
+          operator={{ id: "opr_1", name: "Coast Ent", email: "djcoast239@gmail.com" }}
+          profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
+          activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
+        >
+          <SettingsPage />
+        </ProfileSessionProvider>
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      expect(screen.getByText(/Cloud sync · Pending/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^sync now$/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/Cloud sync · Synced/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Pending operations · 0/)).toBeInTheDocument();
   });
 
   it("lists Snapchat, Twitch, and Kick as unsupported social connections", async () => {

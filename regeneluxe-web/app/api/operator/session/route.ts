@@ -27,12 +27,13 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     operator: result.publicOperator,
+    account: result.publicAccount || result.publicOperator,
     profiles: result.publicProfiles,
     activeProfile: result.publicActiveProfile,
     connections: {
       googleAccount: connections.googleAccount,
       gmail: connections.gmail,
-      youtube: { kind: "YOUTUBE", status: connections.youtube.status },
+      youtube: connections.youtube,
     },
     health: {
       localHealthy: health?.ok !== false,

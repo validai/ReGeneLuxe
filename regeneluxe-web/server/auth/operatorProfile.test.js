@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 process.env.RL_DB_MODE = "memory";
-process.env.APP_ALLOWED_GOOGLE_EMAILS = "validsstudio@gmail.com";
+process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
 delete process.env.TURSO_DATABASE_URL;
 delete process.env.TURSO_AUTH_TOKEN;
 
@@ -14,7 +14,6 @@ const {
   updateManagedProfile,
   setActiveProfileForOperator,
 } = await import("../db/managedProfileRepository.js");
-const { bindProfileGoogleIdentity } = await import("../db/googleIdentityBinding.js");
 const { listForProfile } = await import("../db/profileMigration.js");
 const { publicOperator, resolveActiveProfile, emptyManagedProfile } = await import("../../src/data/profileModels.js");
 const { listPending } = await import("../db/outbox.js");
@@ -27,21 +26,21 @@ describe("operator + managed profile persistence", () => {
   });
 
   afterEach(async () => {
-    process.env.APP_ALLOWED_GOOGLE_EMAILS = "validsstudio@gmail.com";
+    process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
     await closeDb();
   });
 
   it("upserts Operator by googleSub and does not duplicate", async () => {
     const first = await upsertOperatorFromGoogle({
       googleSub: "google-sub-1",
-      email: "validsstudio@gmail.com",
+      email: "djcoast239@gmail.com",
       emailVerified: true,
       name: "Operator",
       avatarUrl: "https://example.com/a.png",
     });
     const second = await upsertOperatorFromGoogle({
       googleSub: "google-sub-1",
-      email: "validsstudio@gmail.com",
+      email: "djcoast239@gmail.com",
       name: "Operator Updated",
     });
     expect(second.id).toBe(first.id);
@@ -59,18 +58,18 @@ describe("operator + managed profile persistence", () => {
     });
     const updated = await upsertOperatorFromGoogle({
       googleSub: "sub-stable",
-      email: "validsstudio@gmail.com",
+      email: "djcoast239@gmail.com",
       name: "Op",
     });
     expect(updated.id).toBe(created.id);
-    expect(updated.email).toBe("validsstudio@gmail.com");
+    expect(updated.email).toBe("djcoast239@gmail.com");
     expect(updated.googleSub).toBe("sub-stable");
   });
 
   it("approves allowlisted email even when optional Google profile fields are missing", async () => {
     const approved = await authorizeGoogleSignIn({
       account: { provider: "google", providerAccountId: "sub-minimal" },
-      profile: { sub: "sub-minimal", email: "validsstudio@gmail.com" },
+      profile: { sub: "sub-minimal", email: "djcoast239@gmail.com" },
     });
     expect(approved.ok).toBe(true);
     expect(approved.operator.googleSub).toBe("sub-minimal");
@@ -83,7 +82,7 @@ describe("operator + managed profile persistence", () => {
     delete process.env.TURSO_AUTH_TOKEN;
     const approved = await authorizeGoogleSignIn({
       account: { provider: "google", providerAccountId: "sub-offline" },
-      profile: { sub: "sub-offline", email: "validsstudio@gmail.com", name: "Valid" },
+      profile: { sub: "sub-offline", email: "djcoast239@gmail.com", name: "Coast Ent" },
     });
     expect(approved.ok).toBe(true);
     expect(await findOperatorByGoogleSub("sub-offline")).toBeTruthy();
@@ -94,7 +93,7 @@ describe("operator + managed profile persistence", () => {
   it("creates a ManagedProfile with nullable website and independent primaryPublicUrl", async () => {
     const operator = await upsertOperatorFromGoogle({
       googleSub: "sub-p",
-      email: "validsstudio@gmail.com",
+      email: "djcoast239@gmail.com",
       name: "Valid",
     });
     const profile = await createManagedProfile(operator.id, {
@@ -118,12 +117,12 @@ describe("operator + managed profile persistence", () => {
   it("does not duplicate a profile on repeated operator resolution", async () => {
     const operator = await upsertOperatorFromGoogle({
       googleSub: "sub-repeat",
-      email: "validsstudio@gmail.com",
+      email: "djcoast239@gmail.com",
     });
     await createManagedProfile(operator.id, { displayName: "DJ Coast", slug: "dj-coast" });
     await upsertOperatorFromGoogle({
       googleSub: "sub-repeat",
-      email: "validsstudio@gmail.com",
+      email: "djcoast239@gmail.com",
     });
     expect(await listProfilesForOperator(operator.id)).toHaveLength(1);
   });
@@ -131,7 +130,7 @@ describe("operator + managed profile persistence", () => {
   it("sets activeProfileId automatically for the first profile and never equal to operator id", async () => {
     const operator = await upsertOperatorFromGoogle({
       googleSub: "sub-active",
-      email: "validsstudio@gmail.com",
+      email: "djcoast239@gmail.com",
     });
     const profile = await createManagedProfile(operator.id, { displayName: "DJ Coast" });
     const saved = await get(COLLECTIONS.operators, operator.id);
@@ -143,7 +142,7 @@ describe("operator + managed profile persistence", () => {
   it("scopes repository reads to the owning profile", async () => {
     const operator = await upsertOperatorFromGoogle({
       googleSub: "sub-scope",
-      email: "validsstudio@gmail.com",
+      email: "djcoast239@gmail.com",
     });
     const one = await createManagedProfile(operator.id, { displayName: "DJ Coast", slug: "dj-coast" });
     const two = await createManagedProfile(operator.id, { displayName: "Future Brand", slug: "future-brand" });
@@ -159,7 +158,7 @@ describe("operator + managed profile persistence", () => {
   it("attaches unscoped operator records to the first profile and skips fixtures", async () => {
     const operator = await upsertOperatorFromGoogle({
       googleSub: "sub-mig",
-      email: "validsstudio@gmail.com",
+      email: "djcoast239@gmail.com",
     });
     await upsert(COLLECTIONS.campaigns, { id: "real_camp", name: "Real work" });
     await upsert(COLLECTIONS.accounts, { id: "real_acc", handle: "@real" });
@@ -179,7 +178,7 @@ describe("operator + managed profile persistence", () => {
   it("sign-out does not delete operator, profile, or campaign data", async () => {
     const operator = await upsertOperatorFromGoogle({
       googleSub: "sub-out",
-      email: "validsstudio@gmail.com",
+      email: "djcoast239@gmail.com",
     });
     const profile = await createManagedProfile(operator.id, { displayName: "DJ Coast" });
     await upsert(COLLECTIONS.campaigns, { id: "keep_me", name: "Keep", managedProfileId: profile.id });
@@ -191,12 +190,12 @@ describe("operator + managed profile persistence", () => {
   it("sign-back-in resolves the same operator and profile", async () => {
     const first = await authorizeGoogleSignIn({
       account: { provider: "google", providerAccountId: "sub-back" },
-      profile: { sub: "sub-back", email: "validsstudio@gmail.com", name: "Valid" },
+      profile: { sub: "sub-back", email: "djcoast239@gmail.com", name: "Coast Ent" },
     });
     const profile = await createManagedProfile(first.operator.id, { displayName: "DJ Coast", slug: "dj-coast" });
     const second = await authorizeGoogleSignIn({
       account: { provider: "google", providerAccountId: "sub-back" },
-      profile: { sub: "sub-back", email: "validsstudio@gmail.com", name: "Valid" },
+      profile: { sub: "sub-back", email: "djcoast239@gmail.com", name: "Coast Ent" },
     });
     expect(second.operator.id).toBe(first.operator.id);
     const profiles = await listProfilesForOperator(second.operator.id);
@@ -207,7 +206,7 @@ describe("operator + managed profile persistence", () => {
   it("local writes mark Operator and ManagedProfile sync pending", async () => {
     const operator = await upsertOperatorFromGoogle({
       googleSub: "sub-sync",
-      email: "validsstudio@gmail.com",
+      email: "djcoast239@gmail.com",
     });
     const profile = await createManagedProfile(operator.id, {
       displayName: "DJ Coast",
@@ -229,13 +228,13 @@ describe("operator + managed profile persistence", () => {
     const published = publicOperator({
       id: "opr_1",
       googleSub: "should-not-leak",
-      email: "validsstudio@gmail.com",
+      email: "djcoast239@gmail.com",
       name: "Valid",
       accessToken: "tok",
     });
     expect(published.googleSub).toBeUndefined();
     expect(published.accessToken).toBeUndefined();
-    expect(published.email).toBe("validsstudio@gmail.com");
+    expect(published.email).toBe("djcoast239@gmail.com");
   });
 
   it("emptyManagedProfile keeps website null when blank", () => {
@@ -243,63 +242,81 @@ describe("operator + managed profile persistence", () => {
     expect(emptyManagedProfile({ displayName: "X", website: null }).website).toBeNull();
   });
 
-  it("claims the bound DJ Coast profile for the matching Google account instead of duplicating it", async () => {
-    process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
-    const previous = await upsertOperatorFromGoogle({
+  it("does not require infrastructure identity for runtime login", async () => {
+    const denied = await authorizeGoogleSignIn({
+      profile: { sub: "studio-sub", email: "validsstudio@gmail.com", name: "Studio" },
+    });
+    expect(denied.ok).toBe(false);
+    expect(denied.reason).toBe("not_allowlisted");
+  });
+
+  it("adopts leftover workspace profiles onto the signing-in account without duplicating them", async () => {
+    const leftover = await upsertOperatorFromGoogle({
       googleSub: "studio-sub",
       email: "validsstudio@gmail.com",
       name: "Studio",
     });
-    const profile = await createManagedProfile(previous.id, {
+    const profile = await createManagedProfile(leftover.id, {
       displayName: "DJ Coast",
       slug: "dj-coast",
       primaryEmail: "djcoast239@gmail.com",
     });
-    await bindProfileGoogleIdentity(profile.id, { email: "djcoast239@gmail.com" });
+    await upsert(COLLECTIONS.campaigns, {
+      id: "camp_keep",
+      name: "Keep",
+      managedProfileId: profile.id,
+    });
     const result = await authorizeGoogleSignIn({
-      profile: { sub: "coast-sub", email: "djcoast239@gmail.com", name: "DJ Coast" },
+      profile: { sub: "coast-sub", email: "djcoast239@gmail.com", name: "Coast Ent" },
     });
     expect(result.ok).toBe(true);
-    expect(result.operator.id).not.toBe(previous.id);
+    expect(result.adoption?.adopted).toBe(true);
+    expect(result.operator.id).not.toBe(leftover.id);
     expect(result.operator.email).toBe("djcoast239@gmail.com");
-    expect(result.profile.id).toBe(profile.id);
     expect(await listProfilesForOperator(result.operator.id)).toHaveLength(1);
     expect((await listProfilesForOperator(result.operator.id))[0].id).toBe(profile.id);
-    expect((await getOperator(previous.id)).status).toBe("INACTIVE");
-    const again = await authorizeGoogleSignIn({
-      profile: { sub: "coast-sub", email: "djcoast239@gmail.com", name: "DJ Coast" },
-    });
-    expect(again.operator.id).toBe(result.operator.id);
-    expect(await listProfilesForOperator(again.operator.id)).toHaveLength(1);
-    process.env.APP_ALLOWED_GOOGLE_EMAILS = "validsstudio@gmail.com";
+    expect(await list(COLLECTIONS.managed_profiles)).toHaveLength(1);
+    expect(await getOperator(leftover.id)).toBeTruthy();
+    expect((await get(COLLECTIONS.campaigns, "camp_keep")).managedProfileId).toBe(profile.id);
   });
 
-  it("binds DJ Coast from the existing workspace and claims it on first matching Google sign-in", async () => {
-    process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
-    const previous = await upsertOperatorFromGoogle({
-      googleSub: "studio-sub-2",
-      email: "validsstudio@gmail.com",
-      name: "Studio",
+  it("does not steal profiles from another allowlisted account", async () => {
+    process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com,other-pilot@gmail.com";
+    const other = await upsertOperatorFromGoogle({
+      googleSub: "other-sub",
+      email: "other-pilot@gmail.com",
+      name: "Other Pilot",
     });
-    const profile = await createManagedProfile(previous.id, {
+    const profile = await createManagedProfile(other.id, { displayName: "Other Act" });
+    const result = await authorizeGoogleSignIn({
+      profile: { sub: "coast-sub", email: "djcoast239@gmail.com", name: "Coast Ent" },
+    });
+    expect(result.ok).toBe(true);
+    expect(result.adoption?.adopted).toBe(false);
+    expect(await listProfilesForOperator(other.id)).toHaveLength(1);
+    expect((await listProfilesForOperator(other.id))[0].id).toBe(profile.id);
+    expect(await listProfilesForOperator(result.operator.id)).toHaveLength(0);
+    process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
+  });
+
+  it("lets the signed-in account keep its managed profile across login", async () => {
+    const account = await upsertOperatorFromGoogle({
+      googleSub: "coast-keep",
+      email: "djcoast239@gmail.com",
+      name: "Coast Ent",
+    });
+    const profile = await createManagedProfile(account.id, {
       displayName: "DJ Coast",
       slug: "dj-coast",
     });
-    const denied = await authorizeGoogleSignIn({
-      profile: { sub: "studio-sub-2", email: "validsstudio@gmail.com", name: "Studio" },
-    });
-    expect(denied.ok).toBe(false);
-    expect(denied.reason).toBe("not_allowlisted");
     const result = await authorizeGoogleSignIn({
-      profile: { sub: "coast-sub-2", email: "djcoast239@gmail.com", name: "DJ Coast" },
+      profile: { sub: "coast-keep", email: "djcoast239@gmail.com", name: "Coast Ent" },
     });
     expect(result.ok).toBe(true);
-    expect(result.claimed).toBe(true);
-    expect(result.profile.id).toBe(profile.id);
-    expect(result.operator.email).toBe("djcoast239@gmail.com");
+    expect(result.operator.id).toBe(account.id);
     expect(await listProfilesForOperator(result.operator.id)).toHaveLength(1);
-    expect((await list(COLLECTIONS.managed_profiles))).toHaveLength(1);
-    process.env.APP_ALLOWED_GOOGLE_EMAILS = "validsstudio@gmail.com";
+    expect((await listProfilesForOperator(result.operator.id))[0].id).toBe(profile.id);
+    expect(await list(COLLECTIONS.managed_profiles)).toHaveLength(1);
   });
 
   it("strips inline data-URL avatars from managed profile records", () => {

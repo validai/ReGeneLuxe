@@ -16,7 +16,7 @@ describe("pilot allowlist", () => {
     ]);
   });
 
-  it("approves the intended operator email", () => {
+  it("approves the intended runtime account email", () => {
     const allowed = ["djcoast239@gmail.com"];
     expect(isEmailAllowed("djcoast239@gmail.com", allowed)).toBe(true);
     expect(isEmailAllowed("DJCoast239@gmail.com", allowed)).toBe(true);
@@ -85,7 +85,7 @@ describe("auth error copy", () => {
   });
 });
 
-describe("operator Google scopes stay separate from Gmail", () => {
+describe("account Google scopes stay separate from Gmail", () => {
   it("does not request gmail.readonly at Auth.js sign-in", () => {
     expect(OPERATOR_GOOGLE_SCOPES.split(/\s+/)).toEqual(["openid", "profile", "email"]);
     expect(OPERATOR_GOOGLE_SCOPES).not.toMatch(/gmail/i);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDbHealth, initDb } from "../../../../server/db/index.js";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {

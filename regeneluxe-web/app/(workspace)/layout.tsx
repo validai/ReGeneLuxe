@@ -19,7 +19,7 @@ function RouteFallback() {
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const result = await requireOperator();
   if (!result.ok) {
-    redirect(result.status === 503 ? "/signin?error=database" : result.reason === "identity_mismatch" ? "/signin?error=identity" : "/signin");
+    redirect(result.status === 503 ? "/signin?error=database" : "/signin");
   }
   if (result.profiles.length === 0) {
     redirect("/setup/profile");

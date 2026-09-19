@@ -8,6 +8,7 @@ import {
   GMAIL_CONNECTION_SCOPE_STRING,
   GMAIL_READONLY_SCOPE,
 } from "../../auth/googleScopes.js";
+import { friendlyGoogleApiError } from "../../auth/googleErrors.js";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const REVOKE_URL = "https://oauth2.googleapis.com/revoke";
@@ -35,7 +36,7 @@ export const gmailConnector = baseConnector({
   setupInstructions: [
     "1. Enable the Gmail API on the ReGeneLuxe Google Cloud project",
     "2. Add gmail.readonly to the OAuth consent screen",
-    "3. Reuse AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET (operator login client)",
+    "3. Reuse AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET (account login client)",
     `4. Add redirect URI: ${gmailCallbackUrl()}`,
   ].join("\n"),
   envKeys: {
@@ -97,7 +98,7 @@ gmailConnector._beginAuth = async ({
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", GMAIL_CONNECTION_SCOPE_STRING);
   url.searchParams.set("access_type", "offline");
-  url.searchParams.set("prompt", "consent select_account");
+  url.searchParams.set("prompt", "consent");
   url.searchParams.set("state", state);
   url.searchParams.set("code_challenge", challenge);
   url.searchParams.set("code_challenge_method", "S256");
@@ -157,11 +158,7 @@ async function fetchGmailProfile(accessToken) {
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    return {
-      ok: false,
-      connectionState: res.status === 401 || res.status === 403 ? "RECONNECT_REQUIRED" : "ERROR",
-      error: json.error?.message || "Gmail mailbox verification failed.",
-    };
+    return { ok: false, ...friendlyGoogleApiError(json, res.status, "gmail") };
   }
   return { ok: true, profile: json };
 }
@@ -296,8 +293,8 @@ gmailConnector._refreshAuth = async (account, tokens) => {
   return gmailConnector.getProfile(account);
 };
 
-gmailConnector._getContent = async () => unavailable("Gmail mailbox ingestion is not enabled.");
-gmailConnector._getMessages = async () => unavailable("Gmail mailbox ingestion is not enabled.");
+gmailConnector._getContent = async () => unavailable("Gmail message bodies stay outside Campaign Brain.");
+gmailConnector._getMessages = async () => unavailable("Use the profile Gmail sync for metadata only.");
 
 gmailConnector._disconnect = async (account) => {
   const tokens = getAccountTokens("gmail", account?.id);

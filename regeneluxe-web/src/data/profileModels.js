@@ -15,7 +15,13 @@ export const PROFILE_CONNECTION_STATES = {
   CONNECTED: "CONNECTED",
   NOT_CONNECTED: "NOT_CONNECTED",
   RECONNECT_REQUIRED: "RECONNECT_REQUIRED",
+  SETUP_REQUIRED: "SETUP_REQUIRED",
   ERROR: "ERROR",
+};
+
+export const PROFILE_CONNECTION_SERVICES = {
+  GOOGLE_GMAIL: "GOOGLE_GMAIL",
+  GOOGLE_YOUTUBE: "GOOGLE_YOUTUBE",
 };
 
 export function slugifyProfileName(name) {
@@ -65,6 +71,10 @@ export function publicOperator(operator) {
     lastLoginAt: operator.lastLoginAt || null,
   };
 }
+
+/** Public ReGeneLuxe account (same row as operator; UX term is Account). */
+export const emptyAccountRecord = emptyOperator;
+export const publicAccount = publicOperator;
 
 export function emptyManagedProfile(partial = {}) {
   const timestamp = nowIso();
@@ -144,6 +154,29 @@ export function emptyProfileConnection(partial = {}) {
     notes: partial.notes || "",
     googleAccountSub: partial.googleAccountSub || "",
     email: partial.email || "",
+    service: partial.service
+      || (kind === PROFILE_CONNECTION_KINDS.GMAIL
+        ? PROFILE_CONNECTION_SERVICES.GOOGLE_GMAIL
+        : kind === PROFILE_CONNECTION_KINDS.YOUTUBE
+          ? PROFILE_CONNECTION_SERVICES.GOOGLE_YOUTUBE
+          : ""),
+    externalAccountId: partial.externalAccountId || "",
+    externalEmail: partial.externalEmail || partial.email || "",
+    externalDisplayName: partial.externalDisplayName || "",
+    externalAvatarUrl: partial.externalAvatarUrl || "",
+    capabilities: Array.isArray(partial.capabilities) ? partial.capabilities : [],
+    lastSuccessfulSyncAt: partial.lastSuccessfulSyncAt || partial.lastSyncAt || null,
+    lastAttemptedSyncAt: partial.lastAttemptedSyncAt || null,
+    lastErrorCode: partial.lastErrorCode || "",
+    lastErrorSummary: partial.lastErrorSummary || "",
+    revision: partial.revision ?? 0,
+    syncState: partial.syncState || "",
+    indexedCount: Number.isFinite(Number(partial.indexedCount)) ? Number(partial.indexedCount) : 0,
+    permission: partial.permission || (kind === PROFILE_CONNECTION_KINDS.GMAIL || kind === PROFILE_CONNECTION_KINDS.YOUTUBE ? "readonly" : ""),
+    channelId: partial.channelId || "",
+    channelTitle: partial.channelTitle || "",
+    channelHandle: partial.channelHandle || "",
+    pendingChannels: Array.isArray(partial.pendingChannels) ? partial.pendingChannels : [],
     grantedScopes: Array.isArray(partial.grantedScopes) ? partial.grantedScopes : [],
     connectedAt: partial.connectedAt || null,
     lastSyncAt: partial.lastSyncAt || null,
@@ -164,11 +197,24 @@ export function publicProfileConnection(row) {
     status,
     connectionState: status,
     displayLabel: row.displayLabel || "",
-    email: row.email || "",
-    googleAccountSub: row.googleAccountSub || "",
-    grantedScopes: Array.isArray(row.grantedScopes) ? row.grantedScopes : [],
+    email: row.email || row.externalEmail || "",
+    externalEmail: row.externalEmail || row.email || "",
+    externalDisplayName: row.externalDisplayName || "",
+    externalAvatarUrl: row.externalAvatarUrl || "",
+    externalAccountId: row.externalAccountId || "",
+    service: row.service || "",
+    permission: row.permission || "readonly",
+    indexedCount: Number(row.indexedCount) || 0,
+    lastSuccessfulSyncAt: row.lastSuccessfulSyncAt || row.lastSyncAt || null,
+    lastAttemptedSyncAt: row.lastAttemptedSyncAt || null,
+    lastErrorSummary: row.lastErrorSummary || "",
+    lastErrorCode: row.lastErrorCode || "",
+    channelId: row.channelId || "",
+    channelTitle: row.channelTitle || "",
+    channelHandle: row.channelHandle || "",
+    pendingChannels: Array.isArray(row.pendingChannels) ? row.pendingChannels : [],
     connectedAt: row.connectedAt || null,
-    lastSyncAt: row.lastSyncAt || null,
+    lastSyncAt: row.lastSyncAt || row.lastSuccessfulSyncAt || null,
     updatedAt: row.updatedAt || null,
   };
 }

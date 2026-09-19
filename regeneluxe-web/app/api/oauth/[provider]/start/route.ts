@@ -4,6 +4,7 @@ import { initDb, get, upsert, COLLECTIONS } from "../../../../../server/db/index
 import { nowIso } from "../../../../../src/data/ids.js";
 import { requireOperator } from "../../../../../server/auth/workspaceSession.js";
 import { startGmailAuth } from "../../../../../server/connectors/gmailConnection.js";
+import { startYoutubeAuth } from "../../../../../server/connectors/youtubeConnection.js";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,6 @@ export async function GET(
     const authz = await requireOperator();
     if (!authz.ok) {
       if (authz.status === 503) return redirectTo("/signin?error=database");
-      if (authz.reason === "identity_mismatch") return redirectTo("/signin?error=identity");
       return redirectTo("/signin");
     }
     const started = await startGmailAuth({
@@ -31,6 +31,22 @@ export async function GET(
     });
     if (!started.ok || !started.authUrl) {
       return NextResponse.redirect(started.redirectTo || `${process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174"}/settings?gmail=error`);
+    }
+    return NextResponse.redirect(started.authUrl);
+  }
+  if (normalizeProviderId(provider) === "youtube") {
+    const authz = await requireOperator();
+    if (!authz.ok) {
+      if (authz.status === 503) return redirectTo("/signin?error=database");
+      return redirectTo("/signin");
+    }
+    const started = await startYoutubeAuth({
+      operator: authz.operator,
+      activeProfile: authz.activeProfile,
+      returnTo: "/settings",
+    });
+    if (!started.ok || !started.authUrl) {
+      return NextResponse.redirect(started.redirectTo || `${process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174"}/settings?youtube=error`);
     }
     return NextResponse.redirect(started.authUrl);
   }
@@ -92,13 +108,16 @@ export async function POST(
     });
 
     let loginHint = "";
-    try {
-      const authz = await requireOperator();
-      if (authz.ok) {
-        loginHint = authz.activeProfile?.googleAccountEmail || authz.operator?.email || "";
+    const requestedProvider = normalizeProviderId(provider || account.platform);
+    if (requestedProvider !== "gmail" && requestedProvider !== "youtube") {
+      try {
+        const authz = await requireOperator();
+        if (authz.ok) {
+          loginHint = authz.activeProfile?.googleAccountEmail || authz.operator?.email || "";
+        }
+      } catch {
+        loginHint = "";
       }
-    } catch {
-      loginHint = "";
     }
     const result = await connector.beginAuth({
       accountId,

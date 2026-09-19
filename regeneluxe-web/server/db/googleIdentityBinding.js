@@ -1,16 +1,9 @@
 import { COLLECTIONS, upsert } from "./index.js";
-import {
-  PILOT_GOOGLE_EMAIL,
-  PILOT_PROFILE_SLUG,
-  googleEmailsMatch,
-  normalizeGoogleEmail,
-} from "../../src/data/googleIdentity.js";
+import { googleEmailsMatch, normalizeGoogleEmail } from "../../src/data/googleIdentity.js";
 import { nowIso } from "../../src/data/ids.js";
-import { PROFILE_CONNECTION_KINDS, PROFILE_CONNECTION_STATES } from "../../src/data/profileModels.js";
 import { getOperator, updateOperator, upsertOperatorFromGoogle } from "./operatorRepository.js";
 import {
   getManagedProfile,
-  getProfileConnectionByKind,
   listManagedProfiles,
   listProfileConnections,
   updateManagedProfile,
@@ -59,8 +52,8 @@ export async function reassignProfileOwner(profileId, toOperatorId) {
 }
 
 /**
- * Attach an incoming Google principal to an already-bound ManagedProfile.
- * Preserves profile ID and workspace data. Marks the previous operator inactive.
+ * Attach an incoming Google principal to an already-owned ManagedProfile.
+ * Operator login itself should not call this — Gmail/YouTube are separate connections.
  */
 export async function claimBoundProfile(profile, googleIdentity = {}) {
   if (!profile?.id) throw new Error("profile is required");
@@ -76,10 +69,6 @@ export async function claimBoundProfile(profile, googleIdentity = {}) {
     ? profile
     : await reassignProfileOwner(profile.id, nextOperator.id);
 
-  await bindProfileGoogleIdentity(savedProfile.id, {
-    email: googleIdentity.email || savedProfile.googleAccountEmail,
-    googleSub: googleIdentity.googleSub || savedProfile.googleAccountSub,
-  });
   await updateOperator(nextOperator.id, {
     activeProfileId: savedProfile.id,
     status: "ACTIVE",
@@ -103,25 +92,5 @@ export async function claimBoundProfile(profile, googleIdentity = {}) {
 }
 
 export async function bindExistingGoogleIdentities() {
-  const profiles = await listManagedProfiles();
-  const updated = [];
-  for (const profile of profiles) {
-    if (normalizeGoogleEmail(profile.googleAccountEmail) && profile.googleAccountSub) continue;
-    const gmail = await getProfileConnectionByKind(profile.id, PROFILE_CONNECTION_KINDS.GMAIL);
-    const gmailEmail = gmail?.status === PROFILE_CONNECTION_STATES.CONNECTED
-      ? gmail.email
-      : "";
-    const isPilot = profile.slug === PILOT_PROFILE_SLUG
-      || String(profile.displayName || "").trim() === "DJ Coast";
-    const email = gmailEmail
-      || profile.googleAccountEmail
-      || (isPilot ? PILOT_GOOGLE_EMAIL : "");
-    if (!email) continue;
-    const next = await bindProfileGoogleIdentity(profile.id, {
-      email,
-      googleSub: gmail?.googleAccountSub || profile.googleAccountSub || "",
-    });
-    if (next) updated.push(next);
-  }
-  return updated;
+  return [];
 }

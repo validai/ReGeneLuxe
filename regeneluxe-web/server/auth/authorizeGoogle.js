@@ -1,17 +1,11 @@
 import { isEmailAllowed } from "./allowlist.js";
 import { initDb } from "../db/index.js";
 import { upsertOperatorFromGoogle } from "../db/operatorRepository.js";
-import {
-  bindExistingGoogleIdentities,
-  claimBoundProfile,
-  findProfileByGoogleIdentity,
-} from "../db/googleIdentityBinding.js";
-import { googleIdentityMismatchMessage } from "../../src/data/googleIdentity.js";
+import { adoptWorkspaceForAccount } from "../db/workspaceAdoption.js";
 
 /**
- * First login: verify allowlisted email, persist Google `sub`, return Operator.
- * If a ManagedProfile is already bound to this Google identity, claim it instead
- * of creating a duplicate workspace.
+ * ReGeneLuxe account Google login. Identity scopes only.
+ * Gmail and YouTube add incremental scopes later and must match this Google sub.
  */
 export async function authorizeGoogleSignIn({ account, profile } = {}) {
   if (account?.provider && account.provider !== "google") {
@@ -27,19 +21,6 @@ export async function authorizeGoogleSignIn({ account, profile } = {}) {
 
   try {
     await initDb();
-    await bindExistingGoogleIdentities();
-    const boundProfile = await findProfileByGoogleIdentity({ email, googleSub: sub });
-    if (boundProfile) {
-      const claimed = await claimBoundProfile(boundProfile, {
-        googleSub: sub,
-        email,
-        emailVerified,
-        name: profile?.name || "",
-        avatarUrl: profile?.picture || "",
-      });
-      return { ok: true, operator: claimed.operator, profile: claimed.profile, claimed: true };
-    }
-
     const operator = await upsertOperatorFromGoogle({
       googleSub: sub,
       email,
@@ -47,12 +28,13 @@ export async function authorizeGoogleSignIn({ account, profile } = {}) {
       name: profile?.name || "",
       avatarUrl: profile?.picture || "",
     });
-    return { ok: true, operator };
+    const adoption = await adoptWorkspaceForAccount(operator);
+    const next = adoption.adopted
+      ? { ...operator, activeProfileId: adoption.profiles[0]?.id || operator.activeProfileId }
+      : operator;
+    return { ok: true, operator: next, account: next, adoption };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (/already linked/i.test(message)) {
-      return { ok: false, reason: "identity_mismatch", message: googleIdentityMismatchMessage(email) };
-    }
     return {
       ok: false,
       reason: "database_unavailable",

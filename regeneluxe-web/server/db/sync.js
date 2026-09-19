@@ -5,10 +5,42 @@ import { claimBatch, markState, OUTBOX_OPS, OUTBOX_STATES } from "./outbox.js";
 import { listJobs, JOB_STATES } from "./jobs.js";
 import { getMeta, setMeta, get as getLocal, upsert as upsertLocal } from "./repository.js";
 
-export async function getSyncStatus() {
+let remoteProbeCache = { at: 0, reachable: null, error: null };
+
+export function resetRemoteProbeCache() {
+  remoteProbeCache = { at: 0, reachable: null, error: null };
+}
+
+async function probeRemoteReachable(remote) {
+  const now = Date.now();
+  if (remoteProbeCache.reachable != null && now - remoteProbeCache.at < 4000) {
+    return remoteProbeCache;
+  }
+  try {
+    await Promise.race([
+      remote.execute("SELECT 1"),
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Turso probe timed out")), 2500);
+      }),
+    ]);
+    remoteProbeCache = { at: now, reachable: true, error: null };
+  } catch (error) {
+    remoteProbeCache = {
+      at: now,
+      reachable: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+  return remoteProbeCache;
+}
+
+export async function getSyncStatus({ fresh = false } = {}) {
   const remote = getRemoteClient();
+  if (!remote) resetRemoteProbeCache();
+  if (fresh) resetRemoteProbeCache();
   const health = await checkLocalHealth();
   const unhealthy = isUnhealthy();
+  const probe = remote ? await probeRemoteReachable(remote) : { reachable: false, error: null };
 
   let pendingOutbox = 0;
   let pendingJobs = 0;
@@ -36,17 +68,19 @@ export async function getSyncStatus() {
   let state = "LOCAL_ONLY";
   if (!health.ok || unhealthy) state = "ERROR";
   else if (!remote) state = "LOCAL_ONLY";
+  else if (!probe.reachable) state = "OFFLINE";
   else if (pendingOutbox > 0) state = syncState || "PENDING";
   else state = syncState || "SYNCED";
 
   return {
     cloudConfigured: Boolean(remote),
+    cloudReachable: Boolean(remote) && Boolean(probe.reachable),
     state,
     lastSyncAt,
     pendingOutbox,
     pendingJobs,
     localHealthy: Boolean(health.ok) && !unhealthy,
-    error: unhealthy?.message || health.error || null,
+    error: probe.error || unhealthy?.message || health.error || null,
   };
 }
 

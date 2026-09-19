@@ -189,9 +189,24 @@ describe("server/db", () => {
   it("sync status when no remote", async () => {
     const status = await getSyncStatus();
     expect(status.cloudConfigured).toBe(false);
+    expect(status.cloudReachable).toBe(false);
     expect(status.localHealthy).toBe(true);
     expect(status.state).toBe("LOCAL_ONLY");
     expect(status.error).toBeNull();
+  });
+
+  it("marks Turso configured but unreachable as offline, not unconfigured", async () => {
+    process.env.TURSO_DATABASE_URL = "http://127.0.0.1:1";
+    process.env.TURSO_AUTH_TOKEN = "test-token";
+    await closeDb();
+    await initDb();
+    const status = await getSyncStatus({ fresh: true });
+    expect(status.cloudConfigured).toBe(true);
+    expect(status.cloudReachable).toBe(false);
+    expect(status.state).toBe("OFFLINE");
+    delete process.env.TURSO_DATABASE_URL;
+    delete process.env.TURSO_AUTH_TOKEN;
+    await closeDb();
   });
 
   it("quarantine path exists", () => {
