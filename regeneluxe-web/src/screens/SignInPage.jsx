@@ -14,7 +14,7 @@ function GoogleMark() {
   );
 }
 
-export default function SignInPage({ errorMessage = "" }) {
+export default function SignInPage({ errorMessage = "", signedOut = false }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-rl_bg px-4 text-rl_text">
       <div className="w-full max-w-md space-y-8 text-center">
@@ -24,10 +24,35 @@ export default function SignInPage({ errorMessage = "" }) {
         </div>
 
         <div className="rl-panel space-y-5 p-8 text-left">
-          <p className="text-center text-sm text-rl_textSecondary">
-            Private operator access. Sign in with the approved Google account.
-          </p>
-          {errorMessage ? (
+          {signedOut ? (
+            <div
+              className="space-y-2 rounded-lg border border-rl_ok/40 bg-rl_ok/10 px-4 py-4"
+              role="status"
+            >
+              <h1 className="font-display text-lg font-semibold tracking-tight text-rl_text">
+                Signed out
+              </h1>
+              <p className="text-sm leading-6 text-rl_textSecondary">
+                You have successfully signed out of ReGeneLuxe.
+              </p>
+              <p className="text-sm leading-6 text-rl_textSecondary">
+                This workspace is no longer active in this browser.
+              </p>
+              <p className="text-sm leading-6 text-rl_textSecondary">
+                Sign back in with the Google account linked to this workspace to continue.
+              </p>
+            </div>
+          ) : (
+            <p className="text-center text-sm text-rl_textSecondary">
+              Private access. Sign in with the Google account linked to this workspace.
+            </p>
+          )}
+          {signedOut ? (
+            <p className="text-center text-xs text-rl_muted">
+              Only the linked Google account can access this workspace.
+            </p>
+          ) : null}
+          {errorMessage && !signedOut ? (
             <p className="rounded-lg border border-rl_danger/30 bg-rl_danger/10 px-3 py-2 text-sm text-rl_danger" role="alert">
               {errorMessage}
             </p>

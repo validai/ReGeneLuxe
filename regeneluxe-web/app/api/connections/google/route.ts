@@ -6,11 +6,16 @@ import {
   refreshGmailConnection,
   startGmailAuth,
 } from "../../../../server/connectors/gmailConnection.js";
+import { displayGoogleIdentity } from "../../../../src/data/googleIdentity.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const YOUTUBE_COPY = "YouTube channel authorization is separate from Google sign-in. Channel attach opens in the next phase.";
+const YOUTUBE_COPY = (email: string) => (
+  email
+    ? `YouTube uses ${email}. Channel attach opens in the next phase.`
+    : "YouTube uses this profile’s Google account. Channel attach opens in the next phase."
+);
 
 export async function GET() {
   const result = await requireOperator();
@@ -35,11 +40,13 @@ export async function POST(request: Request) {
   const action = String(body.action || "start").toLowerCase();
 
   if (kind === "YOUTUBE") {
+    const email = displayGoogleIdentity(result.activeProfile, result.operator);
     return NextResponse.json({
       ok: true,
       connected: false,
       status: "NOT_CONNECTED",
-      message: YOUTUBE_COPY,
+      googleAccountEmail: email,
+      message: YOUTUBE_COPY(email),
     });
   }
 

@@ -15,6 +15,7 @@ import { getRuntimeStatus, getRuntimeHealth, saveRuntimeSecret } from "../data/r
 import { fetchDbHealth } from "../data/durableBootstrap.js";
 import { useProfileSession } from "../components/app/ProfileSession.jsx";
 import { displayConnectionState, displayProfileConnection, formatHandle } from "../data/connectionStatus.js";
+import { displayGoogleIdentity } from "../data/googleIdentity.js";
 import StatusBadge from "../components/app/StatusBadge.jsx";
 import { PlatformIcon } from "../components/app/Icon.jsx";
 
@@ -55,6 +56,7 @@ export default function SettingsPage() {
   });
   const gmailConnection = connections?.gmail || { status: "NOT_CONNECTED" };
   const gmailView = displayProfileConnection(gmailConnection);
+  const googleEmail = displayGoogleIdentity(activeProfile, operator);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -128,14 +130,13 @@ export default function SettingsPage() {
     <PageShell width="narrow" className="space-y-8">
       <PageHeader
         title="Settings"
-        description="Control center for the active profile, operator sign-in, connections, and local data."
+        description="Control center for the active profile, Google account, connections, and local data."
       />
 
       <nav className="flex flex-wrap gap-2 text-xs" aria-label="Settings sections">
         {[
           ["#profile", "Profile"],
           ["#connections", "Connections"],
-          ["#account", "Account & Security"],
           ["#data", "Data & Sync"],
           ["#preferences", "Preferences"],
         ].map(([href, label]) => (
@@ -176,63 +177,28 @@ export default function SettingsPage() {
         </section>
       ) : null}
 
-      {operator ? (
-        <section id="account" className="rl-panel space-y-3 p-5">
-          <h2 className="text-sm font-semibold text-rl_text">Account &amp; Security</h2>
-          <div className="flex items-center gap-3">
-            {operator?.avatarUrl ? (
-              <img src={operator.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
-            ) : (
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-rl_surfaceActive text-sm font-semibold">
-                {(operator?.name || "G").slice(0, 1)}
-              </span>
-            )}
-            <div>
-              <p className="text-sm font-medium text-rl_text">{operator.name || "Operator"}</p>
-              <p className="text-xs text-rl_muted">{operator.email}</p>
-              <p className="text-xs text-rl_ok">Signed in with Google · Session active</p>
-            </div>
-          </div>
-          <p className="text-xs text-rl_muted">
-            This is the ReGeneLuxe operator, not the {activeProfile?.displayName || "active"} profile email.
-            Google sign-in does not grant Gmail or YouTube access.
-          </p>
-        </section>
-      ) : null}
-
       <section id="connections" className="rl-panel space-y-4 p-5">
         <h2 className="text-sm font-semibold text-rl_text">Connections</h2>
         <p className="text-sm text-rl_muted">
-          External services for the active profile. Signed in is operator Google auth. Connected is provider OAuth.
+          One Google account for this profile. Gmail and YouTube must use it.
         </p>
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-3">
-            <div className="flex min-w-0 items-center gap-3">
-              {operator?.avatarUrl ? (
-                <img src={operator.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
-              ) : (
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-rl_surfaceActive text-xs font-semibold">
-                  {(operator?.name || "G").slice(0, 1)}
-                </span>
-              )}
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-rl_text">Google Account</p>
-                <p className="truncate text-xs text-rl_muted">
-                  {operator ? `${operator.name || "Operator"} · ${operator.email}` : "Not signed in"}
-                </p>
-              </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-rl_text">Google</p>
+              <p className="truncate text-xs text-rl_muted">
+                {googleEmail || "Not signed in"}
+              </p>
             </div>
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-rl_ok">
-              Signed in
-            </span>
+            <StatusBadge value="CONNECTED" label="Signed in" />
           </div>
 
           <div className="flex items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-3">
             <div className="min-w-0">
               <p className="text-sm font-medium text-rl_text">Gmail</p>
               <p className="truncate text-xs text-rl_muted">
-                {gmailView.code === "CONNECTED" && gmailConnection.email
-                  ? gmailConnection.email
+                {gmailView.code === "CONNECTED"
+                  ? "Uses the signed-in Google account."
                   : gmailView.hint}
               </p>
             </div>
@@ -314,7 +280,7 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between gap-3 rounded-lg border border-rl_border px-3 py-3">
             <div>
               <p className="text-sm font-medium text-rl_text">YouTube</p>
-              <p className="text-xs text-rl_muted">Channel attach is separate from Google login.</p>
+              <p className="text-xs text-rl_muted">Uses the same Google account.</p>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-[0.12em] text-rl_warning">Not connected</span>
@@ -467,7 +433,7 @@ export default function SettingsPage() {
           Local SQLite is the operational source of truth.
         </p>
         <ul className="space-y-2 text-sm text-rl_muted">
-          <li>Operator · {operator ? "Signed in with Google" : "Not signed in"}</li>
+          <li>Google account · {googleEmail || "Not signed in"}</li>
           <li>Active profile · {activeProfile?.displayName || "—"}</li>
           <li>
             Local database ·{" "}

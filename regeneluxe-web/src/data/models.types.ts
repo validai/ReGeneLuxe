@@ -340,6 +340,7 @@ export interface Operator {
   name: string;
   avatarUrl: string;
   activeProfileId: string | null;
+  status?: "ACTIVE" | "INACTIVE" | (string & {});
   createdAt: string;
   updatedAt: string;
   lastLoginAt: string;
@@ -359,6 +360,8 @@ export interface ManagedProfile {
   timezone: string;
   shortDescription: string;
   platforms: Platform[];
+  googleAccountEmail?: string;
+  googleAccountSub?: string;
   createdAt: string;
   updatedAt: string;
 }

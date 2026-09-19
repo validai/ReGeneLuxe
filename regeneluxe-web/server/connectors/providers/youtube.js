@@ -35,7 +35,7 @@ export const youtubeConnector = baseConnector({
   ],
 });
 
-youtubeConnector._beginAuth = async ({ accountId, returnTo }) => {
+youtubeConnector._beginAuth = async ({ accountId, returnTo, loginHint = "" }) => {
   const creds = youtubeConnector.getAppCredentials();
   const { verifier, challenge } = pkcePair();
   const state = createOAuthState({ provider: "youtube", accountId, returnTo });
@@ -50,10 +50,11 @@ youtubeConnector._beginAuth = async ({ accountId, returnTo }) => {
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", SCOPES);
   url.searchParams.set("access_type", "offline");
-  url.searchParams.set("prompt", "consent");
+  url.searchParams.set("prompt", "consent select_account");
   url.searchParams.set("state", state);
   url.searchParams.set("code_challenge", challenge);
   url.searchParams.set("code_challenge_method", "S256");
+  if (loginHint) url.searchParams.set("login_hint", loginHint);
   return { ok: true, authUrl: url.toString(), state };
 };
 

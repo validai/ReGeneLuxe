@@ -52,6 +52,7 @@ export async function upsertOperatorFromGoogle({
     name: name || existing?.name || "",
     avatarUrl: avatarUrl || existing?.avatarUrl || "",
     activeProfileId: existing?.activeProfileId || null,
+    status: existing?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     createdAt: existing?.createdAt,
     lastLoginAt: now,
     updatedAt: now,

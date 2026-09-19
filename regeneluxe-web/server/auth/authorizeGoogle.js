@@ -1,10 +1,17 @@
 import { isEmailAllowed } from "./allowlist.js";
 import { initDb } from "../db/index.js";
 import { upsertOperatorFromGoogle } from "../db/operatorRepository.js";
+import {
+  bindExistingGoogleIdentities,
+  claimBoundProfile,
+  findProfileByGoogleIdentity,
+} from "../db/googleIdentityBinding.js";
+import { googleIdentityMismatchMessage } from "../../src/data/googleIdentity.js";
 
 /**
  * First login: verify allowlisted email, persist Google `sub`, return Operator.
- * Subsequent logins: same `sub` resolves the same Operator (email may change).
+ * If a ManagedProfile is already bound to this Google identity, claim it instead
+ * of creating a duplicate workspace.
  */
 export async function authorizeGoogleSignIn({ account, profile } = {}) {
   if (account?.provider && account.provider !== "google") {
@@ -20,6 +27,19 @@ export async function authorizeGoogleSignIn({ account, profile } = {}) {
 
   try {
     await initDb();
+    await bindExistingGoogleIdentities();
+    const boundProfile = await findProfileByGoogleIdentity({ email, googleSub: sub });
+    if (boundProfile) {
+      const claimed = await claimBoundProfile(boundProfile, {
+        googleSub: sub,
+        email,
+        emailVerified,
+        name: profile?.name || "",
+        avatarUrl: profile?.picture || "",
+      });
+      return { ok: true, operator: claimed.operator, profile: claimed.profile, claimed: true };
+    }
+
     const operator = await upsertOperatorFromGoogle({
       googleSub: sub,
       email,
@@ -29,10 +49,14 @@ export async function authorizeGoogleSignIn({ account, profile } = {}) {
     });
     return { ok: true, operator };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/already linked/i.test(message)) {
+      return { ok: false, reason: "identity_mismatch", message: googleIdentityMismatchMessage(email) };
+    }
     return {
       ok: false,
       reason: "database_unavailable",
-      message: error instanceof Error ? error.message : String(error),
+      message,
     };
   }
 }

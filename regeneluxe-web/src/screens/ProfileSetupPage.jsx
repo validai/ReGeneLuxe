@@ -173,7 +173,7 @@ export default function ProfileSetupPage({ operator }) {
           <h1 className="font-display text-2xl font-semibold tracking-tight">Profile setup</h1>
           <p className="text-sm text-rl_muted">
             Create the first managed profile for this workspace.
-            {operator?.name ? ` Signed in as ${operator.name}.` : ""}
+            {operator?.email ? ` Signed in as ${operator.email}.` : ""}
           </p>
         </div>
 

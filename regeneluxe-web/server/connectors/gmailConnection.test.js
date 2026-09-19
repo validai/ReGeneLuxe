@@ -21,7 +21,7 @@ const {
   publicProviderVaultStatus,
 } = await import("../secrets/providers.js");
 const { initDb, resetDbForTests, closeDb, upsert, list, COLLECTIONS } = await import("../db/index.js");
-const { createManagedProfile } = await import("../db/managedProfileRepository.js");
+const { createManagedProfile, updateManagedProfile } = await import("../db/managedProfileRepository.js");
 const { upsertOperatorFromGoogle } = await import("../db/operatorRepository.js");
 const {
   startGmailAuth,
@@ -118,8 +118,8 @@ describe("gmail connection v1", () => {
     await initDb();
     operator = await upsertOperatorFromGoogle({
       googleSub: "operator-sub",
-      email: "validsstudio@gmail.com",
-      name: "Operator",
+      email: MAILBOX,
+      name: "DJ Coast",
     });
     profile = await createManagedProfile(operator.id, {
       displayName: "DJ Coast",
@@ -145,7 +145,7 @@ describe("gmail connection v1", () => {
     expect(url.searchParams.get("scope")).toContain(GMAIL_READONLY_SCOPE);
     expect(url.searchParams.get("access_type")).toBe("offline");
     expect(url.searchParams.get("prompt")).toBe("consent select_account");
-    expect(url.searchParams.get("login_hint")).toBeNull();
+    expect(url.searchParams.get("login_hint")).toBe(MAILBOX);
     expect(url.searchParams.get("redirect_uri")).toBe("http://127.0.0.1:5174/api/oauth/gmail/callback");
     expect(url.searchParams.get("redirect_uri")).not.toContain("/api/auth/callback/google");
     expect(OPERATOR_GOOGLE_SCOPES).not.toContain("gmail");
@@ -155,6 +155,30 @@ describe("gmail connection v1", () => {
     expect(state.operatorId).toBe(operator.id);
     expect(state.provider).toBe("gmail");
     expect(consumeOAuthState(started.state).ok).toBe(false);
+  });
+
+  it("hints the bound Google account and rejects a different Gmail principal", async () => {
+    profile = await updateManagedProfile(profile.id, {
+      googleAccountEmail: MAILBOX,
+      googleAccountSub: operator.googleSub,
+    });
+    const started = await startGmailAuth({ operator, activeProfile: profile });
+    expect(started.ok).toBe(true);
+    expect(new URL(started.authUrl).searchParams.get("login_hint")).toBe(MAILBOX);
+
+    vi.stubGlobal("fetch", mockGoogleApis({
+      userinfo: { sub: "other-sub", email: "other@gmail.com" },
+      profile: { emailAddress: "other@gmail.com" },
+    }));
+    const result = await completeGmailAuth({
+      code: "auth-code",
+      state: started.state,
+      operator,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/already linked to djcoast239@gmail.com/i);
+    expect(result.connectionState).not.toBe("CONNECTED");
+    expect(getAccountTokens("gmail", started.connectionId)?.accessToken).toBeFalsy();
   });
 
   it("scopes the connection to the authorizing managed profile, not the operator", async () => {

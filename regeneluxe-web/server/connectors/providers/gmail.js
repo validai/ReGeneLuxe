@@ -74,6 +74,7 @@ gmailConnector._beginAuth = async ({
   managedProfileId,
   operatorId,
   connectionId,
+  loginHint = "",
 } = {}) => {
   const creds = gmailConnector.getAppCredentials();
   const { verifier, challenge } = pkcePair();
@@ -100,6 +101,7 @@ gmailConnector._beginAuth = async ({
   url.searchParams.set("state", state);
   url.searchParams.set("code_challenge", challenge);
   url.searchParams.set("code_challenge_method", "S256");
+  if (loginHint) url.searchParams.set("login_hint", loginHint);
   return { ok: true, authUrl: url.toString(), state };
 };
 

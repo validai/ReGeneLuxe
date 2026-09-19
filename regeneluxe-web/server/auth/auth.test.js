@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isEmailAllowed, parseAllowedEmails } from "./allowlist.js";
 import { isPublicPath, shouldRedirectToSignIn } from "./publicPaths.js";
 import { authErrorMessage } from "./errors.js";
+import { isSignedOutParam, SIGNED_OUT_HREF } from "./signedOut.js";
 import { OPERATOR_GOOGLE_SCOPES, GMAIL_CONNECTION_SCOPES, GMAIL_READONLY_SCOPE } from "./googleScopes.js";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -16,14 +17,15 @@ describe("pilot allowlist", () => {
   });
 
   it("approves the intended operator email", () => {
-    const allowed = ["validsstudio@gmail.com"];
-    expect(isEmailAllowed("validsstudio@gmail.com", allowed)).toBe(true);
-    expect(isEmailAllowed("ValidsStudio@gmail.com", allowed)).toBe(true);
+    const allowed = ["djcoast239@gmail.com"];
+    expect(isEmailAllowed("djcoast239@gmail.com", allowed)).toBe(true);
+    expect(isEmailAllowed("DJCoast239@gmail.com", allowed)).toBe(true);
   });
 
   it("rejects unauthorized Google users", () => {
-    const allowed = ["validsstudio@gmail.com"];
+    const allowed = ["djcoast239@gmail.com"];
     expect(isEmailAllowed("stranger@gmail.com", allowed)).toBe(false);
+    expect(isEmailAllowed("validsstudio@gmail.com", allowed)).toBe(false);
     expect(isEmailAllowed("", allowed)).toBe(false);
   });
 
@@ -65,8 +67,21 @@ describe("auth error copy", () => {
     expect(authErrorMessage("OAuthCallback")).toMatch(/invalid callback/i);
     expect(authErrorMessage("Configuration")).toMatch(/127\.0\.0\.1:5174/);
     expect(authErrorMessage("database")).toMatch(/local database/i);
+    expect(authErrorMessage("identity")).toMatch(/already linked/i);
     expect(authErrorMessage("expired")).toMatch(/session expired/i);
     expect(authErrorMessage("sync")).toMatch(/cloud sync/i);
+  });
+
+  it("treats signed-out as confirmation state, not an auth error", () => {
+    expect(isSignedOutParam("1")).toBe(true);
+    expect(isSignedOutParam("true")).toBe(true);
+    expect(isSignedOutParam(["yes"])).toBe(true);
+    expect(isSignedOutParam("")).toBe(false);
+    expect(isSignedOutParam("0")).toBe(false);
+    expect(SIGNED_OUT_HREF).toBe("/signin?signedOut=1");
+    const actionsPath = join(dirname(fileURLToPath(import.meta.url)), "../../app/actions/auth.ts");
+    expect(readFileSync(actionsPath, "utf8")).toContain("SIGNED_OUT_HREF");
+    expect(authErrorMessage("signedOut")).not.toMatch(/successfully signed out/i);
   });
 });
 

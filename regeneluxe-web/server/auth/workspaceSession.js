@@ -3,6 +3,17 @@ import { initDb, setMeta } from "../db/index.js";
 import { getOperator } from "../db/operatorRepository.js";
 import { listProfilesForOperator, listProfileConnections } from "../db/managedProfileRepository.js";
 import { publicOperator, publicManagedProfile, publicProfileConnection, resolveActiveProfile } from "../../src/data/profileModels.js";
+import { isEmailAllowed } from "./allowlist.js";
+import {
+  bindExistingGoogleIdentities,
+  claimBoundProfile,
+  findProfileByGoogleIdentity,
+} from "../db/googleIdentityBinding.js";
+import {
+  assertMatchesBoundGoogleIdentity,
+  displayGoogleIdentity,
+  googleIdentityMismatchMessage,
+} from "../../src/data/googleIdentity.js";
 
 export async function requireOperator() {
   const session = await auth();
@@ -11,15 +22,55 @@ export async function requireOperator() {
   }
   try {
     await initDb();
+    await bindExistingGoogleIdentities();
   } catch {
     return { ok: false, status: 503, error: "ReGeneLuxe could not open the local database. Your data was not deleted." };
   }
-  const operator = await getOperator(session.operatorId);
-  if (!operator) {
+  let operator = await getOperator(session.operatorId);
+  if (!operator || operator.status === "INACTIVE") {
     return { ok: false, status: 401, error: "Please sign in to continue." };
   }
-  const profiles = await listProfilesForOperator(operator.id);
+  if (!isEmailAllowed(operator.email)) {
+    return {
+      ok: false,
+      status: 401,
+      reason: "identity_mismatch",
+      error: "Please sign in with the Google account linked to this profile.",
+    };
+  }
+  let profiles = await listProfilesForOperator(operator.id);
+  if (!profiles.length) {
+    const bound = await findProfileByGoogleIdentity({
+      email: operator.email,
+      googleSub: operator.googleSub,
+    });
+    if (bound) {
+      const claimed = await claimBoundProfile(bound, {
+        email: operator.email,
+        googleSub: operator.googleSub,
+        emailVerified: operator.emailVerified,
+        name: operator.name,
+        avatarUrl: operator.avatarUrl,
+      });
+      operator = claimed.operator;
+      profiles = await listProfilesForOperator(operator.id);
+    }
+  }
   const activeProfile = resolveActiveProfile(operator, profiles);
+  if (activeProfile) {
+    const match = assertMatchesBoundGoogleIdentity(activeProfile, {
+      email: operator.email,
+      googleSub: operator.googleSub,
+    });
+    if (!match.ok) {
+      return {
+        ok: false,
+        status: 401,
+        reason: "identity_mismatch",
+        error: match.error || googleIdentityMismatchMessage(activeProfile.googleAccountEmail),
+      };
+    }
+  }
   if (activeProfile && operator.activeProfileId !== activeProfile.id) {
     operator.activeProfileId = activeProfile.id;
   }
@@ -43,13 +94,14 @@ export async function loadConnectionState(operator, activeProfile) {
     : [];
   const gmailRow = profileConnections.find((row) => row.kind === "GMAIL");
   const youtubeRow = profileConnections.find((row) => row.kind === "YOUTUBE");
+  const googleEmail = displayGoogleIdentity(activeProfile, operator);
   return {
     googleAccount: {
       kind: "GOOGLE_ACCOUNT",
       status: "CONNECTED",
-      name: operator?.name || "",
-      email: operator?.email || "",
-      avatarUrl: operator?.avatarUrl || "",
+      email: googleEmail,
+      name: activeProfile?.displayName || "",
+      avatarUrl: activeProfile?.avatarUrl || "",
     },
     gmail: publicProfileConnection(gmailRow) || {
       kind: "GMAIL",

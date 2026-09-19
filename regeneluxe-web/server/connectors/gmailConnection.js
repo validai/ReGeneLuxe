@@ -16,6 +16,12 @@ import { list } from "../db/index.js";
 import { COLLECTIONS } from "../db/collections.js";
 import { PROFILE_CONNECTION_KINDS, PROFILE_CONNECTION_STATES, publicProfileConnection } from "../../src/data/profileModels.js";
 import { nowIso } from "../../src/data/ids.js";
+import {
+  assertMatchesBoundGoogleIdentity,
+  boundGoogleEmail,
+  googleIdentityMismatchMessage,
+} from "../../src/data/googleIdentity.js";
+import { bindProfileGoogleIdentity } from "../db/googleIdentityBinding.js";
 
 function absolutePath(path) {
   if (!path) return `${getCanonicalOrigin()}/settings`;
@@ -45,7 +51,7 @@ function disconnectedFields() {
     connectedAt: null,
     lastSyncAt: null,
     mailbox: null,
-    notes: "Authorization is separate from Google sign-in.",
+    notes: "Gmail must use the same Google account as this profile.",
     updatedAt: nowIso(),
   };
 }
@@ -63,6 +69,18 @@ export async function startGmailAuth({ operator, activeProfile, returnTo = "/set
   if (activeProfile.ownerOperatorId && activeProfile.ownerOperatorId !== operator.id) {
     return { ok: false, status: 403, error: "Gmail can only be connected for a profile you own.", redirectTo: settingsRedirect({ gmail: "error", message: "Gmail can only be connected for the active profile." }) };
   }
+  const identity = assertMatchesBoundGoogleIdentity(activeProfile, {
+    email: operator.email,
+    googleSub: operator.googleSub,
+  });
+  if (!identity.ok) {
+    return {
+      ok: false,
+      status: 403,
+      error: identity.error,
+      redirectTo: settingsRedirect({ gmail: "error", message: identity.error }),
+    };
+  }
 
   const connection = await ensureProfileConnection(activeProfile, PROFILE_CONNECTION_KINDS.GMAIL);
   const started = await gmailConnector.beginAuth({
@@ -71,6 +89,7 @@ export async function startGmailAuth({ operator, activeProfile, returnTo = "/set
     managedProfileId: activeProfile.id,
     operatorId: operator.id,
     returnTo,
+    loginHint: boundGoogleEmail(activeProfile, operator.email),
   });
 
   if (!started.ok) {
@@ -176,6 +195,20 @@ export async function completeGmailAuth({
     };
   }
 
+  const identity = assertMatchesBoundGoogleIdentity(profile, {
+    email: result.profile.email,
+    googleSub: result.profile.googleAccountSub,
+  });
+  if (!identity.ok) {
+    clearAccountTokens("gmail", connection.id);
+    return {
+      ok: false,
+      connectionState: "ERROR",
+      error: identity.error,
+      redirectTo: settingsRedirect({ gmail: "error", message: identity.error || googleIdentityMismatchMessage(profile.googleAccountEmail) }),
+    };
+  }
+
   const saved = await upsertProfileConnection({
     ...connection,
     provider: "gmail",
@@ -190,6 +223,12 @@ export async function completeGmailAuth({
     notes: "",
     updatedAt: nowIso(),
   });
+  if (!profile.googleAccountEmail || !profile.googleAccountSub) {
+    await bindProfileGoogleIdentity(profile.id, {
+      email: saved.email,
+      googleSub: saved.googleAccountSub,
+    });
+  }
 
   return {
     ok: true,

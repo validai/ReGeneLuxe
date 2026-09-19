@@ -43,6 +43,7 @@ export function emptyOperator(partial = {}) {
     name: partial.name || "",
     avatarUrl: partial.avatarUrl || "",
     activeProfileId: partial.activeProfileId || null,
+    status: partial.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     createdAt: partial.createdAt || timestamp,
     updatedAt: partial.updatedAt || timestamp,
     lastLoginAt: partial.lastLoginAt || timestamp,
@@ -58,6 +59,7 @@ export function publicOperator(operator) {
     name: operator.name || "",
     avatarUrl: operator.avatarUrl || "",
     activeProfileId: operator.activeProfileId || null,
+    status: operator.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     createdAt: operator.createdAt || null,
     updatedAt: operator.updatedAt || null,
     lastLoginAt: operator.lastLoginAt || null,
@@ -84,6 +86,8 @@ export function emptyManagedProfile(partial = {}) {
     platforms: Array.isArray(partial.platforms)
       ? partial.platforms.filter((item) => PLATFORMS.includes(item) || typeof item === "string")
       : [],
+    googleAccountEmail: partial.googleAccountEmail || "",
+    googleAccountSub: partial.googleAccountSub || "",
     createdAt: partial.createdAt || timestamp,
     updatedAt: partial.updatedAt || timestamp,
   };
@@ -105,6 +109,7 @@ export function publicManagedProfile(profile) {
     timezone: profile.timezone || "",
     shortDescription: profile.shortDescription || "",
     platforms: Array.isArray(profile.platforms) ? profile.platforms : [],
+    googleAccountEmail: profile.googleAccountEmail || "",
     createdAt: profile.createdAt || null,
     updatedAt: profile.updatedAt || null,
     revision: profile.revision ?? null,

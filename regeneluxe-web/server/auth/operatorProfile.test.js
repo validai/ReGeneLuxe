@@ -7,13 +7,14 @@ delete process.env.TURSO_AUTH_TOKEN;
 
 const { initDb, resetDbForTests, closeDb, list, get, upsert, COLLECTIONS } = await import("../db/index.js");
 const { authorizeGoogleSignIn } = await import("./authorizeGoogle.js");
-const { upsertOperatorFromGoogle, findOperatorByGoogleSub } = await import("../db/operatorRepository.js");
+const { upsertOperatorFromGoogle, findOperatorByGoogleSub, getOperator } = await import("../db/operatorRepository.js");
 const {
   createManagedProfile,
   listProfilesForOperator,
   updateManagedProfile,
   setActiveProfileForOperator,
 } = await import("../db/managedProfileRepository.js");
+const { bindProfileGoogleIdentity } = await import("../db/googleIdentityBinding.js");
 const { listForProfile } = await import("../db/profileMigration.js");
 const { publicOperator, resolveActiveProfile, emptyManagedProfile } = await import("../../src/data/profileModels.js");
 const { listPending } = await import("../db/outbox.js");
@@ -26,6 +27,7 @@ describe("operator + managed profile persistence", () => {
   });
 
   afterEach(async () => {
+    process.env.APP_ALLOWED_GOOGLE_EMAILS = "validsstudio@gmail.com";
     await closeDb();
   });
 
@@ -239,6 +241,65 @@ describe("operator + managed profile persistence", () => {
   it("emptyManagedProfile keeps website null when blank", () => {
     expect(emptyManagedProfile({ displayName: "X", website: "" }).website).toBeNull();
     expect(emptyManagedProfile({ displayName: "X", website: null }).website).toBeNull();
+  });
+
+  it("claims the bound DJ Coast profile for the matching Google account instead of duplicating it", async () => {
+    process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
+    const previous = await upsertOperatorFromGoogle({
+      googleSub: "studio-sub",
+      email: "validsstudio@gmail.com",
+      name: "Studio",
+    });
+    const profile = await createManagedProfile(previous.id, {
+      displayName: "DJ Coast",
+      slug: "dj-coast",
+      primaryEmail: "djcoast239@gmail.com",
+    });
+    await bindProfileGoogleIdentity(profile.id, { email: "djcoast239@gmail.com" });
+    const result = await authorizeGoogleSignIn({
+      profile: { sub: "coast-sub", email: "djcoast239@gmail.com", name: "DJ Coast" },
+    });
+    expect(result.ok).toBe(true);
+    expect(result.operator.id).not.toBe(previous.id);
+    expect(result.operator.email).toBe("djcoast239@gmail.com");
+    expect(result.profile.id).toBe(profile.id);
+    expect(await listProfilesForOperator(result.operator.id)).toHaveLength(1);
+    expect((await listProfilesForOperator(result.operator.id))[0].id).toBe(profile.id);
+    expect((await getOperator(previous.id)).status).toBe("INACTIVE");
+    const again = await authorizeGoogleSignIn({
+      profile: { sub: "coast-sub", email: "djcoast239@gmail.com", name: "DJ Coast" },
+    });
+    expect(again.operator.id).toBe(result.operator.id);
+    expect(await listProfilesForOperator(again.operator.id)).toHaveLength(1);
+    process.env.APP_ALLOWED_GOOGLE_EMAILS = "validsstudio@gmail.com";
+  });
+
+  it("binds DJ Coast from the existing workspace and claims it on first matching Google sign-in", async () => {
+    process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
+    const previous = await upsertOperatorFromGoogle({
+      googleSub: "studio-sub-2",
+      email: "validsstudio@gmail.com",
+      name: "Studio",
+    });
+    const profile = await createManagedProfile(previous.id, {
+      displayName: "DJ Coast",
+      slug: "dj-coast",
+    });
+    const denied = await authorizeGoogleSignIn({
+      profile: { sub: "studio-sub-2", email: "validsstudio@gmail.com", name: "Studio" },
+    });
+    expect(denied.ok).toBe(false);
+    expect(denied.reason).toBe("not_allowlisted");
+    const result = await authorizeGoogleSignIn({
+      profile: { sub: "coast-sub-2", email: "djcoast239@gmail.com", name: "DJ Coast" },
+    });
+    expect(result.ok).toBe(true);
+    expect(result.claimed).toBe(true);
+    expect(result.profile.id).toBe(profile.id);
+    expect(result.operator.email).toBe("djcoast239@gmail.com");
+    expect(await listProfilesForOperator(result.operator.id)).toHaveLength(1);
+    expect((await list(COLLECTIONS.managed_profiles))).toHaveLength(1);
+    process.env.APP_ALLOWED_GOOGLE_EMAILS = "validsstudio@gmail.com";
   });
 
   it("strips inline data-URL avatars from managed profile records", () => {

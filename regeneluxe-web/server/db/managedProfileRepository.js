@@ -86,14 +86,16 @@ export async function createManagedProfile(ownerOperatorId, partial = {}) {
   return saved;
 }
 
-export async function updateManagedProfile(id, patch = {}) {
+export async function updateManagedProfile(id, patch = {}, { allowOwnerChange = false } = {}) {
   const existing = await getManagedProfile(id);
   if (!existing) return null;
   const next = emptyManagedProfile({
     ...existing,
     ...patch,
     id: existing.id,
-    ownerOperatorId: existing.ownerOperatorId,
+    ownerOperatorId: allowOwnerChange && patch.ownerOperatorId
+      ? patch.ownerOperatorId
+      : existing.ownerOperatorId,
     createdAt: existing.createdAt,
     updatedAt: nowIso(),
     website: Object.prototype.hasOwnProperty.call(patch, "website")
@@ -141,7 +143,7 @@ export async function seedDefaultProfileConnections(profile) {
       provider: kind.toLowerCase(),
       status: PROFILE_CONNECTION_STATES.NOT_CONNECTED,
       displayLabel: kind === PROFILE_CONNECTION_KINDS.GMAIL ? "Gmail" : "YouTube",
-      notes: "Authorization is separate from Google sign-in.",
+      notes: "Gmail and YouTube must use the same Google account as this profile.",
     }));
     created.push(row);
   }

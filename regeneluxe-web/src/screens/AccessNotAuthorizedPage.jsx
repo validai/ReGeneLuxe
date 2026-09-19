@@ -11,7 +11,7 @@ export default function AccessNotAuthorizedPage() {
           <h1 className="font-display text-xl font-semibold tracking-tight">Access not authorized</h1>
           <p className="text-sm leading-6 text-rl_muted">
             This Google account is not approved for the ReGeneLuxe private pilot.
-            Sign in with the intended operator account, or contact the project owner.
+            Sign in with the Google account linked to this profile.
           </p>
           <a href="/signin" className="rl-btn inline-flex">
             Back to sign in

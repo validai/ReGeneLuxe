@@ -12,7 +12,9 @@ export function authErrorMessage(code) {
       return "Google sign-in was cancelled or denied.";
     case "SessionRequired":
     case "expired":
-      return "Your session expired. Please sign in again.";
+      return "Your session expired. Sign in again.";
+    case "identity":
+      return "This profile is already linked to a Google account. Sign in with that Google account to continue.";
     case "Configuration":
       return "Google sign-in did not complete. Open ReGeneLuxe at http://127.0.0.1:5174 and try again.";
     case "database":

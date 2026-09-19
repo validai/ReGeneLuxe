@@ -113,7 +113,7 @@ export function displayProfileConnection(connection) {
   return {
     code: "NOT_CONNECTED",
     label: CONNECTION_LABELS.NOT_CONNECTED || CONNECTION_LABELS.UNCONNECTED,
-    hint: "Mailbox access is not requested at sign-in.",
+    hint: CONNECTION_LABELS.NOT_CONNECTED || CONNECTION_LABELS.UNCONNECTED,
   };
 }
 

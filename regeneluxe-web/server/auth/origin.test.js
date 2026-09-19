@@ -60,7 +60,8 @@ describe("canonical auth origin", () => {
   it("maps relative and localhost redirect targets onto the canonical origin", () => {
     process.env.AUTH_URL = "http://127.0.0.1:5174";
     expect(toCanonicalPath("/setup/profile")).toBe("http://127.0.0.1:5174/setup/profile");
-    expect(toCanonicalPath("http://localhost:5174/signin")).toBe("http://127.0.0.1:5174/signin");
+    expect(toCanonicalPath("/signin?signedOut=1")).toBe("http://127.0.0.1:5174/signin?signedOut=1");
+    expect(toCanonicalPath("http://localhost:5174/signin?signedOut=1")).toBe("http://127.0.0.1:5174/signin?signedOut=1");
     expect(isLoopbackHostname("localhost")).toBe(true);
     expect(isLoopbackHostname("127.0.0.1")).toBe(true);
   });

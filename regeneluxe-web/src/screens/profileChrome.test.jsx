@@ -55,19 +55,39 @@ describe("auth and profile chrome", () => {
     expect(screen.getByRole("button", { name: /continue with google/i })).toBeInTheDocument();
     expect(screen.getByText(/social campaign command center/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /signed out/i })).not.toBeInTheDocument();
+  });
+
+  it("shows a signed-out confirmation without treating it as an error", () => {
+    render(<SignInPage signedOut />);
+    expect(screen.getByRole("heading", { name: /^signed out$/i })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(/successfully signed out of regeneluxe/i);
+    expect(screen.getByRole("status")).toHaveTextContent(/no longer active in this browser/i);
+    expect(screen.getByRole("status")).toHaveTextContent(/google account linked to this workspace/i);
+    expect(screen.getByText(/only the linked google account can access this workspace/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /continue with google/i })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText(/private access/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps error messaging off the signed-out confirmation", () => {
+    render(<SignInPage signedOut errorMessage="Sign-in could not be completed." />);
+    expect(screen.getByRole("heading", { name: /^signed out$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText(/sign-in could not be completed/i)).not.toBeInTheDocument();
   });
 
   it("renders an access-not-authorized screen", () => {
     render(<AccessNotAuthorizedPage />);
     expect(screen.getByRole("heading", { name: /access not authorized/i })).toBeInTheDocument();
-    expect(screen.getByText(/not approved for the regeneluxe private pilot/i)).toBeInTheDocument();
+    expect(screen.getByText(/sign in with the google account linked to this profile/i)).toBeInTheDocument();
   });
 
   it("shows the active managed profile identity when only one profile exists", () => {
     render(
       <MemoryRouter>
         <ProfileSessionProvider
-          operator={{ id: "opr_1", name: "Studio", email: "validsstudio@gmail.com" }}
+          operator={{ id: "opr_1", name: "DJ Coast", email: "djcoast239@gmail.com" }}
           profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
           activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
         >
@@ -87,7 +107,7 @@ describe("auth and profile chrome", () => {
     render(
       <MemoryRouter>
         <ProfileSessionProvider
-          operator={{ id: "opr_1", name: "Studio", email: "validsstudio@gmail.com" }}
+          operator={{ id: "opr_1", name: "DJ Coast", email: "djcoast239@gmail.com" }}
           profiles={[
             { id: "prf_1", displayName: "DJ Coast" },
             { id: "prf_2", displayName: "Second" },
@@ -101,19 +121,20 @@ describe("auth and profile chrome", () => {
     expect(screen.getByRole("combobox", { name: /switch profile/i })).toBeInTheDocument();
   });
 
-  it("labels the operator as signed in with Google", () => {
+  it("labels the signed-in Google identity without a second operator account", () => {
     render(
       <ProfileSessionProvider
-        operator={{ id: "opr_1", name: "Valid", email: "validsstudio@gmail.com" }}
-        profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
-        activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
+        operator={{ id: "opr_1", name: "DJ Coast", email: "djcoast239@gmail.com" }}
+        profiles={[{ id: "prf_1", displayName: "DJ Coast", googleAccountEmail: "djcoast239@gmail.com" }]}
+        activeProfile={{ id: "prf_1", displayName: "DJ Coast", googleAccountEmail: "djcoast239@gmail.com" }}
       >
         <OperatorMenu />
       </ProfileSessionProvider>,
     );
-    expect(screen.getByText("Valid")).toBeInTheDocument();
-    expect(screen.getByText("Signed in with Google")).toBeInTheDocument();
-    expect(screen.getByText("validsstudio@gmail.com")).toBeInTheDocument();
+    expect(screen.getByText("djcoast239@gmail.com")).toBeInTheDocument();
+    expect(screen.getByText("Signed in")).toBeInTheDocument();
+    expect(screen.queryByText("validsstudio@gmail.com")).not.toBeInTheDocument();
+    expect(screen.queryByText("Signed in with Google")).not.toBeInTheDocument();
   });
 });
 
@@ -226,7 +247,7 @@ describe("profile settings edit", () => {
     render(
       <MemoryRouter>
         <ProfileSessionProvider
-          operator={{ id: "opr_1", name: "Valid", email: "validsstudio@gmail.com" }}
+          operator={{ id: "opr_1", name: "DJ Coast", email: "djcoast239@gmail.com" }}
           profiles={[profile]}
           activeProfile={profile}
         >
@@ -286,11 +307,11 @@ describe("settings Gmail connection chrome", () => {
     render(
       <MemoryRouter>
         <ProfileSessionProvider
-          operator={{ id: "opr_1", name: "Valid", email: "validsstudio@gmail.com" }}
+          operator={{ id: "opr_1", name: "DJ Coast", email: "djcoast239@gmail.com" }}
           profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
-          activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
+          activeProfile={{ id: "prf_1", displayName: "DJ Coast", googleAccountEmail: "djcoast239@gmail.com" }}
           connections={{
-            googleAccount: { status: "CONNECTED", email: "validsstudio@gmail.com" },
+            googleAccount: { status: "CONNECTED", email: "djcoast239@gmail.com" },
             gmail: { kind: "GMAIL", status: "NOT_CONNECTED" },
             youtube: { kind: "YOUTUBE", status: "NOT_CONNECTED" },
           }}
@@ -300,6 +321,9 @@ describe("settings Gmail connection chrome", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText("Gmail")).toBeInTheDocument();
+    expect(screen.getByText("Google")).toBeInTheDocument();
+    expect(screen.getAllByText("djcoast239@gmail.com").length).toBeGreaterThan(0);
+    expect(screen.queryByText("validsstudio@gmail.com")).not.toBeInTheDocument();
     expect(screen.getAllByText("Not connected").length).toBeGreaterThan(0);
     const connect = screen.getByRole("link", { name: /connect gmail/i });
     expect(connect).toHaveAttribute("href", "/api/oauth/gmail/start");
@@ -309,7 +333,7 @@ describe("settings Gmail connection chrome", () => {
     render(
       <MemoryRouter>
         <ProfileSessionProvider
-          operator={{ id: "opr_1", name: "Valid", email: "validsstudio@gmail.com" }}
+          operator={{ id: "opr_1", name: "DJ Coast", email: "djcoast239@gmail.com" }}
           profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
           activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
           connections={{
@@ -324,7 +348,8 @@ describe("settings Gmail connection chrome", () => {
         </ProfileSessionProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByText("djcoast239@gmail.com")).toBeInTheDocument();
+    expect(screen.getAllByText("djcoast239@gmail.com").length).toBeGreaterThan(0);
+    expect(screen.queryByText("validsstudio@gmail.com")).not.toBeInTheDocument();
     expect(screen.getByText("Connected")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /refresh/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /disconnect/i })).toBeInTheDocument();
@@ -335,7 +360,7 @@ describe("settings Gmail connection chrome", () => {
     render(
       <MemoryRouter>
         <ProfileSessionProvider
-          operator={{ id: "opr_1", name: "Valid", email: "validsstudio@gmail.com" }}
+          operator={{ id: "opr_1", name: "DJ Coast", email: "djcoast239@gmail.com" }}
           profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
           activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
           connections={{
@@ -364,7 +389,7 @@ describe("settings Gmail connection chrome", () => {
     render(
       <MemoryRouter>
         <ProfileSessionProvider
-          operator={{ id: "opr_1", name: "Valid", email: "validsstudio@gmail.com" }}
+          operator={{ id: "opr_1", name: "DJ Coast", email: "djcoast239@gmail.com" }}
           profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
           activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
         >

@@ -3,6 +3,7 @@ import type { NextAuthConfig } from "next-auth";
 import { authConfig } from "./auth.config";
 import { authorizeGoogleSignIn } from "./server/auth/authorizeGoogle.js";
 import { findOperatorByGoogleSub } from "./server/db/operatorRepository.js";
+import { isEmailAllowed } from "./server/auth/allowlist.js";
 
 function logAuthError(error: unknown) {
   const err = error as { type?: string; name?: string; cause?: { err?: { error?: string }; error?: string } };
@@ -24,6 +25,7 @@ export const authOptions = {
       const result = await authorizeGoogleSignIn({ account, profile });
       if (result.ok) return true;
       if (result.reason === "not_allowlisted") return "/access-not-authorized";
+      if (result.reason === "identity_mismatch") return "/access-not-authorized";
       if (result.reason === "database_unavailable") return "/signin?error=database";
       return false;
     },
@@ -43,6 +45,10 @@ export const authOptions = {
         token.email = operator?.email || profile.email || token.email;
         token.name = operator?.name || profile.name || token.name;
         token.picture = operator?.avatarUrl || profile.picture || token.picture;
+      }
+      const sessionEmail = typeof token.email === "string" ? token.email : "";
+      if (sessionEmail && !isEmailAllowed(sessionEmail)) {
+        token.operatorId = null;
       }
       return token;
     },

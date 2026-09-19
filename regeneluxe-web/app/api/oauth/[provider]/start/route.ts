@@ -20,7 +20,9 @@ export async function GET(
   if (normalizeProviderId(provider) === "gmail") {
     const authz = await requireOperator();
     if (!authz.ok) {
-      return redirectTo(authz.status === 503 ? "/signin?error=database" : "/signin");
+      if (authz.status === 503) return redirectTo("/signin?error=database");
+      if (authz.reason === "identity_mismatch") return redirectTo("/signin?error=identity");
+      return redirectTo("/signin");
     }
     const started = await startGmailAuth({
       operator: authz.operator,
@@ -89,9 +91,19 @@ export async function POST(
       updatedAt: nowIso(),
     });
 
+    let loginHint = "";
+    try {
+      const authz = await requireOperator();
+      if (authz.ok) {
+        loginHint = authz.activeProfile?.googleAccountEmail || authz.operator?.email || "";
+      }
+    } catch {
+      loginHint = "";
+    }
     const result = await connector.beginAuth({
       accountId,
       returnTo: body.returnTo || "/accounts",
+      loginHint,
     });
 
     if (!result.ok) {

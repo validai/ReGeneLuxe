@@ -3,6 +3,7 @@ import Google from "next-auth/providers/google";
 import { isPublicPath } from "./server/auth/publicPaths.js";
 import { getCanonicalOrigin, toCanonicalPath } from "./server/auth/origin.js";
 import { OPERATOR_GOOGLE_SCOPES } from "./server/auth/googleScopes.js";
+import { PILOT_GOOGLE_EMAIL } from "./src/data/googleIdentity.js";
 
 /**
  * Edge-safe Auth.js config. Do not import SQLite/libsql here.
@@ -25,6 +26,7 @@ export const authConfig = {
         params: {
           scope: OPERATOR_GOOGLE_SCOPES,
           prompt: "select_account",
+          login_hint: PILOT_GOOGLE_EMAIL,
         },
       },
     }),
