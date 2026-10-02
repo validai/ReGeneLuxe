@@ -7,6 +7,7 @@ import {
   PROFILE_CONNECTION_STATES,
   PROFILE_STATUSES,
   publicManagedProfile,
+  SECOND_WORKSPACE_MESSAGE,
   slugifyProfileName,
 } from "../../src/data/profileModels.js";
 import { nowIso } from "../../src/data/ids.js";
@@ -50,14 +51,21 @@ async function uniqueSlug(desired, excludeId = null) {
   }
 }
 
+export async function getWorkspaceForAccount(accountId) {
+  const rows = await listProfilesForOperator(accountId);
+  return rows[0] || null;
+}
+
 export async function createManagedProfile(ownerOperatorId, partial = {}) {
   const owner = String(ownerOperatorId || "");
   if (!owner) throw new Error("ownerOperatorId is required");
   const displayName = String(partial.displayName || "").trim();
-  if (!displayName) throw new Error("Profile name is required");
+  if (!displayName) throw new Error("Brand name is required");
 
   const existingForOwner = await listProfilesForOperator(owner);
-  const isFirst = existingForOwner.length === 0;
+  if (existingForOwner.length > 0) {
+    throw new Error(SECOND_WORKSPACE_MESSAGE);
+  }
   const slug = await uniqueSlug(partial.slug || displayName);
 
   const record = emptyManagedProfile({
@@ -72,18 +80,33 @@ export async function createManagedProfile(ownerOperatorId, partial = {}) {
 
   const saved = await upsert(COLLECTIONS.managed_profiles, record);
   await seedDefaultProfileConnections(saved);
-
-  if (isFirst) {
-    await attachUnscopedRecordsToProfile(saved.id);
-    await updateOperator(owner, { activeProfileId: saved.id });
-  } else {
-    const operator = await getOperator(owner);
-    if (!operator?.activeProfileId) {
-      await updateOperator(owner, { activeProfileId: saved.id });
-    }
-  }
-
+  await attachUnscopedRecordsToProfile(saved.id);
+  await updateOperator(owner, { activeProfileId: saved.id });
   return saved;
+}
+
+export async function getCurrentWorkspace(accountId) {
+  return getWorkspaceForAccount(accountId);
+}
+
+export async function updateCurrentWorkspace(accountId, patch = {}) {
+  const workspace = await getWorkspaceForAccount(accountId);
+  if (!workspace) return null;
+  return updateManagedProfile(workspace.id, patch);
+}
+
+export async function getCurrentConnections(accountId) {
+  const workspace = await getWorkspaceForAccount(accountId);
+  if (!workspace) return [];
+  return listProfileConnections(workspace.id);
+}
+
+export async function getCurrentCampaigns(accountId) {
+  const workspace = await getWorkspaceForAccount(accountId);
+  if (!workspace) return [];
+  await initDb();
+  const rows = await list(COLLECTIONS.campaigns);
+  return rows.filter((row) => row.managedProfileId === workspace.id);
 }
 
 export async function updateManagedProfile(id, patch = {}, { allowOwnerChange = false } = {}) {
@@ -111,16 +134,20 @@ export async function updateManagedProfile(id, patch = {}, { allowOwnerChange = 
 export async function setActiveProfileForOperator(operatorId, profileId) {
   if (!operatorId) throw new Error("operatorId is required");
   if (profileId && profileId === operatorId) {
-    throw new Error("activeProfileId must not equal operator ID");
+    throw new Error("Workspace id must not equal operator ID");
   }
-  if (profileId) {
+  const workspace = await getWorkspaceForAccount(operatorId);
+  if (profileId && workspace && profileId !== workspace.id) {
+    throw new Error(SECOND_WORKSPACE_MESSAGE);
+  }
+  if (profileId && !workspace) {
     const profile = await getManagedProfile(profileId);
-    if (!profile) throw new Error("Managed profile not found");
+    if (!profile) throw new Error("Workspace not found");
     if (profile.ownerOperatorId !== operatorId) {
-      throw new Error("Profile is not owned by this operator");
+      throw new Error("Workspace is not owned by this account");
     }
   }
-  return updateOperator(operatorId, { activeProfileId: profileId || null });
+  return getOperator(operatorId);
 }
 
 export async function listProfileConnections(managedProfileId) {

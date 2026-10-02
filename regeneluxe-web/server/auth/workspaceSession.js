@@ -1,8 +1,8 @@
 import { auth } from "../../auth";
 import { initDb, setMeta } from "../db/index.js";
 import { getOperator } from "../db/operatorRepository.js";
-import { listProfilesForOperator, listProfileConnections } from "../db/managedProfileRepository.js";
-import { publicOperator, publicManagedProfile, publicProfileConnection, resolveActiveProfile } from "../../src/data/profileModels.js";
+import { getWorkspaceForAccount, listProfileConnections } from "../db/managedProfileRepository.js";
+import { publicOperator, publicManagedProfile, publicProfileConnection } from "../../src/data/profileModels.js";
 import { isEmailAllowed } from "./allowlist.js";
 import { displayAccountEmail } from "../../src/data/googleIdentity.js";
 import { publicGmailForProfile } from "../connectors/gmailConnection.js";
@@ -29,23 +29,23 @@ export async function requireOperator() {
       error: "This Google account is not approved for the ReGeneLuxe private pilot.",
     };
   }
-  const profiles = await listProfilesForOperator(operator.id);
-  const activeProfile = resolveActiveProfile(operator, profiles);
-  if (activeProfile && operator.activeProfileId !== activeProfile.id) {
-    operator.activeProfileId = activeProfile.id;
-  }
-  if (activeProfile?.id) {
-    await setMeta("active_profile_id", activeProfile.id);
+  const workspace = await getWorkspaceForAccount(operator.id);
+  const profiles = workspace ? [workspace] : [];
+  if (workspace?.id) {
+    await setMeta("active_profile_id", workspace.id);
+    await setMeta("workspace_id", workspace.id);
   }
   return {
     ok: true,
     operator,
+    workspace,
     profiles,
-    activeProfile,
+    activeProfile: workspace,
     publicOperator: publicOperator(operator),
     publicAccount: publicOperator(operator),
+    publicWorkspace: publicManagedProfile(workspace),
     publicProfiles: profiles.map(publicManagedProfile),
-    publicActiveProfile: publicManagedProfile(activeProfile),
+    publicActiveProfile: publicManagedProfile(workspace),
   };
 }
 

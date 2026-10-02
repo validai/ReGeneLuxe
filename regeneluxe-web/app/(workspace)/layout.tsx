@@ -21,17 +21,17 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
   if (!result.ok) {
     redirect(result.status === 503 ? "/signin?error=database" : "/signin");
   }
-  if (result.profiles.length === 0) {
+  if (!result.workspace) {
     redirect("/setup/profile");
   }
 
-  const connections = await loadConnectionState(result.operator, result.activeProfile);
+  const connections = await loadConnectionState(result.operator, result.workspace);
 
   return (
     <WorkspaceProviders
       operator={result.publicOperator}
-      profiles={result.publicProfiles}
-      activeProfile={result.publicActiveProfile}
+      profiles={result.publicWorkspace ? [result.publicWorkspace] : []}
+      activeProfile={result.publicWorkspace || result.publicActiveProfile}
       connections={{
         googleAccount: connections.googleAccount,
         gmail: connections.gmail,

@@ -56,8 +56,9 @@ export async function POST(request: Request) {
     await setMeta("active_profile_id", profile.id);
     return NextResponse.json({ ok: true, profile: toPublicProfile(profile) });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not create profile.";
-    const status = /required|supported|Maximum|pixels|read this image/i.test(message) ? 400 : 500;
+    const message = error instanceof Error ? error.message : "Could not create account.";
+    const conflict = /already has a brand workspace/i.test(message);
+    const status = conflict ? 409 : /required|supported|Maximum|pixels|read this image/i.test(message) ? 400 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });
   }
 }

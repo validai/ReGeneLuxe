@@ -83,7 +83,7 @@ describe("auth and profile chrome", () => {
     expect(screen.getByText(/sign in with an approved google account/i)).toBeInTheDocument();
   });
 
-  it("shows the active managed profile identity when only one profile exists", () => {
+  it("shows the brand identity without a profile switcher", () => {
     render(
       <MemoryRouter>
         <ProfileSessionProvider
@@ -96,14 +96,15 @@ describe("auth and profile chrome", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText("DJ Coast")).toBeInTheDocument();
-    expect(screen.getAllByText("Active profile").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Active profile")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /dj coast/i }));
-    expect(screen.getByRole("menuitem", { name: /edit profile/i })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: /view profile/i })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /edit account/i })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /^account$/i })).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/switch profile/i)).not.toBeInTheDocument();
   });
 
-  it("becomes a switcher when more than one profile exists", () => {
+  it("does not show a profile switcher even if extra workspaces are passed", () => {
     render(
       <MemoryRouter>
         <ProfileSessionProvider
@@ -118,10 +119,12 @@ describe("auth and profile chrome", () => {
         </ProfileSessionProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByRole("combobox", { name: /switch profile/i })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/switch profile/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Second")).not.toBeInTheDocument();
   });
 
-  it("labels the signed-in Google account separately from the profile", () => {
+  it("labels the signed-in Google email without Operator or Managed Profile copy", () => {
     render(
       <ProfileSessionProvider
         operator={{ id: "opr_1", name: "Coast Ent", email: "djcoast239@gmail.com" }}
@@ -131,9 +134,11 @@ describe("auth and profile chrome", () => {
         <OperatorMenu />
       </ProfileSessionProvider>,
     );
-    expect(screen.getByText("Coast Ent")).toBeInTheDocument();
     expect(screen.getByText("djcoast239@gmail.com")).toBeInTheDocument();
     expect(screen.getByText("Signed in with Google")).toBeInTheDocument();
+    expect(screen.queryByText("Operator")).not.toBeInTheDocument();
+    expect(screen.queryByText("Managed Profile")).not.toBeInTheDocument();
+    expect(screen.queryByText("Profile Owner")).not.toBeInTheDocument();
     expect(screen.queryByText("validsstudio@gmail.com")).not.toBeInTheDocument();
   });
 });
@@ -187,19 +192,19 @@ describe("profile setup image and field diagnostics", () => {
 
   it("focuses the first invalid field on save", () => {
     render(<ProfileSetupPage />);
-    fireEvent.click(screen.getByRole("button", { name: /save profile/i }));
+    fireEvent.click(screen.getByRole("button", { name: /save account/i }));
     expect(screen.getByText("Please fix 5 fields before saving.")).toBeInTheDocument();
-    expect(screen.getByLabelText(/profile name/i)).toHaveFocus();
+    expect(screen.getByLabelText(/brand name/i)).toHaveFocus();
     expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
   });
 
   it("clears a field error as soon as the value is corrected", () => {
     render(<ProfileSetupPage />);
-    const name = screen.getByLabelText(/profile name/i);
+    const name = screen.getByLabelText(/brand name/i);
     fireEvent.blur(name);
-    expect(screen.getByText("Enter a profile name.")).toBeInTheDocument();
+    expect(screen.getByText("Enter a brand name.")).toBeInTheDocument();
     fireEvent.change(name, { target: { value: "DJ Coast" } });
-    expect(screen.queryByText("Enter a profile name.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Enter a brand name.")).not.toBeInTheDocument();
   });
 
   it("does not flash an error on an untouched optional website", () => {
@@ -255,8 +260,8 @@ describe("profile settings edit", () => {
         </ProfileSessionProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByRole("heading", { name: /edit profile/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/profile name/i)).toHaveValue("DJ Coast");
+    expect(screen.getByRole("heading", { name: /edit account/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/brand name/i)).toHaveValue("DJ Coast");
     expect(screen.getByRole("button", { name: /change image/i })).toBeInTheDocument();
     expect(screen.queryByText(/create the first managed profile/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Snapchat" })).toBeInTheDocument();
@@ -320,7 +325,9 @@ describe("settings Gmail connection chrome", () => {
         </ProfileSessionProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByRole("link", { name: /account/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^account$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^profile$/i })).not.toBeInTheDocument();
+    expect(screen.queryByText("Active profile")).not.toBeInTheDocument();
     expect(screen.queryByText("Google operator")).not.toBeInTheDocument();
     expect(screen.getAllByText(/djcoast239@gmail.com/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/validsstudio@gmail.com/)).not.toBeInTheDocument();

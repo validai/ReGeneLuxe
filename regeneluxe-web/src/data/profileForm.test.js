@@ -37,7 +37,7 @@ describe("profile setup field diagnostics", () => {
       website: "",
       platforms: [],
     });
-    expect(result.errors.displayName).toBe("Enter a profile name.");
+    expect(result.errors.displayName).toBe("Enter a brand name.");
     expect(result.errors.slug).toBe("Use letters, numbers, and hyphens only.");
     expect(result.errors.platforms).toBe("Select at least one platform.");
     expect(result.summary).toBe("Please fix 3 fields before saving.");

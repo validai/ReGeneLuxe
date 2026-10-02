@@ -1,13 +1,13 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { setActiveProfileId as persistActiveProfileId } from "../../data/profileScope.js";
-import { hydrateFromSnapshot } from "../../data/operationalStore.js";
+import { setActiveProfileId as persistWorkspaceId } from "../../data/profileScope.js";
 
 const ProfileSessionContext = createContext({
   operator: null,
   profiles: [],
   activeProfile: null,
+  workspace: null,
   connections: null,
   setActiveProfile: async () => {},
 });
@@ -24,36 +24,19 @@ export function ProfileSessionProvider({
   const [activeProfile, setActiveProfileState] = useState(initialActive);
   const [connections, setConnections] = useState(initialConnections);
 
-  const setActiveProfile = useCallback(async (profileId) => {
-    if (!profileId || profileId === operator?.id) return;
-    const response = await fetch(`/api/profiles/${profileId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "activate" }),
-    });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok || body.ok === false) {
-      throw new Error(body.error || "Could not switch profile.");
-    }
-    persistActiveProfileId(profileId);
-    if (body.operator) setOperator(body.operator);
-    if (body.activeProfile) setActiveProfileState(body.activeProfile);
-    try {
-      const snap = await fetch("/api/data/snapshot");
-      const snapBody = await snap.json();
-      if (snap.ok && snapBody.data) hydrateFromSnapshot(snapBody.data);
-    } catch {
-      /* local cache stays until next boot */
-    }
-  }, [operator?.id]);
+  const setActiveProfile = useCallback(async () => {
+    /* One email = one workspace. Switching brands is not supported. */
+  }, []);
 
   const refresh = useCallback(async () => {
     const response = await fetch("/api/operator/session");
     const body = await response.json().catch(() => ({}));
     if (!response.ok || !body.ok) return body;
     setOperator(body.operator || null);
-    setProfiles(Array.isArray(body.profiles) ? body.profiles : []);
-    setActiveProfileState(body.activeProfile || null);
+    const workspace = body.workspace || body.activeProfile || null;
+    setProfiles(workspace ? [workspace] : []);
+    setActiveProfileState(workspace);
+    if (workspace?.id) persistWorkspaceId(workspace.id);
     setConnections(body.connections || null);
     return body;
   }, []);
@@ -62,6 +45,7 @@ export function ProfileSessionProvider({
     operator,
     profiles,
     activeProfile,
+    workspace: activeProfile,
     connections,
     setActiveProfile,
     refresh,

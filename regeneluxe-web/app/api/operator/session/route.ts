@@ -28,6 +28,7 @@ export async function GET() {
     ok: true,
     operator: result.publicOperator,
     account: result.publicAccount || result.publicOperator,
+    workspace: result.publicWorkspace || result.publicActiveProfile,
     profiles: result.publicProfiles,
     activeProfile: result.publicActiveProfile,
     connections: {

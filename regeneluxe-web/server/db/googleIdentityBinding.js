@@ -4,10 +4,12 @@ import { nowIso } from "../../src/data/ids.js";
 import { getOperator, updateOperator, upsertOperatorFromGoogle } from "./operatorRepository.js";
 import {
   getManagedProfile,
+  getWorkspaceForAccount,
   listManagedProfiles,
   listProfileConnections,
   updateManagedProfile,
 } from "./managedProfileRepository.js";
+import { SECOND_WORKSPACE_MESSAGE } from "../../src/data/profileModels.js";
 
 export async function findProfileByGoogleIdentity({ email = "", googleSub = "" } = {}) {
   const needleEmail = normalizeGoogleEmail(email);
@@ -38,6 +40,10 @@ export async function reassignProfileOwner(profileId, toOperatorId) {
   const nextOwner = String(toOperatorId || "");
   if (!nextOwner) throw new Error("toOperatorId is required");
   if (profile.ownerOperatorId === nextOwner) return profile;
+  const existing = await getWorkspaceForAccount(nextOwner);
+  if (existing && existing.id !== profileId) {
+    throw new Error(SECOND_WORKSPACE_MESSAGE);
+  }
 
   const saved = await updateManagedProfile(profileId, { ownerOperatorId: nextOwner }, { allowOwnerChange: true });
   const connections = await listProfileConnections(profileId);
@@ -64,6 +70,10 @@ export async function claimBoundProfile(profile, googleIdentity = {}) {
     name: googleIdentity.name || "",
     avatarUrl: googleIdentity.avatarUrl || "",
   });
+  const existingWorkspace = await getWorkspaceForAccount(nextOperator.id);
+  if (existingWorkspace && existingWorkspace.id !== profile.id) {
+    throw new Error(SECOND_WORKSPACE_MESSAGE);
+  }
   const previousOwnerId = profile.ownerOperatorId;
   const savedProfile = previousOwnerId === nextOperator.id
     ? profile

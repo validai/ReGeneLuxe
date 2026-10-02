@@ -56,6 +56,9 @@ export function emptyOperator(partial = {}) {
   };
 }
 
+export const SECOND_WORKSPACE_MESSAGE =
+  "This ReGeneLuxe account already has a brand workspace. Use a different email to create another brand account.";
+
 export function publicOperator(operator) {
   if (!operator) return null;
   return {
@@ -64,7 +67,6 @@ export function publicOperator(operator) {
     emailVerified: Boolean(operator.emailVerified),
     name: operator.name || "",
     avatarUrl: operator.avatarUrl || "",
-    activeProfileId: operator.activeProfileId || null,
     status: operator.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     createdAt: operator.createdAt || null,
     updatedAt: operator.updatedAt || null,
@@ -219,16 +221,19 @@ export function publicProfileConnection(row) {
   };
 }
 
-export function resolveActiveProfile(operator, profiles = []) {
-  const list = Array.isArray(profiles) ? profiles.filter(Boolean) : [];
-  if (!list.length) return null;
-  if (list.length === 1) return list[0];
-  const wanted = operator?.activeProfileId;
-  if (wanted && wanted !== operator?.id) {
-    const match = list.find((profile) => profile.id === wanted);
-    if (match) return match;
-  }
-  return list[0];
+/**
+ * One email / one account / one workspace. Never pick among multiple brands.
+ * @param {object | null} [_account]
+ * @param {object[]} [workspaces]
+ */
+export function resolveWorkspace(_account, workspaces = []) {
+  const list = Array.isArray(workspaces) ? workspaces.filter(Boolean) : [];
+  return list[0] || null;
+}
+
+/** @deprecated use resolveWorkspace — runtime no longer switches profiles */
+export function resolveActiveProfile(account, profiles = []) {
+  return resolveWorkspace(account, profiles);
 }
 
 export function isFixtureRecord(record) {

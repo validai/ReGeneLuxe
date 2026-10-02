@@ -153,13 +153,13 @@ export default function ProfileSetupPage({ operator }) {
       const response = await fetch("/api/profiles", { method: "POST", body: form });
       const body = await response.json().catch(() => ({}));
       if (!response.ok || body.ok === false) {
-        setFormSummary(body.error || "Could not save this profile.");
+        setFormSummary(body.error || "Could not save this account.");
         return;
       }
       router.replace("/");
       router.refresh();
     } catch {
-      setFormSummary("Could not save this profile. Check that the local database is available.");
+      setFormSummary("Could not save this account. Check that the local database is available.");
     } finally {
       setSaving(false);
     }
@@ -170,9 +170,9 @@ export default function ProfileSetupPage({ operator }) {
       <div className="mx-auto w-full max-w-xl space-y-8">
         <div className="space-y-2 text-center">
           <BrandTitle variant="header" />
-          <h1 className="font-display text-2xl font-semibold tracking-tight">Profile setup</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">Account setup</h1>
           <p className="text-sm text-rl_muted">
-            Create the first managed profile for this workspace.
+            Set up this ReGeneLuxe account.
             {operator?.email ? ` Signed in as ${operator.email}.` : ""}
           </p>
         </div>
@@ -184,7 +184,7 @@ export default function ProfileSetupPage({ operator }) {
             </p>
           ) : null}
 
-          <FormField id="profile-name" label="Profile name" error={errors.displayName}>
+          <FormField id="profile-name" label="Brand name" error={errors.displayName}>
             <input
               id="profile-name"
               className={fieldClass}
@@ -296,7 +296,7 @@ export default function ProfileSetupPage({ operator }) {
           <FormField
             id="profile-website"
             label="Website"
-            hint="Optional. Leave blank if this profile has no domain."
+            hint="Optional. Leave blank if this account has no domain."
             error={errors.website}
           >
             <input
@@ -359,7 +359,7 @@ export default function ProfileSetupPage({ operator }) {
           </div>
 
           <button type="submit" className="rl-btn w-full" disabled={saving}>
-            {saving ? "Saving…" : "Save profile"}
+            {saving ? "Saving…" : "Save account"}
           </button>
         </form>
       </div>

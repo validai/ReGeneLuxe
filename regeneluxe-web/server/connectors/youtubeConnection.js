@@ -54,10 +54,10 @@ function disconnectedFields() {
 
 async function loadOwnedYoutubeConnection(operator, activeProfile) {
   if (!operator?.id || !activeProfile?.id) {
-    return { ok: false, status: 400, error: "Active profile required." };
+    return { ok: false, status: 400, error: "Account workspace required." };
   }
   if (activeProfile.ownerOperatorId && activeProfile.ownerOperatorId !== operator.id) {
-    return { ok: false, status: 403, error: "YouTube can only be managed for a profile you own." };
+    return { ok: false, status: 403, error: "YouTube can only be managed for an account you own." };
   }
   const connection = await getProfileConnectionByKind(activeProfile.id, PROFILE_CONNECTION_KINDS.YOUTUBE)
     || await ensureProfileConnection(activeProfile, PROFILE_CONNECTION_KINDS.YOUTUBE);
@@ -72,13 +72,13 @@ export async function startYoutubeAuth({ operator, activeProfile, returnTo = "/s
     return { ok: false, status: 401, error: "Please sign in to continue.", redirectTo: absolutePath("/signin") };
   }
   if (!activeProfile?.id) {
-    return { ok: false, status: 400, error: "Create a managed profile before connecting YouTube.", redirectTo: absolutePath("/setup/profile") };
+    return { ok: false, status: 400, error: "Finish account setup before connecting YouTube.", redirectTo: absolutePath("/setup/profile") };
   }
   if (activeProfile.ownerOperatorId && activeProfile.ownerOperatorId !== operator.id) {
     return {
       ok: false,
       status: 403,
-      error: "YouTube can only be connected for a profile you own.",
+      error: "YouTube can only be connected for an account you own.",
       redirectTo: settingsRedirect({ youtube: "error", message: "YouTube can only be connected for the active profile." }),
     };
   }
@@ -139,7 +139,7 @@ export async function completeYoutubeAuth({ code, state, error, errorDescription
   }
   const profile = stateResult.managedProfileId ? await getManagedProfile(stateResult.managedProfileId) : null;
   if (!profile || profile.ownerOperatorId !== operator.id) {
-    return { ok: false, error: "YouTube can only be attached to the authorizing managed profile.", redirectTo: settingsRedirect({ youtube: "error", message: "YouTube can only be attached to the authorizing managed profile." }) };
+    return { ok: false, error: "YouTube can only be attached to this ReGeneLuxe account.", redirectTo: settingsRedirect({ youtube: "error", message: "YouTube can only be attached to this ReGeneLuxe account." }) };
   }
   const connection = await ensureProfileConnection(profile, PROFILE_CONNECTION_KINDS.YOUTUBE);
   const result = await youtubeConnector.completeAuth({

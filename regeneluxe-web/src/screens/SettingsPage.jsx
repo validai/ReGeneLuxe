@@ -58,10 +58,10 @@ export default function SettingsPage() {
     const params = new URLSearchParams(window.location.search);
     const gmail = params.get("gmail");
     const youtube = params.get("youtube");
-    if (gmail === "connected") return "Gmail connected for the active profile.";
+    if (gmail === "connected") return "Gmail connected for this account.";
     if (gmail === "error") return params.get("message") || "Gmail connection failed.";
-    if (youtube === "connected") return "YouTube connected for the active profile.";
-    if (youtube === "pick") return "Choose a YouTube channel for this profile.";
+    if (youtube === "connected") return "YouTube connected for this account.";
+    if (youtube === "pick") return "Choose a YouTube channel for this account.";
     if (youtube === "error") return params.get("message") || "YouTube connection failed.";
     return "";
   });
@@ -144,13 +144,12 @@ export default function SettingsPage() {
     <PageShell width="narrow" className="space-y-8">
       <PageHeader
         title="Settings"
-        description="Account, profile, connections, and local data."
+        description="Account, connections, and local data."
       />
 
       <nav className="flex flex-wrap gap-2 text-xs" aria-label="Settings sections">
         {[
           ["#account", "Account"],
-          ["#profile", "Profile"],
           ["#connections", "Connections"],
           ["#data", "Data & Sync"],
           ["#preferences", "Preferences"],
@@ -161,56 +160,37 @@ export default function SettingsPage() {
         ))}
       </nav>
 
-      <section id="account" className="rl-panel space-y-3 p-5">
-        <h2 className="text-sm font-semibold text-rl_text">Account</h2>
-        <p className="text-sm text-rl_muted">
-          Signed in with Google. This identity owns the ReGeneLuxe workspace and its profiles.
-        </p>
-        <ul className="space-y-1 text-sm text-rl_muted">
-          <li>Email · {operatorEmail || "Not signed in"}</li>
-          <li>Name · {operator?.name || "—"}</li>
-          <li>Status · {operator?.status === "INACTIVE" ? "Inactive" : "Active"}</li>
-        </ul>
-      </section>
-
-      {activeProfile ? (
-        <section id="profile" className="rl-panel space-y-4 p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              {activeProfile.avatarUrl ? (
-                <img src={activeProfile.avatarUrl} alt="" className="h-12 w-12 rounded-full object-cover" />
-              ) : (
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-rl_surfaceActive text-sm font-semibold">
-                  {(activeProfile.displayName || "?").slice(0, 1)}
-                </span>
-              )}
-              <div>
-                <h2 className="text-sm font-semibold text-rl_text">{activeProfile.displayName}</h2>
-                <p className="text-xs text-rl_muted">Active profile</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link to="/settings/profile" className="rl-btn-ghost px-3 py-1.5 text-xs">Edit profile</Link>
-              <Link to="/settings/profile" className="rl-btn-ghost px-3 py-1.5 text-xs">Change image</Link>
+      <section id="account" className="rl-panel space-y-4 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {activeProfile?.avatarUrl ? (
+              <img src={activeProfile.avatarUrl} alt="" className="h-12 w-12 rounded-full object-cover" />
+            ) : (
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-rl_surfaceActive text-sm font-semibold">
+                {(activeProfile?.displayName || operatorEmail || "?").slice(0, 1)}
+              </span>
+            )}
+            <div>
+              <h2 className="text-sm font-semibold text-rl_text">{activeProfile?.displayName || "Account"}</h2>
+              <p className="text-xs text-rl_muted">Signed in with Google</p>
             </div>
           </div>
-          <ul className="space-y-1 text-sm text-rl_muted">
-            <li>Primary email · {activeProfile.primaryEmail || "—"}</li>
-            <li>Primary public link · {activeProfile.primaryPublicUrl || "—"}</li>
-            <li>Website · {activeProfile.website || "—"}</li>
-            <li>Platforms · {(activeProfile.platforms || []).join(", ") || "—"}</li>
-            <li>Status · {activeProfile.status === "INACTIVE" ? "Inactive" : "Active"}</li>
-            <li>Account · {operatorEmail ? `Signed in (${operatorEmail})` : "Not signed in"}</li>
-            <li>Gmail · {gmailView.code === "CONNECTED" ? `Connected (${gmailConnection.email || gmailConnection.externalEmail || "read only"})` : gmailView.label}</li>
-            <li>
-              YouTube ·{" "}
-              {youtubeView.code === "CONNECTED" && youtubeConnection.channelTitle
-                ? `${youtubeConnection.channelTitle} — Connected`
-                : youtubeView.label}
-            </li>
-          </ul>
-        </section>
-      ) : null}
+          {activeProfile ? (
+            <div className="flex flex-wrap gap-2">
+              <Link to="/settings/profile" className="rl-btn-ghost px-3 py-1.5 text-xs">Edit account</Link>
+              <Link to="/settings/profile" className="rl-btn-ghost px-3 py-1.5 text-xs">Change image</Link>
+            </div>
+          ) : null}
+        </div>
+        <ul className="space-y-1 text-sm text-rl_muted">
+          <li>Email · {operatorEmail || "Not signed in"}</li>
+          <li>Primary public link · {activeProfile?.primaryPublicUrl || "—"}</li>
+          <li>Website · {activeProfile?.website || "—"}</li>
+          <li>Timezone · {activeProfile?.timezone || "—"}</li>
+          <li>Description · {activeProfile?.shortDescription || "—"}</li>
+          <li>Main platforms · {(activeProfile?.platforms || []).join(", ") || "—"}</li>
+        </ul>
+      </section>
 
       <section id="connections" className="rl-panel space-y-4 p-5">
         <h2 className="text-sm font-semibold text-rl_text">Connections</h2>
@@ -274,7 +254,7 @@ export default function SettingsPage() {
                         body: JSON.stringify({ kind: "GMAIL", action: "disconnect" }),
                       }).then((response) => response.json()).catch(() => ({}));
                       if (result.ok) {
-                        setConnectionNote("Gmail disconnected. The active profile was kept.");
+                        setConnectionNote("Gmail disconnected. This account was kept.");
                         await refresh?.();
                       } else {
                         setConnectionNote(result.error || "Could not disconnect Gmail.");
@@ -300,7 +280,7 @@ export default function SettingsPage() {
                           body: JSON.stringify({ kind: "GMAIL", action: "disconnect" }),
                         }).then((response) => response.json()).catch(() => ({}));
                         if (result.ok) {
-                          setConnectionNote("Gmail disconnected. The active profile was kept.");
+                          setConnectionNote("Gmail disconnected. This account was kept.");
                           await refresh?.();
                         } else {
                           setConnectionNote(result.error || "Could not disconnect Gmail.");
@@ -406,7 +386,7 @@ export default function SettingsPage() {
                         body: JSON.stringify({ kind: "YOUTUBE", action: "disconnect" }),
                       }).then((response) => response.json()).catch(() => ({}));
                       if (result.ok) {
-                        setConnectionNote("YouTube disconnected. The active profile was kept.");
+                        setConnectionNote("YouTube disconnected. This account was kept.");
                         await refresh?.();
                       } else {
                         setConnectionNote(result.error || "Could not disconnect YouTube.");
@@ -432,7 +412,7 @@ export default function SettingsPage() {
                           body: JSON.stringify({ kind: "YOUTUBE", action: "disconnect" }),
                         }).then((response) => response.json()).catch(() => ({}));
                         if (result.ok) {
-                          setConnectionNote("YouTube disconnected. The active profile was kept.");
+                          setConnectionNote("YouTube disconnected. This account was kept.");
                           await refresh?.();
                         } else {
                           setConnectionNote(result.error || "Could not disconnect YouTube.");
@@ -579,8 +559,7 @@ export default function SettingsPage() {
           Local SQLite is the operational source of truth.
         </p>
         <ul className="space-y-2 text-sm text-rl_muted">
-          <li>Account · {operatorEmail || "Not signed in"}</li>
-          <li>Active profile · {activeProfile?.displayName || "—"}</li>
+          <li>Account · {activeProfile?.displayName || operatorEmail || "Not signed in"}</li>
           <li>
             Gmail ·{" "}
             {gmailView.code === "CONNECTED"

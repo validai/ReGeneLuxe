@@ -9,7 +9,7 @@ export default async function SetupProfilePage() {
   if (!result.ok) {
     redirect(result.status === 503 ? "/signin?error=database" : "/signin");
   }
-  if (result.profiles.length > 0) {
+  if (result.workspace) {
     redirect("/");
   }
   return <ProfileSetupPage operator={result.publicOperator} />;

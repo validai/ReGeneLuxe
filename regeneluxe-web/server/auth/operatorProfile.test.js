@@ -139,20 +139,28 @@ describe("operator + managed profile persistence", () => {
     await expect(setActiveProfileForOperator(operator.id, operator.id)).rejects.toThrow(/must not equal operator ID/);
   });
 
-  it("scopes repository reads to the owning profile", async () => {
+  it("scopes repository reads to the owning workspace and rejects a second brand", async () => {
+    process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com,other-pilot@gmail.com";
     const operator = await upsertOperatorFromGoogle({
       googleSub: "sub-scope",
       email: "djcoast239@gmail.com",
     });
     const one = await createManagedProfile(operator.id, { displayName: "DJ Coast", slug: "dj-coast" });
-    const two = await createManagedProfile(operator.id, { displayName: "Future Brand", slug: "future-brand" });
+    await expect(createManagedProfile(operator.id, { displayName: "Future Brand", slug: "future-brand" }))
+      .rejects.toThrow(/already has a brand workspace/i);
+    const other = await upsertOperatorFromGoogle({
+      googleSub: "sub-other-brand",
+      email: "other-pilot@gmail.com",
+    });
+    const two = await createManagedProfile(other.id, { displayName: "Future Brand", slug: "future-brand" });
     await upsert(COLLECTIONS.campaigns, { id: "camp-a", name: "Coast campaign", managedProfileId: one.id });
     await upsert(COLLECTIONS.campaigns, { id: "camp-b", name: "Other campaign", managedProfileId: two.id });
     const scoped = await listForProfile(COLLECTIONS.campaigns, one.id);
     expect(scoped.map((row) => row.id)).toEqual(["camp-a"]);
-    expect(await listProfilesForOperator(operator.id)).toHaveLength(2);
+    expect(await listProfilesForOperator(operator.id)).toHaveLength(1);
     const resolved = resolveActiveProfile({ ...operator, activeProfileId: two.id }, [one, two]);
-    expect(resolved.id).toBe(two.id);
+    expect(resolved.id).toBe(one.id);
+    process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
   });
 
   it("attaches unscoped operator records to the first profile and skips fixtures", async () => {
@@ -234,6 +242,7 @@ describe("operator + managed profile persistence", () => {
     });
     expect(published.googleSub).toBeUndefined();
     expect(published.accessToken).toBeUndefined();
+    expect(published.activeProfileId).toBeUndefined();
     expect(published.email).toBe("djcoast239@gmail.com");
   });
 

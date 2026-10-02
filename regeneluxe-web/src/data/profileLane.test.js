@@ -13,7 +13,7 @@ describe("profile repository scoping", () => {
     expect(listCampaigns()).toHaveLength(1);
   });
 
-  it("filters campaigns and accounts by activeProfileId", () => {
+  it("filters campaigns and accounts by workspace id", () => {
     const a = createCampaign({ name: "A", managedProfileId: "prf_a" });
     createCampaign({ name: "B", managedProfileId: "prf_b" });
     createAccount({ handle: "@a", managedProfileId: "prf_a" });
@@ -32,7 +32,7 @@ describe("profile repository scoping", () => {
     expect(stampProfile({ name: "x" }).managedProfileId).toBe("prf_live");
   });
 
-  it("supports future multi-profile ownership in the same helper", () => {
+  it("scopes records by workspace id", () => {
     const records = [
       { id: "1", managedProfileId: "p1" },
       { id: "2", managedProfileId: "p2" },

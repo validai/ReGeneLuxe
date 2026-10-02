@@ -120,7 +120,7 @@ export default function AppShellNext({ children, onOpenCommand }) {
                 className="rl-input py-1.5 text-xs"
                 value={workingAccountId}
                 onChange={(event) => setWorkingAccountId(event.target.value)}
-                aria-label="Social accounts for this profile"
+                aria-label="Social accounts for this account"
                 title={workingAccountId
                   ? accountOptionLabel(accounts.find((a) => a.id === workingAccountId) || {})
                   : "All social accounts"}
@@ -225,12 +225,12 @@ export default function AppShellNext({ children, onOpenCommand }) {
         {accounts.length > 0 && (
           <div className="px-3 pb-2">
             <label className="block">
-              <span className="sr-only">Social accounts for this profile</span>
+              <span className="sr-only">Social accounts for this account</span>
               <select
                 className="rl-input py-1.5 text-xs"
                 value={workingAccountId}
                 onChange={(event) => setWorkingAccountId(event.target.value)}
-                aria-label="Social accounts for this profile"
+                aria-label="Social accounts for this account"
               >
                 <option value="">All social accounts</option>
                 {accounts.map((account) => (

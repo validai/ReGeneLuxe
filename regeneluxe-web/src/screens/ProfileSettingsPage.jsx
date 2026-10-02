@@ -189,7 +189,7 @@ export default function ProfileSettingsPage() {
   if (!activeProfile) {
     return (
       <PageShell width="narrow">
-        <PageHeader title="Edit profile" description="Select or create a managed profile first." />
+        <PageHeader title="Edit account" description="Finish account setup first." />
       </PageShell>
     );
   }
@@ -200,8 +200,8 @@ export default function ProfileSettingsPage() {
   return (
     <PageShell width="narrow" className="space-y-8">
       <PageHeader
-        title="Edit profile"
-        description={`${activeProfile.displayName} · Active profile. Separate from the signed-in ReGeneLuxe account.`}
+        title="Edit account"
+        description={`${activeProfile.displayName} · Signed in with Google.`}
       />
 
       <form className="rl-panel space-y-5 p-6" onSubmit={onSubmit} noValidate>
@@ -213,7 +213,7 @@ export default function ProfileSettingsPage() {
         {savedNote ? <p className="text-sm text-rl_ok">{savedNote}</p> : null}
 
         <ul className="space-y-1 text-sm text-rl_muted">
-          <li>Account · {operator?.email ? `Signed in (${operator.email})` : "Not signed in"}</li>
+          <li>Email · {operator?.email ? operator.email : "Not signed in"}</li>
           <li>Gmail · {connections?.gmail?.status === "CONNECTED" ? "Connected" : "Not connected"}</li>
           <li>
             YouTube ·{" "}
@@ -272,7 +272,7 @@ export default function ProfileSettingsPage() {
           )}
         </FormField>
 
-        <FormField id="profile-name" label="Profile name" error={errors.displayName}>
+        <FormField id="profile-name" label="Brand name" error={errors.displayName}>
           <input
             id="profile-name"
             className={fieldClass}
@@ -391,7 +391,7 @@ export default function ProfileSettingsPage() {
         </div>
 
         <button type="submit" className="rl-btn w-full" disabled={saving}>
-          {saving ? "Saving…" : "Save profile"}
+          {saving ? "Saving…" : "Save account"}
         </button>
       </form>
     </PageShell>

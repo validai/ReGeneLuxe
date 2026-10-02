@@ -307,9 +307,13 @@ describe("youtube profile connection", () => {
     expect(publicRow.refreshToken).toBeUndefined();
   });
 
-  it("keeps YouTube data isolated to the authorizing profile", async () => {
+  it("keeps YouTube data isolated to the authorizing account workspace", async () => {
     vi.stubGlobal("fetch", mockYoutubeApis());
-    const other = await createManagedProfile(operator.id, { displayName: "Other Act" });
+    const otherOp = await upsertOperatorFromGoogle({
+      googleSub: "other-act-sub",
+      email: "other-pilot@gmail.com",
+    });
+    const other = await createManagedProfile(otherOp.id, { displayName: "Other Act" });
     const started = await startYoutubeAuth({ operator, activeProfile: profile });
     await completeYoutubeAuth({ code: "auth-code", state: started.state, operator });
     const otherVideos = (await list(COLLECTIONS.youtube_videos)).filter((row) => row.managedProfileId === other.id);

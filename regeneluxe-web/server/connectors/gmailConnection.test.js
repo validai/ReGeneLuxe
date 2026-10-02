@@ -404,14 +404,21 @@ describe("gmail connection v1", () => {
     expect(result.connection.lastErrorSummary).toMatch(/Gmail API is not enabled/i);
   });
 
-  it("keeps Gmail isolated to the authorizing profile", async () => {
+  it("keeps Gmail isolated to the authorizing account workspace", async () => {
     vi.stubGlobal("fetch", mockGoogleApis());
-    const other = await createManagedProfile(operator.id, { displayName: "Other Act" });
+    const otherOp = await upsertOperatorFromGoogle({
+      googleSub: "other-act-sub",
+      email: "other-pilot@gmail.com",
+    });
+    const other = await createManagedProfile(otherOp.id, { displayName: "Other Act" });
     const started = await startGmailAuth({ operator, activeProfile: profile });
     await completeGmailAuth({ code: "auth-code", state: started.state, operator });
     const otherMail = await list(COLLECTIONS.gmail_messages).then((rows) => rows.filter((row) => row.managedProfileId === other.id));
     expect(otherMail).toHaveLength(0);
-    const otherStarted = await startGmailAuth({ operator, activeProfile: other });
+    const ownMail = await list(COLLECTIONS.gmail_messages).then((rows) => rows.filter((row) => row.managedProfileId === profile.id));
+    expect(ownMail).toHaveLength(1);
+    expect(ownMail[0].managedProfileId).not.toBe(other.id);
+    const otherStarted = await startGmailAuth({ operator: otherOp, activeProfile: other });
     expect(otherStarted.connectionId).not.toBe(started.connectionId);
   });
 

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "../../auth";
 import { initDb } from "../../server/db/index.js";
 import { getOperator } from "../../server/db/operatorRepository.js";
-import { listProfilesForOperator } from "../../server/db/managedProfileRepository.js";
+import { getWorkspaceForAccount } from "../../server/db/managedProfileRepository.js";
 import SignInScreen from "../../src/screens/SignInPage";
 import { authErrorMessage } from "../../server/auth/errors.js";
 import { isSignedOutParam } from "../../server/auth/signedOut.js";
@@ -28,8 +28,8 @@ export default async function SignInPage({
       const operator = await getOperator(session.operatorId);
       const allowed = operator && operator.status !== "INACTIVE" && isEmailAllowed(operator.email);
       if (allowed) {
-        const profiles = await listProfilesForOperator(operator.id);
-        destination = profiles.length ? "/" : "/setup/profile";
+        const workspace = await getWorkspaceForAccount(operator.id);
+        destination = workspace ? "/" : "/setup/profile";
       }
     } catch {
       dbFailed = true;

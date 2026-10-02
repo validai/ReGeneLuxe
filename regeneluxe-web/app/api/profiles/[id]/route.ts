@@ -95,18 +95,28 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ ok: false, error: "Unknown action." }, { status: 400 });
   }
   try {
+    const workspace = result.workspace || result.activeProfile;
+    if (!workspace || workspace.id !== id) {
+      return NextResponse.json({
+        ok: false,
+        error: "This ReGeneLuxe account already has a brand workspace. Use a different email to create another brand account.",
+      }, { status: 409 });
+    }
     const operator = await setActiveProfileForOperator(result.operator.id, id);
     await setMeta("active_profile_id", id);
     const next = await getManagedProfile(id);
     return NextResponse.json({
       ok: true,
       operator: publicOperator(operator),
+      workspace: toPublicProfile(next),
       activeProfile: toPublicProfile(next),
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not load this account.";
+    const conflict = /already has a brand workspace/i.test(message);
     return NextResponse.json({
       ok: false,
-      error: error instanceof Error ? error.message : "Could not switch profile.",
-    }, { status: 400 });
+      error: message,
+    }, { status: conflict ? 409 : 400 });
   }
 }

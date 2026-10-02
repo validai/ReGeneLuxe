@@ -45,10 +45,10 @@ export async function adoptWorkspaceForAccount(account) {
   }
 
   const { ownerId, profiles } = candidates[0];
-  const transferred = [];
-  for (const profile of profiles) {
-    transferred.push(await reassignProfileOwner(profile.id, account.id));
+  if (profiles.length !== 1) {
+    return { adopted: false, reason: "ambiguous", profiles: [] };
   }
+  const transferred = [await reassignProfileOwner(profiles[0].id, account.id)];
 
   await updateOperator(account.id, {
     activeProfileId: transferred[0]?.id || account.activeProfileId || null,

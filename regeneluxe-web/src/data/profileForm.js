@@ -14,7 +14,7 @@ export function isHttpUrl(value) {
 }
 
 export function validateProfileName(value) {
-  return String(value || "").trim() ? "" : "Enter a profile name.";
+  return String(value || "").trim() ? "" : "Enter a brand name.";
 }
 
 export function validateProfileSlug(value) {

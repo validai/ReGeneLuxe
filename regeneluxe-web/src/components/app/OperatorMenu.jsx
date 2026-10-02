@@ -24,8 +24,9 @@ export default function OperatorMenu({ collapsed = false }) {
   if (!operator) return null;
 
   const googleEmail = displayAccountEmail(operator);
-  const accountName = operator.name || activeProfile?.displayName || "Account";
-  const initial = (googleEmail || "?").slice(0, 1).toUpperCase();
+  const brandName = activeProfile?.displayName || "";
+  const initial = (brandName || googleEmail || "?").slice(0, 1).toUpperCase();
+  const avatarUrl = activeProfile?.avatarUrl || operator.avatarUrl;
 
   return (
     <div ref={rootRef} className="relative">
@@ -37,8 +38,8 @@ export default function OperatorMenu({ collapsed = false }) {
         aria-haspopup="menu"
         title={googleEmail}
       >
-        {operator.avatarUrl ? (
-          <img src={operator.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+        {avatarUrl ? (
+          <img src={avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
         ) : (
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-rl_surfaceActive text-xs font-semibold text-rl_text">
             {initial}
@@ -46,8 +47,7 @@ export default function OperatorMenu({ collapsed = false }) {
         )}
         {!collapsed && (
           <span className="min-w-0">
-            <span className="block truncate font-medium text-rl_text">{accountName}</span>
-            <span className="block truncate text-[11px]">{googleEmail}</span>
+            <span className="block truncate font-medium text-rl_text">{googleEmail}</span>
             <span className="block truncate text-[11px]">Signed in with Google</span>
           </span>
         )}
