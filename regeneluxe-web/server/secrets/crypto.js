@@ -48,11 +48,15 @@ export function encryptSecret(plaintext) {
 
 export function decryptSecret(payload) {
   if (!payload) return null;
-  if (!String(payload).startsWith("v1:")) {
-    // Legacy plaintext (should not exist for tokens) — refuse to echo into clients.
-    return String(payload);
+  const raw = String(payload);
+  if (!raw.startsWith("v1:")) {
+    throw new Error("Refusing to decrypt non-v1 secret payload.");
   }
-  const [, ivB64, tagB64, dataB64] = String(payload).split(":");
+  const parts = raw.split(":");
+  if (parts.length !== 4) {
+    throw new Error("Invalid secret payload.");
+  }
+  const [, ivB64, tagB64, dataB64] = parts;
   const key = getEncryptionKey();
   const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivB64, "base64"));
   decipher.setAuthTag(Buffer.from(tagB64, "base64"));

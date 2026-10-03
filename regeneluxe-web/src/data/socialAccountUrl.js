@@ -41,6 +41,7 @@ function firstSegment(pathname) {
 function looksLikeUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) return false;
+  if (/^(javascript|data|file|vbscript):/i.test(raw) || raw.startsWith("//")) return false;
   if (/^https?:\/\//i.test(raw)) return true;
   if (raw.includes(" ") || raw.startsWith("@")) return false;
   return /^(?:[\w-]+\.)+[\w-]+(?:[/:?#].*)?$/i.test(raw);
@@ -49,8 +50,11 @@ function looksLikeUrl(value) {
 function toUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) return null;
+  if (/^(javascript|data|file|vbscript):/i.test(raw) || raw.startsWith("//")) return null;
   try {
-    return new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return url;
   } catch {
     return null;
   }

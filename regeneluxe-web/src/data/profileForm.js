@@ -1,16 +1,10 @@
 import { slugifyProfileName } from "./profileModels.js";
+import { isSafeHttpUrl } from "./httpUrl.js";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function isHttpUrl(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return false;
-  try {
-    const url = new URL(raw);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
+  return isSafeHttpUrl(value);
 }
 
 export function validateProfileName(value) {

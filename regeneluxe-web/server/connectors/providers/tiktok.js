@@ -32,7 +32,7 @@ export const tiktokConnector = baseConnector({
   ],
 });
 
-tiktokConnector._beginAuth = async ({ accountId, returnTo }) => {
+tiktokConnector._beginAuth = async ({ accountId, returnTo, operatorId = null, managedProfileId = null }) => {
   const status = tiktokConnector.resolveReadiness();
   if (status === "PROVIDER_REVIEW_REQUIRED") {
     // Still allow auth if credentials exist — capabilities may be limited
@@ -47,7 +47,7 @@ tiktokConnector._beginAuth = async ({ accountId, returnTo }) => {
       instructions: tiktokConnector.setupInstructions,
     };
   }
-  const state = createOAuthState({ provider: "tiktok", accountId, returnTo });
+  const state = createOAuthState({ provider: "tiktok", accountId, returnTo, operatorId, managedProfileId });
   const url = new URL("https://www.tiktok.com/v2/auth/authorize/");
   url.searchParams.set("client_key", creds.clientId);
   url.searchParams.set("redirect_uri", creds.redirectUri);

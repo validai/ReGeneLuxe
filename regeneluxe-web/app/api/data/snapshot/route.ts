@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import {
   COLLECTIONS,
   initDb,
@@ -7,6 +6,8 @@ import {
 } from "../../../../server/db/index.js";
 import { publicOperator, publicManagedProfile } from "../../../../src/data/profileModels.js";
 import { stripSecretFields } from "../../../../src/data/secretFields.js";
+import { requireWorkspaceApi, deniedJson, jsonPrivate } from "../../../../server/auth/apiGuard.js";
+import { publicSnapshotForWorkspace } from "../../../../server/auth/tenantScope.js";
 
 export const dynamic = "force-dynamic";
 
@@ -81,14 +82,13 @@ async function snapshot() {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authz = await requireWorkspaceApi(request);
+  if (!authz.ok) return deniedJson(authz.error, authz.status);
   try {
-    const data = await snapshot();
-    return NextResponse.json({ ok: true, data });
-  } catch (error) {
-    return NextResponse.json({
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-    }, { status: 500 });
+    const data = publicSnapshotForWorkspace(await snapshot(), authz);
+    return jsonPrivate({ ok: true, data });
+  } catch {
+    return jsonPrivate({ ok: false, error: "Could not load workspace data." }, 500);
   }
 }

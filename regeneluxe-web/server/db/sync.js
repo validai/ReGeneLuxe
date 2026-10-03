@@ -4,6 +4,7 @@ import { migrate, SCHEMA_VERSION } from "./migrations.js";
 import { claimBatch, markState, OUTBOX_OPS, OUTBOX_STATES } from "./outbox.js";
 import { listJobs, JOB_STATES } from "./jobs.js";
 import { getMeta, setMeta, get as getLocal, upsert as upsertLocal } from "./repository.js";
+import { applyRemoteRecord } from "../auth/identityLock.js";
 
 let remoteProbeCache = { at: 0, reachable: null, error: null };
 
@@ -282,7 +283,7 @@ export async function pullRemoteToLocal() {
           skippedCount += 1;
           continue;
         }
-        await upsertLocal(collection, remoteRecord, local, {
+        await upsertLocal(collection, applyRemoteRecord(collection, null, remoteRecord), local, {
           skipOutbox: true,
           forceRevision: remoteRecord.revision || 1,
         });
@@ -291,7 +292,7 @@ export async function pullRemoteToLocal() {
       }
 
       if (!localRecord) {
-        await upsertLocal(collection, remoteRecord, local, {
+        await upsertLocal(collection, applyRemoteRecord(collection, null, remoteRecord), local, {
           skipOutbox: true,
           forceRevision: remoteRecord.revision || 1,
         });
@@ -303,7 +304,7 @@ export async function pullRemoteToLocal() {
       const remoteRev = Number(remoteRecord.revision || 0);
 
       if (remoteRev > localRev) {
-        await upsertLocal(collection, remoteRecord, local, {
+        await upsertLocal(collection, applyRemoteRecord(collection, localRecord, remoteRecord), local, {
           skipOutbox: true,
           forceRevision: remoteRev,
         });

@@ -68,13 +68,56 @@ export function youtubeCallbackUrl() {
   return `${getCanonicalOrigin()}/api/oauth/youtube/callback`;
 }
 
+export function isSafeLocalPath(value) {
+  const raw = String(value || "").trim();
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) return false;
+  if (raw.includes("://")) return false;
+  return true;
+}
+
+export function safeReturnTo(value, fallback = "/") {
+  if (!isSafeLocalPath(value)) return fallback;
+  return String(value).trim();
+}
+
+export function isAllowedRequestOrigin(request) {
+  const allowed = new Set([getCanonicalOrigin()]);
+  try {
+    allowed.add(new URL(getCanonicalOrigin()).origin);
+  } catch {
+    /* ignore */
+  }
+  allowed.add("http://127.0.0.1:5174");
+  allowed.add("http://localhost:5174");
+
+  const origin = request.headers.get("origin");
+  if (origin) {
+    try {
+      const parsed = new URL(origin);
+      if (allowed.has(parsed.origin)) return true;
+      if (isLoopbackHostname(parsed.hostname) && String(parsed.port || "") === "5174") return true;
+    } catch {
+      return false;
+    }
+    return false;
+  }
+  const fetchSite = String(request.headers.get("sec-fetch-site") || "").toLowerCase();
+  if (fetchSite === "cross-site") return false;
+  return true;
+}
+
 export function toCanonicalPath(url, baseUrl = getCanonicalOrigin()) {
   if (!url) return baseUrl;
-  if (url.startsWith("/")) return `${baseUrl}${url}`;
+  const raw = String(url).trim();
+  if (raw.startsWith("/") && !raw.startsWith("//") && !raw.includes("\\") && !raw.includes("://")) {
+    return `${baseUrl}${raw}`;
+  }
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(raw);
     if (isLoopbackHostname(parsed.hostname) || parsed.origin === baseUrl) {
-      return `${baseUrl}${parsed.pathname}${parsed.search}`;
+      const path = `${parsed.pathname}${parsed.search}`;
+      if (path.startsWith("//")) return baseUrl;
+      return `${baseUrl}${path}`;
     }
   } catch {
     return baseUrl;

@@ -20,6 +20,14 @@ describe("local media store", () => {
   it("stores bytes on disk and returns a media reference, not a data URL", async () => {
     const { saveProfileImageBuffer, readLocalMedia } = await import("./store.js");
     const buffer = Buffer.alloc(411_229, 7);
+    buffer[0] = 0x89;
+    buffer[1] = 0x50;
+    buffer[2] = 0x4e;
+    buffer[3] = 0x47;
+    buffer[4] = 0x0d;
+    buffer[5] = 0x0a;
+    buffer[6] = 0x1a;
+    buffer[7] = 0x0a;
     const saved = await saveProfileImageBuffer({
       buffer,
       mimeType: "image/png",

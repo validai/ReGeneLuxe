@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { requireOperator } from "../../../server/auth/workspaceSession.js";
+import { requireWorkspaceApi, deniedJson, jsonPrivate } from "../../../server/auth/apiGuard.js";
 import { createManagedProfile, toPublicProfile } from "../../../server/db/managedProfileRepository.js";
 import { setMeta } from "../../../server/db/index.js";
 import { saveProfileImageBuffer } from "../../../server/media/store.js";
@@ -8,12 +7,10 @@ import { readProfileInput } from "../../../server/profiles/readProfileInput.js";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET() {
-  const result = await requireOperator();
-  if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
-  }
-  return NextResponse.json({
+export async function GET(request: Request) {
+  const result = await requireWorkspaceApi(request);
+  if (!result.ok) return deniedJson(result.error, result.status);
+  return jsonPrivate({
     ok: true,
     profiles: result.publicProfiles,
     activeProfile: result.publicActiveProfile,
@@ -21,10 +18,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const result = await requireOperator();
-  if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
-  }
+  const result = await requireWorkspaceApi(request, { mutate: true });
+  if (!result.ok) return deniedJson(result.error, result.status);
 
   try {
     const input = await readProfileInput(request);
@@ -36,6 +31,7 @@ export async function POST(request: Request) {
         buffer,
         mimeType: input.avatarFile.type,
         originalName: input.avatarFile.name,
+        managedProfileId: result.workspace?.id || "",
       });
       avatarUrl = saved.url;
       avatarMediaId = saved.id;
@@ -54,11 +50,11 @@ export async function POST(request: Request) {
       status: "ACTIVE",
     });
     await setMeta("active_profile_id", profile.id);
-    return NextResponse.json({ ok: true, profile: toPublicProfile(profile) });
+    return jsonPrivate({ ok: true, profile: toPublicProfile(profile) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not create account.";
     const conflict = /already has a brand workspace/i.test(message);
     const status = conflict ? 409 : /required|supported|Maximum|pixels|read this image/i.test(message) ? 400 : 500;
-    return NextResponse.json({ ok: false, error: message }, { status });
+    return jsonPrivate({ ok: false, error: conflict ? message : (status === 400 ? message : "Could not create account.") }, status);
   }
 }

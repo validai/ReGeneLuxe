@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { requireOperator } from "../../../../server/auth/workspaceSession.js";
+import { requireWorkspaceApi, deniedJson, jsonPrivate } from "../../../../server/auth/apiGuard.js";
 import {
   getManagedProfile,
   setActiveProfileForOperator,
@@ -16,28 +15,24 @@ export const runtime = "nodejs";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, { params }: Params) {
-  const result = await requireOperator();
-  if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
-  }
+export async function GET(request: Request, { params }: Params) {
+  const result = await requireWorkspaceApi(request);
+  if (!result.ok) return deniedJson(result.error, result.status);
   const { id } = await params;
   const profile = await getManagedProfile(id);
   if (!profile || profile.ownerOperatorId !== result.operator.id) {
-    return NextResponse.json({ ok: false, error: "Profile not found." }, { status: 404 });
+    return jsonPrivate({ ok: false, error: "Profile not found." }, 404);
   }
-  return NextResponse.json({ ok: true, profile: toPublicProfile(profile) });
+  return jsonPrivate({ ok: true, profile: toPublicProfile(profile) });
 }
 
 export async function PATCH(request: Request, { params }: Params) {
-  const result = await requireOperator();
-  if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
-  }
+  const result = await requireWorkspaceApi(request, { mutate: true });
+  if (!result.ok) return deniedJson(result.error, result.status);
   const { id } = await params;
   const profile = await getManagedProfile(id);
   if (!profile || profile.ownerOperatorId !== result.operator.id) {
-    return NextResponse.json({ ok: false, error: "Profile not found." }, { status: 404 });
+    return jsonPrivate({ ok: false, error: "Profile not found." }, 404);
   }
   try {
     const input = await readProfileInput(request);
@@ -69,6 +64,7 @@ export async function PATCH(request: Request, { params }: Params) {
         buffer,
         mimeType: input.avatarFile.type,
         originalName: input.avatarFile.name,
+        managedProfileId: profile.id,
       });
       patch.avatarUrl = saved.url;
       patch.avatarMediaId = saved.id;
@@ -76,36 +72,34 @@ export async function PATCH(request: Request, { params }: Params) {
       patch.avatarUrl = input.avatarUrl;
     }
     const saved = await updateManagedProfile(id, patch);
-    return NextResponse.json({ ok: true, profile: toPublicProfile(saved) });
+    return jsonPrivate({ ok: true, profile: toPublicProfile(saved) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not update profile.";
     const status = /required|supported|Maximum|pixels|read this image/i.test(message) ? 400 : 500;
-    return NextResponse.json({ ok: false, error: message }, { status });
+    return jsonPrivate({ ok: false, error: status === 400 ? message : "Could not update profile." }, status);
   }
 }
 
 export async function POST(request: Request, { params }: Params) {
-  const result = await requireOperator();
-  if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
-  }
+  const result = await requireWorkspaceApi(request, { mutate: true });
+  if (!result.ok) return deniedJson(result.error, result.status);
   const { id } = await params;
   const body = await request.json().catch(() => ({}));
   if (body.action !== "activate") {
-    return NextResponse.json({ ok: false, error: "Unknown action." }, { status: 400 });
+    return jsonPrivate({ ok: false, error: "Unknown action." }, 400);
   }
   try {
     const workspace = result.workspace || result.activeProfile;
     if (!workspace || workspace.id !== id) {
-      return NextResponse.json({
+      return jsonPrivate({
         ok: false,
         error: "This ReGeneLuxe account already has a brand workspace. Use a different email to create another brand account.",
-      }, { status: 409 });
+      }, 409);
     }
     const operator = await setActiveProfileForOperator(result.operator.id, id);
     await setMeta("active_profile_id", id);
     const next = await getManagedProfile(id);
-    return NextResponse.json({
+    return jsonPrivate({
       ok: true,
       operator: publicOperator(operator),
       workspace: toPublicProfile(next),
@@ -114,9 +108,9 @@ export async function POST(request: Request, { params }: Params) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not load this account.";
     const conflict = /already has a brand workspace/i.test(message);
-    return NextResponse.json({
+    return jsonPrivate({
       ok: false,
-      error: message,
-    }, { status: conflict ? 409 : 400 });
+      error: conflict ? message : "Could not load this account.",
+    }, conflict ? 409 : 400);
   }
 }

@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireOperator, loadConnectionState } from "../../../../server/auth/workspaceSession.js";
 import { getDbHealth } from "../../../../server/db/index.js";
+import { jsonPrivate, deniedJson } from "../../../../server/auth/apiGuard.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -8,23 +8,26 @@ export const runtime = "nodejs";
 export async function GET() {
   const result = await requireOperator();
   if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
+    return deniedJson(result.error, result.status);
   }
 
-  let health = null;
+  let health: {
+    ok?: boolean;
+    error?: string | null;
+    sync?: { cloudConfigured?: boolean; state?: string; lastSyncAt?: string | null; pendingOutbox?: number; error?: string | null };
+  } | null = null;
   try {
     health = await getDbHealth();
-  } catch (error) {
+  } catch {
     health = {
       ok: false,
-      error: error instanceof Error ? error.message : "Local database unavailable",
       sync: { state: "ERROR", cloudConfigured: false, pendingOutbox: 0 },
     };
   }
 
   const connections = await loadConnectionState(result.operator, result.activeProfile);
 
-  return NextResponse.json({
+  return jsonPrivate({
     ok: true,
     operator: result.publicOperator,
     account: result.publicAccount || result.publicOperator,
@@ -42,7 +45,6 @@ export async function GET() {
       syncState: health?.sync?.state || "LOCAL_ONLY",
       lastSyncAt: health?.sync?.lastSyncAt || null,
       pendingOutbox: health?.sync?.pendingOutbox ?? 0,
-      error: health?.error || health?.sync?.error || null,
     },
   });
 }

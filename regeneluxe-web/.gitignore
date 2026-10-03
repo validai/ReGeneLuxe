@@ -30,3 +30,10 @@ out
 server/.secrets.json
 server/.secrets.key
 .regeneluxe/
+.env
+.env.local
+.env*.local
+*.db
+*.db-wal
+*.db-shm
+

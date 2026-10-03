@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { readSecrets, writeSecrets } from "../../secrets.js";
+import { safeReturnTo } from "../../auth/origin.js";
 
 const STATE_TTL_MS = 15 * 60 * 1000;
 
@@ -22,7 +23,7 @@ export function createOAuthState({
   secrets.oauthStates[state] = {
     provider: String(provider).toLowerCase(),
     accountId,
-    returnTo,
+    returnTo: safeReturnTo(returnTo, "/accounts"),
     createdAt: Date.now(),
     ...(managedProfileId ? { managedProfileId } : {}),
     ...(operatorId ? { operatorId } : {}),
@@ -49,7 +50,7 @@ export function consumeOAuthState(state) {
   if (Date.now() - row.createdAt > STATE_TTL_MS) {
     return { ok: false, error: "OAuth session expired. Start connect again." };
   }
-  return { ok: true, ...row };
+  return { ok: true, ...row, returnTo: safeReturnTo(row.returnTo, "/accounts") };
 }
 
 export function friendlyOAuthError(code, provider = "this account") {

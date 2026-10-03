@@ -1,29 +1,31 @@
-import { NextResponse } from "next/server";
 import { listProviderDefinitions, getConnector, normalizeProviderId } from "../../../server/connectors/registry.js";
 import { initDb, get, upsert, COLLECTIONS, enqueueJob, JOB_TYPES } from "../../../server/db/index.js";
 import { clearAccountTokens, hasAccountTokens, publicProviderVaultStatus } from "../../../server/secrets/providers.js";
 import { syncConnectedAccount } from "../../../server/connectors/syncAccount.js";
 import { nowIso } from "../../../src/data/ids.js";
+import { requireWorkspaceApi, deniedJson, jsonPrivate } from "../../../server/auth/apiGuard.js";
+import { recordBelongsToWorkspace } from "../../../server/auth/tenantScope.js";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authz = await requireWorkspaceApi(request);
+  if (!authz.ok) return deniedJson(authz.error, authz.status);
   try {
     await initDb();
-    return NextResponse.json({
+    return jsonPrivate({
       ok: true,
       providers: listProviderDefinitions(),
       vault: publicProviderVaultStatus(),
     });
-  } catch (error) {
-    return NextResponse.json({
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-    }, { status: 500 });
+  } catch {
+    return jsonPrivate({ ok: false, error: "Could not load connections." }, 500);
   }
 }
 
 export async function POST(request: Request) {
+  const authz = await requireWorkspaceApi(request, { mutate: true });
+  if (!authz.ok) return deniedJson(authz.error, authz.status);
   try {
     await initDb();
     const body = await request.json().catch(() => ({}));
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
     const accountId = body.accountId;
 
     if (action === "status") {
-      return NextResponse.json({
+      return jsonPrivate({
         ok: true,
         providers: listProviderDefinitions(),
         vault: publicProviderVaultStatus(),
@@ -39,12 +41,12 @@ export async function POST(request: Request) {
     }
 
     if (!accountId) {
-      return NextResponse.json({ ok: false, error: "accountId required" }, { status: 400 });
+      return jsonPrivate({ ok: false, error: "accountId required" }, 400);
     }
 
     const account = await get(COLLECTIONS.accounts, accountId);
-    if (!account) {
-      return NextResponse.json({ ok: false, error: "Account not found" }, { status: 404 });
+    if (!account || !recordBelongsToWorkspace(account, authz)) {
+      return jsonPrivate({ ok: false, error: "Account not found" }, 404);
     }
 
     const provider = normalizeProviderId(body.provider || account.platform);
@@ -60,7 +62,7 @@ export async function POST(request: Request) {
         updatedAt: nowIso(),
       };
       await upsert(COLLECTIONS.accounts, next);
-      return NextResponse.json({ ok: true, account: next });
+      return jsonPrivate({ ok: true, account: next });
     }
 
     if (action === "refresh") {
@@ -69,19 +71,16 @@ export async function POST(request: Request) {
         payload: { accountId },
       });
       const synced = await syncConnectedAccount(account);
-      return NextResponse.json({ ...synced, hasToken: hasAccountTokens(provider, accountId) });
+      return jsonPrivate({ ...synced, hasToken: hasAccountTokens(provider, accountId) });
     }
 
     if (action === "sync") {
       const synced = await syncConnectedAccount(account);
-      return NextResponse.json(synced);
+      return jsonPrivate(synced);
     }
 
-    return NextResponse.json({ ok: false, error: `Unknown action ${action}` }, { status: 400 });
-  } catch (error) {
-    return NextResponse.json({
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-    }, { status: 500 });
+    return jsonPrivate({ ok: false, error: `Unknown action ${action}` }, 400);
+  } catch {
+    return jsonPrivate({ ok: false, error: "Could not update connection." }, 500);
   }
 }

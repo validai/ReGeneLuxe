@@ -24,7 +24,7 @@ export const soundcloudConnector = baseConnector({
   ],
 });
 
-soundcloudConnector._beginAuth = async ({ accountId, returnTo }) => {
+soundcloudConnector._beginAuth = async ({ accountId, returnTo, operatorId = null, managedProfileId = null }) => {
   const creds = soundcloudConnector.getAppCredentials();
   if (!creds.complete) {
     return {
@@ -35,7 +35,7 @@ soundcloudConnector._beginAuth = async ({ accountId, returnTo }) => {
       message: "SoundCloud app credentials are not configured.",
     };
   }
-  const state = createOAuthState({ provider: "soundcloud", accountId, returnTo });
+  const state = createOAuthState({ provider: "soundcloud", accountId, returnTo, operatorId, managedProfileId });
   const url = new URL("https://soundcloud.com/connect");
   url.searchParams.set("client_id", creds.clientId);
   url.searchParams.set("redirect_uri", creds.redirectUri);

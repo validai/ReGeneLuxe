@@ -44,7 +44,7 @@ threadsConnector.getAppCredentials = () => {
   return own;
 };
 
-threadsConnector._beginAuth = async ({ accountId, returnTo }) => {
+threadsConnector._beginAuth = async ({ accountId, returnTo, operatorId = null, managedProfileId = null }) => {
   const creds = threadsConnector.getAppCredentials();
   if (!creds.complete) {
     return {
@@ -55,7 +55,7 @@ threadsConnector._beginAuth = async ({ accountId, returnTo }) => {
       message: "Threads app credentials are not configured.",
     };
   }
-  const state = createOAuthState({ provider: "threads", accountId, returnTo });
+  const state = createOAuthState({ provider: "threads", accountId, returnTo, operatorId, managedProfileId });
   const url = new URL("https://threads.net/oauth/authorize");
   url.searchParams.set("client_id", creds.clientId);
   url.searchParams.set("redirect_uri", creds.redirectUri);

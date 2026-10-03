@@ -18,6 +18,17 @@ export const authConfig = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
+    updateAge: 24 * 60 * 60,
+  },
+  cookies: {
+    sessionToken: {
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: String(process.env.AUTH_URL || process.env.NEXTAUTH_URL || "").startsWith("https:"),
+      },
+    },
   },
   providers: [
     Google({
@@ -30,9 +41,17 @@ export const authConfig = {
     }),
   ],
   callbacks: {
+    jwt({ token }) {
+      return token;
+    },
+    session({ session, token }) {
+      const operatorId = typeof token.operatorId === "string" ? token.operatorId : null;
+      session.operatorId = operatorId;
+      return session;
+    },
     authorized({ auth, request }) {
       if (isPublicPath(request.nextUrl.pathname)) return true;
-      return Boolean(auth?.user);
+      return Boolean(auth?.operatorId);
     },
     redirect({ url }) {
       return toCanonicalPath(url, getCanonicalOrigin());

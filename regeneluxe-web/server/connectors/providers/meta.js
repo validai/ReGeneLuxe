@@ -53,9 +53,9 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
     ],
   });
 
-  connector._beginAuth = async ({ accountId, returnTo }) => {
+  connector._beginAuth = async ({ accountId, returnTo, operatorId = null, managedProfileId = null }) => {
     const creds = connector.getAppCredentials();
-    const state = createOAuthState({ provider, accountId, returnTo });
+    const state = createOAuthState({ provider, accountId, returnTo, operatorId, managedProfileId });
     const url = new URL("https://www.facebook.com/v21.0/dialog/oauth");
     url.searchParams.set("client_id", creds.clientId);
     url.searchParams.set("redirect_uri", creds.redirectUri);

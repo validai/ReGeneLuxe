@@ -43,7 +43,8 @@ describe("route protection", () => {
     expect(shouldRedirectToSignIn("/api/health", false)).toBe(false);
     expect(shouldRedirectToSignIn("/api/oauth/youtube/callback", false)).toBe(false);
     expect(shouldRedirectToSignIn("/api/oauth/gmail/callback", false)).toBe(false);
-    expect(shouldRedirectToSignIn("/api/oauth/gmail/start", false)).toBe(false);
+    expect(shouldRedirectToSignIn("/api/oauth/gmail/start", false)).toBe(true);
+    expect(isPublicPath("/api/oauth/gmail/start")).toBe(false);
     expect(isPublicPath("/api/oauth/gmail/callback")).toBe(true);
     expect(isPublicPath("/api/auth/callback/google")).toBe(true);
   });

@@ -29,10 +29,10 @@ export const xConnector = baseConnector({
   ],
 });
 
-xConnector._beginAuth = async ({ accountId, returnTo }) => {
+xConnector._beginAuth = async ({ accountId, returnTo, operatorId = null, managedProfileId = null }) => {
   const creds = xConnector.getAppCredentials();
   const { verifier, challenge } = pkcePair();
-  const state = createOAuthState({ provider: "x", accountId, returnTo });
+  const state = createOAuthState({ provider: "x", accountId, returnTo, operatorId, managedProfileId });
   const secrets = readSecrets();
   secrets.oauthPkce = secrets.oauthPkce || {};
   secrets.oauthPkce[state] = verifier;

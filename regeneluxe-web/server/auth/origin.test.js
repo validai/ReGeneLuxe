@@ -68,6 +68,13 @@ describe("canonical auth origin", () => {
     expect(isLoopbackHostname("127.0.0.1")).toBe(true);
   });
 
+  it("rejects protocol-relative and external redirect targets", () => {
+    process.env.AUTH_URL = "http://127.0.0.1:5174";
+    expect(toCanonicalPath("https://evil.example/phish")).toBe("http://127.0.0.1:5174");
+    expect(toCanonicalPath("//evil.example/phish")).toBe("http://127.0.0.1:5174");
+    expect(toCanonicalPath("javascript:alert(1)")).toBe("http://127.0.0.1:5174");
+  });
+
   it("redirects Host localhost but not 127.0.0.1", () => {
     expect(shouldRedirectLocalhostAlias("localhost:5174")).toBe(true);
     expect(shouldRedirectLocalhostAlias("127.0.0.1:5174")).toBe(false);

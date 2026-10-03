@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireOperator } from "../../../../server/auth/workspaceSession.js";
+import { requireWorkspaceApi, deniedJson, jsonPrivate, rateLimit, clientKey } from "../../../../server/auth/apiGuard.js";
 import {
   disconnectGmailConnection,
   publicGmailForProfile,
@@ -18,14 +18,12 @@ import { getProfileConnectionByKind } from "../../../../server/db/managedProfile
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET() {
-  const result = await requireOperator();
-  if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
-  }
+export async function GET(request: Request) {
+  const result = await requireWorkspaceApi(request);
+  if (!result.ok) return deniedJson(result.error, result.status);
   const gmail = await publicGmailForProfile(result.activeProfile?.id);
   const youtube = await publicYoutubeForProfile(result.activeProfile?.id);
-  return NextResponse.json({
+  return jsonPrivate({
     ok: true,
     operator: { email: result.operator.email, name: result.operator.name },
     gmail,
@@ -34,10 +32,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const result = await requireOperator();
-  if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
-  }
+  const result = await requireWorkspaceApi(request, { mutate: true });
+  if (!result.ok) return deniedJson(result.error, result.status);
+  const limited = rateLimit(`google-conn:${clientKey(request)}:${result.operator.id}`, { limit: 20, windowMs: 60_000 });
+  if (!limited.ok) return deniedJson(limited.error, limited.status);
   const body = await request.json().catch(() => ({}));
   const kind = String(body.kind || "").toUpperCase();
   const action = String(body.action || "start").toLowerCase();

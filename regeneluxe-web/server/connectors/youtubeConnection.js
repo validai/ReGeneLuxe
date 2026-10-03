@@ -173,8 +173,6 @@ export async function completeYoutubeAuth({ code, state, error, errorDescription
     await upsertProfileConnection({
       ...connection,
       ...disconnectedFields(),
-      status: PROFILE_CONNECTION_STATES.ERROR,
-      connectionState: PROFILE_CONNECTION_STATES.ERROR,
       lastErrorCode: "GOOGLE_ACCOUNT_MISMATCH",
       lastErrorSummary: identity.error,
       notes: identity.error,

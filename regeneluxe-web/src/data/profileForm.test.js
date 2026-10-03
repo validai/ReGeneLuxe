@@ -28,6 +28,13 @@ describe("profile setup field diagnostics", () => {
     expect(result.errors.primaryPublicUrl).toBe("Enter a complete URL beginning with http:// or https://.");
   });
 
+  it("shows a URL error for javascript and data schemes", () => {
+    expect(validateProfileSetupFields({ ...valid, primaryPublicUrl: "javascript:alert(1)" }).errors.primaryPublicUrl)
+      .toBe("Enter a complete URL beginning with http:// or https://.");
+    expect(validateProfileSetupFields({ ...valid, website: "data:text/html,hi" }).errors.website)
+      .toBe("Enter a complete URL beginning with http:// or https://.");
+  });
+
   it("requires a profile name, slug, and at least one platform", () => {
     const result = validateProfileSetupFields({
       displayName: "",

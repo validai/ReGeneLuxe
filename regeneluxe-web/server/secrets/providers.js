@@ -21,7 +21,7 @@ export function getProviderAppCredentials(provider) {
   if (!app) return null;
   return {
     clientId: app.clientId || null,
-    clientSecret: app.clientSecret ? decryptSecret(app.clientSecret) : null,
+    clientSecret: safeDecrypt(app.clientSecret),
     redirectUri: app.redirectUri || null,
     extra: app.extra || {},
   };
@@ -47,13 +47,22 @@ export function setProviderAppCredentials(provider, {
   return true;
 }
 
+function safeDecrypt(value) {
+  if (!value) return null;
+  try {
+    return decryptSecret(value);
+  } catch {
+    return null;
+  }
+}
+
 export function getAccountTokens(provider, accountId) {
   const secrets = readSecrets();
   const row = secrets.providers?.[providerKey(provider, accountId)];
   if (!row) return null;
   return {
-    accessToken: row.accessToken ? decryptSecret(row.accessToken) : null,
-    refreshToken: row.refreshToken ? decryptSecret(row.refreshToken) : null,
+    accessToken: safeDecrypt(row.accessToken),
+    refreshToken: safeDecrypt(row.refreshToken),
     expiresAt: row.expiresAt || null,
     scopes: row.scopes || [],
     providerAccountId: row.providerAccountId || null,

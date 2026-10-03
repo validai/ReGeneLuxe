@@ -1,17 +1,18 @@
-import { NextResponse } from "next/server";
+import { requireWorkspaceApi, deniedJson, jsonPrivate } from "../../../../server/auth/apiGuard.js";
 import { getDbHealth, initDb } from "../../../../server/db/index.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authz = await requireWorkspaceApi(request);
+  if (!authz.ok) return deniedJson(authz.error, authz.status);
   try {
     await initDb();
     const health = await getDbHealth() as {
       ok?: boolean;
       mode?: string;
       schemaVersion?: number;
-      error?: string | null;
       sync?: {
         localHealthy?: boolean;
         cloudConfigured?: boolean;
@@ -19,26 +20,31 @@ export async function GET() {
         lastSyncAt?: string | null;
         pendingOutbox?: number;
         pendingJobs?: number;
-        error?: string | null;
       };
     };
     const sync = health.sync ?? {};
     const localHealthy = health.ok !== false && sync.localHealthy !== false;
-    return NextResponse.json({
+    return jsonPrivate({
       ok: localHealthy,
       local: {
         healthy: health.ok !== false,
         mode: health.mode ?? null,
         schemaVersion: health.schemaVersion ?? null,
-        error: health.error ?? null,
       },
-      sync,
+      sync: {
+        localHealthy: sync.localHealthy !== false,
+        cloudConfigured: Boolean(sync.cloudConfigured),
+        state: sync.state || "LOCAL_ONLY",
+        lastSyncAt: sync.lastSyncAt || null,
+        pendingOutbox: sync.pendingOutbox ?? 0,
+        pendingJobs: sync.pendingJobs ?? 0,
+      },
     });
-  } catch (error) {
-    return NextResponse.json({
+  } catch {
+    return jsonPrivate({
       ok: false,
-      local: { healthy: false, error: error instanceof Error ? error.message : String(error) },
+      local: { healthy: false },
       sync: { state: "ERROR", cloudConfigured: false, pendingOutbox: 0 },
-    }, { status: 503 });
+    }, 503);
   }
 }

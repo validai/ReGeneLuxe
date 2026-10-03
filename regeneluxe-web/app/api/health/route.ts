@@ -1,48 +1,44 @@
 import { NextResponse } from "next/server";
 import { publicStatus } from "../../../server/secrets.js";
-import { runtimeIdentity, SERVICE_NAME, APP_NAME } from "../../../server/config.js";
+import { SERVICE_NAME, APP_NAME } from "../../../server/config.js";
 import { getDbHealth, initDb } from "../../../server/db/index.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const PUBLIC_HEADERS = {
+  "Cache-Control": "no-store",
+  "X-Content-Type-Options": "nosniff",
+};
+
 export async function GET() {
   const status = publicStatus();
-  const identity = runtimeIdentity(5174);
-  let db = null;
+  let localHealthy = false;
+  let syncState = "UNKNOWN";
+  let cloudConfigured = false;
   try {
     await initDb();
-    db = await getDbHealth();
-  } catch (error) {
-    db = {
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-      sync: { state: "ERROR", cloudConfigured: false, pendingOutbox: 0 },
-    };
+    const db = await getDbHealth();
+    localHealthy = db?.ok !== false && db?.sync?.localHealthy !== false;
+    syncState = db?.sync?.state || "LOCAL_ONLY";
+    cloudConfigured = Boolean(db?.sync?.cloudConfigured);
+  } catch {
+    localHealthy = false;
+    syncState = "ERROR";
   }
   return NextResponse.json({
     ok: true,
-    ...identity,
     app: APP_NAME,
     service: SERVICE_NAME,
     framework: "next",
     canonicalUiUrl: "http://127.0.0.1:5174",
-    healthUrl: "http://127.0.0.1:5174/api/health",
-    apiUrl: "http://127.0.0.1:5174",
-    uiPort: 5174,
-    apiPort: 5174,
     state: status.aiConfigured ? "RUNNING" : "AI_NOT_CONFIGURED",
     running: true,
-    aiConfigured: status.aiConfigured,
-    provider: status.provider,
-    connectedProviders: status.connectedProviders || [],
-    socialConnectionError: false,
+    aiConfigured: Boolean(status.aiConfigured),
     database: {
-      localHealthy: db?.ok !== false,
-      schemaVersion: db?.schemaVersion ?? null,
-      sync: db?.sync || null,
-      error: db?.error || db?.sync?.error || null,
+      localHealthy,
+      sync: { state: syncState, cloudConfigured },
     },
     timestamp: new Date().toISOString(),
-  });
+  }, { headers: PUBLIC_HEADERS });
 }

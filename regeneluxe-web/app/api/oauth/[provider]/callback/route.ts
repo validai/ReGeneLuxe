@@ -7,12 +7,14 @@ import { syncConnectedAccount } from "../../../../../server/connectors/syncAccou
 import { requireOperator } from "../../../../../server/auth/workspaceSession.js";
 import { completeGmailAuth, gmailSettingsRedirect } from "../../../../../server/connectors/gmailConnection.js";
 import { completeYoutubeAuth } from "../../../../../server/connectors/youtubeConnection.js";
+import { safeReturnTo } from "../../../../../server/auth/apiGuard.js";
+import { recordBelongsToWorkspace } from "../../../../../server/auth/tenantScope.js";
 
 export const dynamic = "force-dynamic";
 
 function redirectTo(path: string, params: Record<string, string> = {}) {
   const origin = process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174";
-  const url = new URL(path, origin);
+  const url = new URL(safeReturnTo(path, "/accounts"), origin);
   Object.entries(params).forEach(([key, value]) => {
     if (value) url.searchParams.set(key, value);
   });
@@ -57,6 +59,7 @@ export async function GET(
 
   try {
     await initDb();
+    const authz = await requireOperator();
     const stateResult = consumeOAuthState(state);
     if (!stateResult.ok) {
       return redirectTo("/accounts", {
@@ -64,9 +67,18 @@ export async function GET(
         message: stateResult.error || friendlyOAuthError("expired_state", provider),
       });
     }
+    if (stateResult.operatorId && authz.ok && stateResult.operatorId !== authz.operator.id) {
+      return redirectTo("/accounts", {
+        connect: "error",
+        message: "This connection belongs to a different ReGeneLuxe account.",
+      });
+    }
+    if (!authz.ok) {
+      return redirectTo("/signin");
+    }
 
     const account = await get(COLLECTIONS.accounts, stateResult.accountId);
-    if (!account) {
+    if (!account || !recordBelongsToWorkspace(account, authz)) {
       return redirectTo("/accounts", {
         connect: "error",
         message: "Account missing for this connection.",
@@ -91,7 +103,7 @@ export async function GET(
       });
       return redirectTo(stateResult.returnTo || "/accounts", {
         connect: "error",
-        message: result.error || friendlyOAuthError("invalid_grant", connector.displayName || provider),
+        message: friendlyOAuthError("invalid_grant", connector.displayName || provider),
       });
     }
 
@@ -106,9 +118,12 @@ export async function GET(
       lastErrorSummary: "",
       updatedAt: nowIso(),
     };
+    delete nextAccount.accessToken;
+    delete nextAccount.refreshToken;
+    delete nextAccount.token;
+    delete nextAccount.clientSecret;
     await upsert(COLLECTIONS.accounts, nextAccount);
 
-    // Best-effort initial sync — failures should not undo connection.
     try {
       await syncConnectedAccount(nextAccount);
     } catch {
@@ -120,10 +135,10 @@ export async function GET(
       provider,
       accountId: account.id,
     });
-  } catch (err) {
+  } catch {
     return redirectTo("/accounts", {
       connect: "error",
-      message: err instanceof Error ? err.message : "Connection failed",
+      message: "Connection failed",
     });
   }
 }
