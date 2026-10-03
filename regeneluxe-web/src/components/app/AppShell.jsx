@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useAppNavigate as useNavigate } from "@/nav";
 import BrandTitle from "../BrandTitle.jsx";
 import { NavIcon } from "./Icon.jsx";
 import { useAppData } from "../../hooks/useAppData.js";

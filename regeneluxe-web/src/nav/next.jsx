@@ -42,6 +42,10 @@ export function useAppParams() {
   return useParams();
 }
 
+export function useAppPathname() {
+  return usePathname();
+}
+
 export function useAppSearchParams() {
   const params = useNextSearchParams();
   const router = useRouter();

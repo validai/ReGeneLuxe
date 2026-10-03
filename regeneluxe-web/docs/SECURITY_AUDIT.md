@@ -253,16 +253,62 @@ Exports strip secret field names, omit Gmail messages, and scope to the current 
 
 `package-lock.json` is present. Do not run `npm audit fix --force`.
 
-Patched in this sprint:
+### Security checkpoint
 
-- `next` 16.3.6 — fixes GHSA-vcvr-r3jv-pc5j (`next/og` ImageResponse RCE). ReGeneLuxe uses `ImageResponse` for `/icon` and `/apple-icon` with static markup only.
+Commit `64177f4c97b27a20622780e558e7922037247fb5` (`security: harden ReGeneLuxe application boundaries`) on `origin/main`. Gmail/YouTube ingestion WIP was left unstaged.
 
-Deferred (no `--force`, no major upgrades):
+### Signed-in live acceptance
 
-- `react-router` / `react-router-dom` open-redirect XSS (legacy Vite shell / tests; Next App Router is canonical).
-- Dev-tooling DoS/path issues: `vite`, `rollup`, `minimatch`, `picomatch`, `brace-expansion`, `browserslist`, `flatted`, `js-yaml`.
+Unauthenticated live checks after the checkpoint:
 
-Post-patch `npm audit`: 0 critical, 10 high (deferred), 5 moderate, 2 low.
+- `/api/health` 200, no secrets; `database.localHealthy=true`; `database.sync.state=SYNCED`; `cloudConfigured=true`
+- Security headers present (`X-Frame-Options: DENY`, CSP, `nosniff`, `Cache-Control: no-store`)
+- `/settings`, `/api/data/collection`, `/api/jobs/tick`, `/api/backup`, `/api/db/health` redirect 307 to sign-in
+
+Signed-in UI smoke (Account Settings, DJ Coast workspace, Connections, Data & Sync, avatar, Campaigns, Content, Analytics, sign-out/in) was **not completed in this follow-up**. Google OAuth started with `openid profile email` + PKCE to `http://127.0.0.1:5174/api/auth/callback/google`, then stopped on the operator passkey/password challenge. No password was entered. No provider ingestion was started.
+
+### Dependency remediation (follow-up)
+
+Removed from product/test runtime:
+
+- `react-router-dom` (and `react-router`). Product already uses native Next App Router (`nav/next.jsx` + `AppShellNext`). Vitest now uses an in-memory `MemoryRouter` in `src/nav/vite.jsx`.
+
+Patched / overridden (minors/patches only):
+
+| Package | Action | Runtime |
+| --- | --- | --- |
+| `next` | 16.3.6 (prior checkpoint) | production |
+| `vite` | 7.2.x → 7.3.6 | test tooling |
+| `rollup` | override 4.64.0 | test tooling (via Vite) |
+| `minimatch` | override 3.1.5 | ESLint |
+| `brace-expansion` | override 1.1.21 | ESLint / glob |
+| `picomatch` 2.x | override 2.3.2 | Tailwind/chokidar glob |
+| `picomatch` 4.x | override 4.0.7 | Vite/Vitest |
+| `browserslist` | override 4.29.3 | Autoprefixer/Babel |
+| `flatted` | override 3.4.4 | ESLint cache |
+| `js-yaml` | override 4.3.2 | ESLint |
+
+### Remaining HIGH advisories
+
+All remaining High findings are **dev-only CSS tooling** pulled by Tailwind CSS 3.4 (`chokidar` → `braces` / `micromatch` / `fast-glob`). They are not shipped in the Next.js production server runtime. The npm-reported fix is Tailwind **4.3.3**, a major upgrade deferred to avoid destabilizing PostCSS/build.
+
+| Package | Path | Prod runtime? | Safe patch? | Action |
+| --- | --- | --- | --- | --- |
+| `tailwindcss` 3.4.18 | direct devDependency | build-time CSS only | no (major 4.x) | defer |
+| `chokidar` 3.6.0 | tailwindcss | no | only via Tailwind 4 | defer |
+| `braces` | chokidar / micromatch | no | npm reports all versions | defer |
+| `micromatch` | tailwindcss / fast-glob | no | only via Tailwind 4 | defer |
+| `fast-glob` | tailwindcss | no | only via Tailwind 4 | defer |
+
+**Production-reachable Highs:** 0  
+**Dev-only Highs remaining:** 5 (Tailwind 3 glob stack)  
+**Critical:** 0  
+
+Post-remediation `npm audit`: 0 critical, 5 high (dev-only), 5 moderate, 2 low.
+
+Moderates deferred (Vitest 5 major, or unused-in-runtime parsers): `vitest` / `@vitest/mocker`, `ajv`, `yaml`, `@humanfs/node`.
+
+Install scripts present and expected: `esbuild` postinstall (native binary) and optional `fsevents` on macOS. No unexpected install scripts.
 
 ## 34. Prompt injection boundary
 
@@ -274,4 +320,6 @@ External email subjects, snippets, captions, and social display names are data. 
 
 ## 36. Regression tests
 
-See `server/auth/security.boundaries.test.js` plus existing identity, OAuth mismatch, origin, media, allowlist, and secret-stripping tests.
+See `server/auth/security.boundaries.test.js` plus existing identity, OAuth mismatch, origin, media, allowlist, and secret-stripping tests. Route chrome tests use the in-memory `MemoryRouter` in `src/nav/vite.jsx` (no `react-router-dom`).
+
+Gmail/YouTube ingestion remains uncommitted WIP and is out of scope for both security checkpoints.

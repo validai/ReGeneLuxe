@@ -13,7 +13,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      // Screen tests keep react-router MemoryRouter; product uses nav/next via App Router.
+      // Screen tests use the in-memory MemoryRouter; product uses nav/next via App Router.
       "@/nav": path.join(rootDir, "src/nav/vite.jsx"),
       "@": path.join(rootDir, "src"),
       "regeneluxe-nav": path.join(rootDir, "src/nav/vite.jsx"),

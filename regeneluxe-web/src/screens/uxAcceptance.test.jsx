@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "@/nav";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import App from "../App.jsx";
 import { createCampaign } from "../data/campaignRepository.js";

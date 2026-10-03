@@ -1,9 +1,9 @@
 /**
- * Test-only SPA route tree (Vitest + MemoryRouter).
+ * Test-only SPA route tree (Vitest + in-memory MemoryRouter).
  * Product runtime uses native App Router pages under `app/(workspace)/`.
  */
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { useAppNavigate as useNavigate, useAppPathname } from "@/nav";
 import AppShell from "./components/app/AppShell.jsx";
 import CommandPalette from "./components/app/CommandPalette.jsx";
 import Skeleton from "./components/app/Skeleton.jsx";
@@ -24,6 +24,32 @@ const InboxPage = lazy(() => import("./screens/InboxPage.jsx"));
 const AccountsPage = lazy(() => import("./screens/AccountsPage.jsx"));
 const SettingsPage = lazy(() => import("./screens/SettingsPage.jsx"));
 const ProfileSettingsPage = lazy(() => import("./screens/ProfileSettingsPage.jsx"));
+
+const REDIRECTS = {
+  "/dashboard": "/",
+  "/start": "/campaigns",
+  "/drafting-room": "/content",
+  "/campaign/new": "/campaigns",
+  "/login": "/",
+  "/gate": "/",
+  "/thank-you": "/",
+};
+
+function matchTestScreen(pathname) {
+  if (pathname === "/") return { element: <DashboardPage /> };
+  if (pathname === "/calendar") return { element: <CalendarPage /> };
+  if (pathname === "/queue") return { element: <QueuePage /> };
+  if (pathname === "/content") return { element: <ContentPage /> };
+  if (pathname === "/content/new" || /^\/content\/[^/]+$/.test(pathname)) return { element: <ComposerPage /> };
+  if (pathname === "/campaigns") return { element: <CampaignsPage /> };
+  if (/^\/campaigns\/[^/]+$/.test(pathname)) return { element: <CampaignWorkspace /> };
+  if (pathname === "/inbox") return { element: <InboxPage /> };
+  if (pathname === "/analytics") return { element: <AnalyticsPage /> };
+  if (pathname === "/accounts") return { element: <AccountsPage /> };
+  if (pathname === "/settings") return { element: <SettingsPage /> };
+  if (pathname === "/settings/profile") return { element: <ProfileSettingsPage /> };
+  return { element: <NotFound /> };
+}
 
 function RouteFallback() {
   return (
@@ -116,6 +142,10 @@ export default function App() {
     };
   }, [navigate]);
 
+  const rawPath = useAppPathname();
+  const pathname = REDIRECTS[rawPath] || rawPath;
+  const screen = matchTestScreen(pathname);
+
   const closeCommand = () => setCommandOpen(false);
   const openCommand = () => setCommandOpen(true);
 
@@ -124,29 +154,7 @@ export default function App() {
       <div className="min-h-screen bg-rl_bg text-rl_text">
         <AppShell onOpenCommand={openCommand}>
           <Suspense fallback={<RouteFallback />}>
-            <Routes>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/queue" element={<QueuePage />} />
-              <Route path="/content" element={<ContentPage />} />
-              <Route path="/content/new" element={<ComposerPage />} />
-              <Route path="/content/:contentId" element={<ComposerPage />} />
-              <Route path="/campaigns" element={<CampaignsPage />} />
-              <Route path="/campaigns/:campaignId" element={<CampaignWorkspace />} />
-              <Route path="/inbox" element={<InboxPage />} />
-              <Route path="/analytics" element={<AnalyticsPage />} />
-              <Route path="/accounts" element={<AccountsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/settings/profile" element={<ProfileSettingsPage />} />
-              <Route path="/dashboard" element={<Navigate to="/" replace />} />
-              <Route path="/start" element={<Navigate to="/campaigns" replace />} />
-              <Route path="/drafting-room" element={<Navigate to="/content" replace />} />
-              <Route path="/campaign/new" element={<Navigate to="/campaigns" replace />} />
-              <Route path="/login" element={<Navigate to="/" replace />} />
-              <Route path="/gate" element={<Navigate to="/" replace />} />
-              <Route path="/thank-you" element={<Navigate to="/" replace />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            {screen.element}
           </Suspense>
         </AppShell>
         {commandOpen ? (
