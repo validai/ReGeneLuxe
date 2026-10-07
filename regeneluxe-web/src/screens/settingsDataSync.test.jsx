@@ -31,12 +31,13 @@ const syncedHealth = {
   },
 };
 
-function renderSettings(healthResponse, { initialDbHealth, hangHealth = false } = {}) {
+function renderSettings(healthResponse, { initialDbHealth, hangHealth = false, delaySync } = {}) {
   vi.stubGlobal("fetch", vi.fn(async (url, init) => {
     if (hangHealth && String(url).includes("/api/db/health")) {
       return new Promise(() => {});
     }
     if (String(url).includes("/api/sync") && String(init?.method || "GET").toUpperCase() === "POST") {
+      if (delaySync) await delaySync;
       return {
         ok: true,
         json: async () => ({
@@ -89,7 +90,9 @@ describe("authenticated Data & Sync health", () => {
 
   it("shows Connected and Synced from authoritative health without waiting on fetch", () => {
     renderSettings(syncedHealth, { initialDbHealth: syncedHealth, hangHealth: true });
-    expect(screen.getByText(/Account · DJ Coast/)).toBeInTheDocument();
+    expect(screen.getByText(/DJ Coast workspace/)).toBeInTheDocument();
+    expect(screen.getByText(/0 campaigns/)).toBeInTheDocument();
+    expect(screen.getByText(/0 social accounts/)).toBeInTheDocument();
     expect(screen.getByText(/Local database · Healthy/)).toBeInTheDocument();
     expect(screen.getByText(/Cloud database · Connected/)).toBeInTheDocument();
     expect(screen.getByText(/Cloud sync · Synced/)).toBeInTheDocument();
@@ -190,5 +193,37 @@ describe("authenticated Data & Sync health", () => {
       expect(screen.getByText(/Cloud sync · Synced/)).toBeInTheDocument();
     });
     expect(screen.getByText(/Pending operations · 0/)).toBeInTheDocument();
+  });
+
+  it("shows Syncing only while the request is active, then Synced", async () => {
+    let release;
+    const delaySync = new Promise((resolve) => {
+      release = resolve;
+    });
+    renderSettings(syncedHealth, { initialDbHealth: syncedHealth, delaySync });
+    fireEvent.click(screen.getByRole("button", { name: /^sync now$/i }));
+    expect(await screen.findByRole("button", { name: /syncing/i })).toBeDisabled();
+    expect(screen.getByText(/Cloud sync · Syncing/)).toBeInTheDocument();
+    release();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^sync now$/i })).toBeEnabled();
+    });
+    expect(screen.getByText(/Cloud sync · Synced/)).toBeInTheDocument();
+    expect(screen.queryByText(/Cloud sync · Syncing/)).not.toBeInTheDocument();
+  });
+
+  it("requires RESET DJ COAST and keeps Reset disabled", async () => {
+    renderSettings(syncedHealth, { initialDbHealth: syncedHealth, hangHealth: true });
+    fireEvent.click(screen.getByRole("button", { name: /review reset/i }));
+    expect(screen.getByRole("heading", { name: /reset is disabled/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/this Mac/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/this browser/i)).not.toBeInTheDocument();
+    const confirm = screen.getByRole("button", { name: /reset is disabled/i });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/type reset dj coast to acknowledge/i), {
+      target: { value: "RESET DJ COAST" },
+    });
+    expect(screen.getByText(/phrase matches/i)).toBeInTheDocument();
+    expect(confirm).toBeDisabled();
   });
 });

@@ -11,14 +11,14 @@ import Skeleton from "../components/app/Skeleton.jsx";
 import { useAppData } from "../hooks/useAppData.js";
 import { SCHEMA_VERSION, PLATFORMS, SOCIAL_CONNECTION_PLATFORMS } from "../data/models.js";
 import { AI_MODES, AI_MODE_LABELS } from "../data/domain.js";
-import { updateSettings, resetAllLocalData } from "../data/settingsRepository.js";
+import { updateSettings } from "../data/settingsRepository.js";
 import { downloadBackupFile, importBackup, validateBackup } from "../data/backupService.js";
 import { getRuntimeStatus, getRuntimeHealth, saveRuntimeSecret } from "../data/runtimeClient.js";
 import { fetchDbHealth, getLastDbHealth } from "../data/durableBootstrap.js";
 import { useProfileSession } from "../components/app/ProfileSession.jsx";
 import { displayConnectionState, displayProfileConnection, formatHandle } from "../data/connectionStatus.js";
 import { displayAccountEmail } from "../data/googleIdentity.js";
-import { formatDataSyncDisplay, formatSyncLine, mergeHealthWithSyncStatus } from "../data/syncHealth.js";
+import { formatDataSyncDisplay, formatSyncLine, formatWorkspaceSummary, mergeHealthWithSyncStatus } from "../data/syncHealth.js";
 import StatusBadge from "../components/app/StatusBadge.jsx";
 import { PlatformIcon } from "../components/app/Icon.jsx";
 
@@ -50,6 +50,8 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
   const [importError, setImportError] = useState("");
   const [importOk, setImportOk] = useState("");
   const [resetOpen, setResetOpen] = useState(false);
+  const [resetPhrase, setResetPhrase] = useState("");
+  const [syncing, setSyncing] = useState(false);
   const [runtime, setRuntime] = useState({ running: false, aiConfigured: false, state: "UNAVAILABLE" });
   const [health, setHealth] = useState(null);
   const [runtimeLoading, setRuntimeLoading] = useState(true);
@@ -75,7 +77,14 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
   const gmailView = displayProfileConnection(gmailConnection);
   const youtubeView = displayProfileConnection(youtubeConnection);
   const operatorEmail = displayAccountEmail(operator);
-  const dataSync = formatDataSyncDisplay(dbHealth);
+  const dataSync = formatDataSyncDisplay(dbHealth, { inFlight: syncing });
+  const workspaceSummary = formatWorkspaceSummary({
+    brandName: activeProfile?.displayName || "Workspace",
+    campaignCount: campaigns.length,
+    socialAccountCount: accounts.length,
+  });
+  const resetPhraseExpected = `RESET ${String(activeProfile?.displayName || "WORKSPACE").toUpperCase()}`;
+  const resetPhraseMatches = resetPhrase.trim() === resetPhraseExpected;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -579,59 +588,77 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
 
       <section id="data" className="rl-panel space-y-3 p-5">
         <h2 className="text-sm font-semibold text-rl_text">Data &amp; Sync</h2>
+        <p className="text-sm font-medium text-rl_text">{workspaceSummary.heading}</p>
         <p className="text-sm text-rl_muted">
-          Schema version {SCHEMA_VERSION}. {campaigns.length} campaigns, {accounts.length} accounts.
-          Local SQLite is the operational source of truth.
+          {workspaceSummary.campaigns}
+          {" · "}
+          {workspaceSummary.socialAccounts}
         </p>
         <ul className="space-y-2 text-sm text-rl_muted">
-          <li>Account · {activeProfile?.displayName || operatorEmail || "Not signed in"}</li>
-          <li>
-            Gmail ·{" "}
-            {gmailView.code === "CONNECTED"
-              ? `Connected · last sync ${formatWhen(gmailConnection.lastSuccessfulSyncAt || gmailConnection.lastSyncAt)}`
-              : gmailView.label}
-          </li>
-          <li>
-            YouTube ·{" "}
-            {youtubeView.code === "CONNECTED"
-              ? `Connected · last sync ${formatWhen(youtubeConnection.lastSuccessfulSyncAt || youtubeConnection.lastSyncAt)}`
-              : youtubeView.label}
-          </li>
-          <li>
-            Local database · {formatSyncLine(dataSync.local)}
-          </li>
-          <li>
-            Cloud database · {formatSyncLine(dataSync.cloud)}
-          </li>
-          <li>
-            Cloud sync · {formatSyncLine(dataSync.sync)}
-          </li>
-          <li>
-            Last sync · {formatSyncLine(dataSync.lastSync)}
-          </li>
-          <li>
-            Pending operations · {formatSyncLine(dataSync.pending)}
-          </li>
+          <li>Local database · {formatSyncLine(dataSync.local)}</li>
+          <li>Cloud database · {formatSyncLine(dataSync.cloud)}</li>
+          <li>Cloud sync · {formatSyncLine(dataSync.sync)}</li>
+          <li>Last sync · {formatSyncLine(dataSync.lastSync)}</li>
+          <li>Pending operations · {formatSyncLine(dataSync.pending)}</li>
         </ul>
+        <details className="rounded-xl border border-rl_border px-4 py-3">
+          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.14em] text-rl_muted">
+            Technical details
+          </summary>
+          <ul className="mt-3 space-y-2 text-sm text-rl_muted">
+            <li>Application schema version {SCHEMA_VERSION}</li>
+            <li>Signed-in Google account · {operatorEmail || "Not signed in"}</li>
+            <li>
+              Gmail ·{" "}
+              {gmailView.code === "CONNECTED"
+                ? `Connected · last sync ${formatWhen(gmailConnection.lastSuccessfulSyncAt || gmailConnection.lastSyncAt)}`
+                : gmailView.label}
+            </li>
+            <li>
+              YouTube ·{" "}
+              {youtubeView.code === "CONNECTED"
+                ? `Connected · last sync ${formatWhen(youtubeConnection.lastSuccessfulSyncAt || youtubeConnection.lastSyncAt)}`
+                : youtubeView.label}
+            </li>
+          </ul>
+        </details>
         <button
           type="button"
           className="rl-btn-ghost"
+          disabled={syncing}
+          aria-busy={syncing}
           onClick={async () => {
-            const response = await fetch("/api/sync", {
-              method: "POST",
-              credentials: "same-origin",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ pull: true, push: true }),
-            }).catch(() => null);
-            const body = await response?.json?.().catch(() => null);
-            const health = await fetchDbHealth();
-            setDbHealth(mergeHealthWithSyncStatus(health, body?.status));
+            if (syncing) return;
+            setSyncing(true);
+            let postStatus = null;
+            try {
+              const response = await fetch("/api/sync", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pull: true, push: true }),
+              }).catch(() => null);
+              const body = await response?.json?.().catch(() => null);
+              postStatus = body?.status || null;
+              if (postStatus) {
+                setDbHealth((current) => mergeHealthWithSyncStatus(current, postStatus));
+              }
+            } finally {
+              setSyncing(false);
+            }
+            try {
+              const health = await fetchDbHealth();
+              setDbHealth(mergeHealthWithSyncStatus(health, postStatus));
+            } catch {
+              /* POST status already applied */
+            }
           }}
         >
-          Sync now
+          {syncing ? "Syncing…" : "Sync now"}
         </button>
         <p className="text-xs text-rl_muted">
-          The app works offline. Cloud sync is optional. API keys and OAuth tokens stay on the local runtime and are never synced.
+          Local SQLite on this Mac is the operational database. Cloud sync is optional.
+          API keys and OAuth tokens stay on the local runtime and are never synced.
         </p>
       </section>
 
@@ -688,32 +715,72 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
       </section>
 
       <section className="space-y-3 rounded-2xl border border-rl_danger/40 bg-rl_danger/10 p-5">
-        <h2 className="text-sm font-semibold text-rl_danger">Reset application</h2>
+        <h2 className="text-sm font-semibold text-rl_danger">Danger Zone</h2>
+        <p className="text-sm text-rl_text">
+          Reset would delete this workspace&apos;s local ReGeneLuxe collections from this Mac
+          (campaigns, social accounts, settings, queue, and related local records).
+          It would not wipe Gmail metadata, provider connections, vault secrets, or your signed-in identity.
+        </p>
         <p className="text-sm text-rl_muted">
-          Deletes all local campaigns, accounts, and settings in this browser.
+          Turso still holds synchronized workspace data. The next successful cloud sync would
+          rehydrate campaigns and social accounts from the cloud rather than permanently
+          deleting them. Because restore-versus-remote-delete is not an explicit product choice yet,
+          Reset is disabled.
         </p>
         <button
           type="button"
-          onClick={() => setResetOpen(true)}
-          className="rounded-full bg-rl_danger px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white"
+          onClick={() => {
+            setResetPhrase("");
+            setResetOpen(true);
+          }}
+          className="rounded-full border border-rl_danger/40 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-rl_danger"
         >
-          Reset local data
+          Review reset
         </button>
       </section>
 
       <ConfirmDialog
         open={resetOpen}
-        title="Reset all local data?"
-        body="This cannot be undone unless you have an export. Export first if you need a backup."
-        confirmLabel="Reset everything"
+        title="Reset is disabled"
+        body={(
+          <>
+            <p>
+              Typing {resetPhraseExpected} confirms you understand this is destructive.
+              Reset remains disabled because Turso would restore this workspace on the next successful sync.
+            </p>
+            <ul className="mt-3 list-disc space-y-1 pl-5">
+              <li>Local campaigns, social accounts, settings, and queue collections would be emptied on this Mac</li>
+              <li>Gmail metadata, provider connections, and vault secrets would not be cleared</li>
+              <li>Cloud records would remain and rehydrate locally after sync</li>
+            </ul>
+          </>
+        )}
+        confirmLabel="Reset is disabled"
         danger
-        onCancel={() => setResetOpen(false)}
-        onConfirm={() => {
-          resetAllLocalData();
+        confirmDisabled
+        onCancel={() => {
           setResetOpen(false);
-          setImportOk("Local data cleared.");
+          setResetPhrase("");
         }}
-      />
+        onConfirm={() => {}}
+      >
+        <label className="mt-4 block text-sm text-rl_text" htmlFor="reset-phrase">
+          Type {resetPhraseExpected} to acknowledge
+        </label>
+        <input
+          id="reset-phrase"
+          className="rl-input mt-2"
+          value={resetPhrase}
+          onChange={(event) => setResetPhrase(event.target.value)}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        {resetPhraseMatches ? (
+          <p className="mt-2 text-sm text-rl_warning">
+            Phrase matches. Reset is still blocked until cloud restore semantics are explicit.
+          </p>
+        ) : null}
+      </ConfirmDialog>
     </PageShell>
   );
 }

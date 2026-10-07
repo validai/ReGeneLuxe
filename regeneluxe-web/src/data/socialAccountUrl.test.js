@@ -87,6 +87,15 @@ describe("social account URL parser", () => {
     expect(www.handle).toBe("djcoast");
   });
 
+  it("detects LinkedIn URLs without marking them Connected", () => {
+    const parsed = parseSocialIdentity("https://www.linkedin.com/in/djcoast");
+    expect(parsed.ok).toBe(true);
+    expect(parsed.platform).toBe("LinkedIn");
+    expect(parsed.handle).toBe("djcoast");
+    expect(parsed.connectionState).toBe("MANUAL_ONLY");
+    expect(parsed.connectionState).not.toBe("CONNECTED");
+  });
+
   it("returns a manual-platform error for unknown URLs", () => {
     const parsed = parseSocialIdentity("https://example.com/someone");
     expect(parsed.ok).toBe(false);

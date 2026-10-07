@@ -70,8 +70,10 @@ export async function getSyncStatus({ fresh = false } = {}) {
   if (!health.ok || unhealthy) state = "ERROR";
   else if (!remote) state = "LOCAL_ONLY";
   else if (!probe.reachable) state = "OFFLINE";
-  else if (pendingOutbox > 0) state = syncState || "PENDING";
-  else state = syncState || "SYNCED";
+  else if (pendingOutbox > 0) state = syncState === "SYNCING" ? "SYNCING" : "PENDING";
+  else if (syncState === "CONFLICT") state = "CONFLICT";
+  else if (syncState === "ERROR") state = "ERROR";
+  else state = "SYNCED";
 
   return {
     cloudConfigured: Boolean(remote),

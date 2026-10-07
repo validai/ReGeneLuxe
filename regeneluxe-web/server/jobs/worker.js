@@ -271,6 +271,13 @@ async function dispatch(job) {
  * Claim and process up to `limit` jobs. Safe to call from /api/jobs/tick.
  * @param {{ limit?: number, types?: string[] | null }} [options]
  */
+/**
+ * @param {{
+ *   limit?: number,
+ *   types?: string[] | null,
+ *   authz?: { operator?: object, workspace?: object, activeProfile?: object },
+ * }} [options]
+ */
 export async function processJobQueue(options = {}) {
   const limit = options.limit ?? 5;
   const types = options.types ?? null;

@@ -1,11 +1,16 @@
 import { readString, writeString } from "./storage.js";
 
-const SIDEBAR_KEY = "rl_sidebar_collapsed";
+/** UI preference only. Not operational SQLite state. */
+const SIDEBAR_KEY = "regeneluxe.sidebarCollapsed";
+const LEGACY_SIDEBAR_KEY = "rl_sidebar_collapsed";
 const CONTENT_VIEW_KEY = "rl_content_view";
 const CALENDAR_VIEW_KEY = "rl_calendar_view";
 
 export function getSidebarCollapsed() {
-  return readString(SIDEBAR_KEY) === "1";
+  const current = readString(SIDEBAR_KEY);
+  if (current === "1" || current === "true") return true;
+  if (current === "0" || current === "false") return false;
+  return readString(LEGACY_SIDEBAR_KEY) === "1";
 }
 
 export function setSidebarCollapsed(collapsed) {

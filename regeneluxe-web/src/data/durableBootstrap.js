@@ -47,6 +47,7 @@ function collectLocalStorageDump() {
   const keys = [
     ...Object.values(STORAGE_KEYS),
     "rl_sidebar_collapsed",
+    "regeneluxe.sidebarCollapsed",
     "rl_content_view",
     "rl_calendar_view",
     MIGRATION_FLAG,

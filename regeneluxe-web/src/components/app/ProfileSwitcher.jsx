@@ -20,8 +20,15 @@ export default function ProfileSwitcher({ collapsed = false }) {
     const onDoc = (event) => {
       if (!rootRef.current?.contains(event.target)) setOpen(false);
     };
+    const onKey = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      window.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   if (!activeProfile) return null;
@@ -29,19 +36,24 @@ export default function ProfileSwitcher({ collapsed = false }) {
   const initial = (activeProfile.displayName || "?").slice(0, 1).toUpperCase();
 
   return (
-    <div ref={rootRef} className={collapsed ? "relative px-1.5 pb-3" : "relative px-3 pb-3"}>
+    <div ref={rootRef} className={`relative ${collapsed ? "px-2 pb-3" : "px-3 pb-3"}`}>
       <button
         type="button"
-        className={`flex w-full items-center gap-2 rounded-lg border border-rl_border bg-rl_bg/40 text-left transition-colors hover:border-rl_accent/40 ${collapsed ? "justify-center px-1 py-2" : "px-2 py-2"}`}
+        className={`flex items-center rounded-lg text-left transition-colors hover:bg-rl_surfaceHover ${
+          collapsed
+            ? "h-10 w-10 justify-center"
+            : "w-full gap-2 border border-rl_border bg-rl_bg/40 px-2 py-2 hover:border-rl_accent/40"
+        }`}
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label={activeProfile.displayName}
         title={activeProfile.displayName}
       >
         {activeProfile.avatarUrl ? (
-          <img src={activeProfile.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+          <img src={activeProfile.avatarUrl} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
         ) : (
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-rl_surfaceActive text-xs font-semibold">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rl_surfaceActive text-xs font-semibold">
             {initial}
           </span>
         )}
@@ -54,7 +66,9 @@ export default function ProfileSwitcher({ collapsed = false }) {
       {open ? (
         <div
           role="menu"
-          className="absolute left-2 right-2 z-50 mt-1 overflow-hidden rounded-xl border border-rl_border bg-rl_surfaceRaised shadow-lg"
+          className={`absolute z-50 mt-1 overflow-hidden rounded-xl border border-rl_border bg-rl_surfaceRaised shadow-lg ${
+            collapsed ? "left-2 w-56" : "left-3 right-3"
+          }`}
         >
           {MENU.map((item) => (
             <Link

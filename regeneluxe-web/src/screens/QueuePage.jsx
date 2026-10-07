@@ -11,7 +11,7 @@ export default function QueuePage() {
   const { queue, content, accounts, campaigns } = useAppData();
 
   return (
-    <PageShell>
+    <PageShell width="workspace">
       <PageHeader
         title="Queue"
         description="What ReGeneLuxe will attempt to publish next."
@@ -19,7 +19,11 @@ export default function QueuePage() {
       />
 
       {queue.length === 0 ? (
-        <EmptyState title="Queue empty" body="Schedule content from Create to add jobs." />
+        <EmptyState
+          title="Queue empty"
+          body="Nothing is waiting to publish. Schedule a post from Create and it will appear here."
+          action={<Link to="/content/new" className="rl-btn">Create</Link>}
+        />
       ) : (
         <ul className="divide-y divide-rl_border border-y border-rl_border">
           {queue.map((job) => {

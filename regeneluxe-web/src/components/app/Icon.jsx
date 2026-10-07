@@ -33,6 +33,7 @@ import {
   CaretDown,
   CaretUp,
   DotsThree,
+  List,
   Bell,
   WarningCircle,
   CheckCircle,
@@ -78,6 +79,8 @@ const NAV = {
   create: Plus,
   expand: CaretRight,
   collapse: CaretLeft,
+  menu: List,
+  close: X,
 };
 
 const ACTIONS = {

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  countLabel,
   displayCloudDatabaseStatus,
   displayCloudSyncStatus,
   formatDataSyncDisplay,
   formatSyncLine,
+  formatWorkspaceSummary,
   mergeHealthWithSyncStatus,
 } from "./syncHealth.js";
 
@@ -103,6 +105,35 @@ describe("formatDataSyncDisplay", () => {
     expect(formatSyncLine(rows.cloud)).toMatch(/Failed to fetch/);
     expect(formatSyncLine(rows.cloud)).not.toBe("Not configured");
     expect(formatSyncLine(rows.local)).not.toBe("Healthy");
+  });
+
+  it("does not leave Syncing after a completed request with an empty outbox", () => {
+    expect(displayCloudSyncStatus({
+      cloudConfigured: true,
+      cloudReachable: true,
+      state: "SYNCING",
+      pendingOutbox: 0,
+    })).toBe("Synced");
+    expect(displayCloudSyncStatus({
+      cloudConfigured: true,
+      cloudReachable: true,
+      state: "SYNCED",
+      pendingOutbox: 0,
+    }, { inFlight: true })).toBe("Syncing");
+  });
+
+  it("uses singular and plural workspace counts", () => {
+    expect(countLabel(1, "social account")).toBe("1 social account");
+    expect(countLabel(2, "social account")).toBe("2 social accounts");
+    expect(formatWorkspaceSummary({
+      brandName: "DJ Coast",
+      campaignCount: 0,
+      socialAccountCount: 1,
+    })).toEqual({
+      heading: "DJ Coast workspace",
+      campaigns: "0 campaigns",
+      socialAccounts: "1 social account",
+    });
   });
 
   it("applies Sync now status onto existing health so the screen can refresh", () => {

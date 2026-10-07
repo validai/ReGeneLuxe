@@ -23,6 +23,7 @@ const HOST_TO_PLATFORM = {
   "snapchat.com": "Snapchat",
   "twitch.tv": "Twitch",
   "kick.com": "Kick",
+  "linkedin.com": "LinkedIn",
 };
 
 function stripWww(host) {
@@ -90,6 +91,8 @@ function canonicalFor(platform, handle, sourceUrl) {
       return `https://www.twitch.tv/${id}`;
     case "Kick":
       return `https://kick.com/${id}`;
+    case "LinkedIn":
+      return sourceUrl || `https://www.linkedin.com/in/${id}`;
     default:
       return sourceUrl || "";
   }
@@ -162,6 +165,16 @@ function parseKick(url) {
   return { platform: "Kick", handle, profileUrl: canonicalFor("Kick", handle, url.toString()) };
 }
 
+function parseLinkedIn(url) {
+  const parts = cleanPath(url.pathname).split("/").filter(Boolean);
+  const kind = parts[0] || "";
+  const handle = handleFromSegment(parts[1] || "");
+  const profileUrl = handle && ["in", "company", "school", "showcase"].includes(kind)
+    ? `https://www.linkedin.com/${kind}/${handle}`
+    : url.toString();
+  return { platform: "LinkedIn", handle, profileUrl };
+}
+
 function parseFromUrl(url) {
   const host = stripWww(url.hostname);
   const platform = HOST_TO_PLATFORM[host];
@@ -171,6 +184,7 @@ function parseFromUrl(url) {
   if (platform === "Snapchat") return parseSnapchat(url);
   if (platform === "Twitch") return parseTwitch(url);
   if (platform === "Kick") return parseKick(url);
+  if (platform === "LinkedIn") return parseLinkedIn(url);
   const segment = firstSegment(url.pathname);
   if (platform === "TikTok" || platform === "Threads") {
     const handle = handleFromSegment(segment);

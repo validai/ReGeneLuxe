@@ -152,7 +152,7 @@ export default function ProfileSettingsPage() {
       return;
     }
     if (!activeProfile?.id) {
-      setFormSummary("No active profile to edit.");
+      setFormSummary("No account to edit.");
       return;
     }
     setSaving(true);

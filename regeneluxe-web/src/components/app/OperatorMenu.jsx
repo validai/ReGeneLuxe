@@ -17,8 +17,15 @@ export default function OperatorMenu({ collapsed = false }) {
     const onDoc = (event) => {
       if (!rootRef.current?.contains(event.target)) setOpen(false);
     };
+    const onKey = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      window.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   if (!operator) return null;
@@ -32,14 +39,17 @@ export default function OperatorMenu({ collapsed = false }) {
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-rl_muted transition-colors duration-rl hover:bg-rl_surfaceHover hover:text-rl_text ${collapsed ? "justify-center px-0" : ""}`}
+        className={`flex items-center rounded-lg text-left text-sm text-rl_muted transition-colors duration-rl hover:bg-rl_surfaceHover hover:text-rl_text ${
+          collapsed ? "h-10 w-10 justify-center" : "w-full gap-3 px-3 py-2"
+        }`}
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label={googleEmail ? `Signed in as ${googleEmail}` : "Signed in with Google"}
         title={googleEmail}
       >
         {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+          <img src={avatarUrl} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
         ) : (
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-rl_surfaceActive text-xs font-semibold text-rl_text">
             {initial}
@@ -55,7 +65,9 @@ export default function OperatorMenu({ collapsed = false }) {
       {open ? (
         <div
           role="menu"
-          className="absolute bottom-full left-2 right-2 z-50 mb-2 overflow-hidden rounded-xl border border-rl_border bg-rl_surfaceRaised shadow-lg"
+          className={`absolute bottom-full z-50 mb-2 overflow-hidden rounded-xl border border-rl_border bg-rl_surfaceRaised shadow-lg ${
+            collapsed ? "left-2 w-56" : "left-2 right-2"
+          }`}
         >
           <Link
             href="/settings#account"

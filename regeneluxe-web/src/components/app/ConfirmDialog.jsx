@@ -4,9 +4,11 @@ export default function ConfirmDialog({
   open,
   title,
   body,
+  children,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   danger = false,
+  confirmDisabled = false,
   onConfirm,
   onCancel,
 }) {
@@ -36,7 +38,8 @@ export default function ConfirmDialog({
         <h2 id="confirm-title" className="font-display text-xl font-semibold tracking-tight text-rl_text">
           {title}
         </h2>
-        {body && <p className="mt-2 text-sm text-rl_muted">{body}</p>}
+        {body ? <div className="mt-2 text-sm text-rl_muted">{body}</div> : null}
+        {children}
         <div className="mt-6 flex justify-end gap-2">
           <button
             ref={cancelRef}
@@ -49,7 +52,8 @@ export default function ConfirmDialog({
           <button
             type="button"
             onClick={onConfirm}
-            className={danger ? "rl-btn-danger" : "rl-btn"}
+            disabled={confirmDisabled}
+            className={`${danger ? "rl-btn-danger" : "rl-btn"} disabled:cursor-not-allowed disabled:opacity-50`}
           >
             {confirmLabel}
           </button>

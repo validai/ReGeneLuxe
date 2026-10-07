@@ -10,9 +10,7 @@ import SideSheet from "../components/app/SideSheet.jsx";
 import { useAppData } from "../hooks/useAppData.js";
 import { createAccount, deleteAccount, updateAccount } from "../data/accountRepository.js";
 import { PLATFORMS, emptyAccount } from "../data/models.js";
-import { PUBLISH_PERMISSIONS, PUBLISH_PERMISSION_LABELS } from "../data/domain.js";
 import {
-  declaredCapabilities,
   publishMediaSupport,
   startProviderConnect,
   connectionAction,
@@ -22,7 +20,9 @@ import { formatStamp } from "../utils/dates.js";
 import { useToast } from "../components/app/useToast.js";
 import { parseSocialIdentity } from "../data/socialAccountUrl.js";
 import { displayConnectionState, formatHandle } from "../data/connectionStatus.js";
+import { fieldsForPlatform, identityHintForPlatform } from "../data/socialAccountFields.js";
 import { PlatformIcon } from "../components/app/Icon.jsx";
+import { useProfileSession } from "../components/app/ProfileSession.jsx";
 
 const blank = () => emptyAccount({
   platform: "Instagram",
@@ -36,39 +36,48 @@ const HEALTH = {
   CONNECTED: { label: "Connected", tone: "bg-rl_ok/15 text-rl_ok" },
   AUTH_EXPIRED: { label: "Reconnect required", tone: "bg-rl_warning/15 text-rl_warning" },
   RECONNECT_REQUIRED: { label: "Reconnect required", tone: "bg-rl_warning/15 text-rl_warning" },
-  ERROR: { label: "Reconnect required", tone: "bg-rl_danger/15 text-rl_danger" },
-  MANUAL_ONLY: { label: "Manual", tone: "bg-rl_surfaceSoft text-rl_muted" },
-  UNCONNECTED: { label: "Not connected", tone: "bg-rl_warning/15 text-rl_warning" },
+  ERROR: { label: "Error", tone: "bg-rl_danger/15 text-rl_danger" },
+  MANUAL_ONLY: { label: "Not connected", tone: "bg-rl_surfaceSoft text-rl_muted" },
+  UNCONNECTED: { label: "Not connected", tone: "bg-rl_surfaceSoft text-rl_muted" },
   CONNECTING: { label: "Connecting", tone: "bg-rl_warning/15 text-rl_warning" },
   SETUP_REQUIRED: { label: "Setup required", tone: "bg-rl_warning/15 text-rl_warning" },
   UNSUPPORTED: { label: "Unsupported", tone: "bg-rl_surfaceSoft text-rl_muted" },
   PROVIDER_REVIEW_REQUIRED: { label: "Provider review required", tone: "bg-rl_warning/15 text-rl_warning" },
+  NOT_CONNECTED: { label: "Not connected", tone: "bg-rl_surfaceSoft text-rl_muted" },
 };
 
 function healthFor(connectionState) {
   return HEALTH[connectionState] || HEALTH.MANUAL_ONLY;
 }
 
-function softCapabilityLine(platform) {
-  const caps = declaredCapabilities(platform);
-  if (!caps.length) return "Publishing stays manual until a real sign-in exists.";
+function capabilityBits(platform) {
   const media = publishMediaSupport(platform);
-  const bits = [
-    media.image ? "Image ✓" : "Image ✕",
-    media.video ? "Video ✓" : "Video ✕",
-    media.text ? "Text ✓" : null,
+  return [
+    media.image ? "Image" : null,
+    media.video ? "Video" : null,
+    media.text ? "Text" : null,
   ].filter(Boolean);
-  return `When connected: ${bits.join(" · ")}.`;
 }
 
 function providerSlug(platform) {
   return String(platform || "").toLowerCase().replace("twitter", "x");
 }
 
+function safeIdentityPatch(draft) {
+  return {
+    displayName: draft.displayName,
+    handle: draft.handle,
+    profileUrl: draft.profileUrl,
+    platform: draft.platform,
+  };
+}
+
 export default function AccountsPage() {
   const { accounts, campaigns, content } = useAppData();
+  const { activeProfile } = useProfileSession();
   const toast = useToast();
   const [draft, setDraft] = useState(blank());
+  const [composerOpen, setComposerOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [errors, setErrors] = useState({});
   const [pendingDelete, setPendingDelete] = useState(null);
@@ -80,26 +89,31 @@ export default function AccountsPage() {
   const [providers, setProviders] = useState([]);
 
   const selected = accounts.find((account) => account.id === selectedId) || null;
+  const brandName = activeProfile?.displayName || "this workspace";
+  const composerFields = fieldsForPlatform(draft.platform);
 
   const readinessFor = (platform) => {
     const id = String(platform || "").toLowerCase().replace("twitter", "x");
     return providers.find((item) => item.provider === id || item.displayName === platform)?.readiness || "";
   };
 
-  const applyIdentity = (value) => {
+  const applyIdentity = (value, platform = draft.platform, { preferPlatform = false } = {}) => {
     setIdentityInput(value);
     const looksUrl = /[./]/.test(value) && !value.trim().startsWith("@");
-    const parsed = parseSocialIdentity(value, looksUrl ? {} : { platform: draft.platform });
+    const parsed = parseSocialIdentity(value, looksUrl && !preferPlatform ? {} : { platform });
     setDetection(parsed);
-    if (!parsed.ok) return;
+    if (!parsed.ok) {
+      if (preferPlatform) setDraft((current) => ({ ...current, platform }));
+      return;
+    }
     setDraft((current) => ({
       ...current,
-      platform: parsed.platform || current.platform,
+      platform: preferPlatform ? platform : (parsed.platform || current.platform),
       handle: parsed.handle ? `@${String(parsed.handle).replace(/^@/, "")}` : current.handle,
       profileUrl: parsed.profileUrl || current.profileUrl,
       displayName: current.displayName || parsed.displayName || parsed.handle || "",
-      connectionState: "MANUAL_ONLY",
-      connectionMethod: "MANUAL",
+      connectionState: current.connectionState || "MANUAL_ONLY",
+      connectionMethod: current.connectionMethod || "MANUAL",
     }));
   };
 
@@ -198,7 +212,6 @@ export default function AccountsPage() {
       if (sync.account) {
         updateAccount(account.id, {
           ...sync.account,
-          // never copy secrets if somehow present
           accessToken: undefined,
           refreshToken: undefined,
         });
@@ -215,8 +228,19 @@ export default function AccountsPage() {
   const validate = (data) => {
     const next = {};
     if (!data.platform) next.platform = "Required.";
-    if (!data.displayName.trim() && !data.handle.trim()) next.displayName = "Add a display name or handle.";
+    if (!data.displayName.trim() && !data.handle.trim() && !data.profileUrl.trim()) {
+      next.displayName = "Add a display name, handle, or profile URL.";
+    }
     return next;
+  };
+
+  const closeComposer = () => {
+    setComposerOpen(false);
+    setEditingId(null);
+    setDraft(blank());
+    setIdentityInput("");
+    setDetection(null);
+    setErrors({});
   };
 
   const handleSubmit = (event) => {
@@ -226,16 +250,25 @@ export default function AccountsPage() {
     if (Object.keys(nextErrors).length) return;
 
     if (editingId) {
-      updateAccount(editingId, { ...draft, connectionState: draft.connectionState || "MANUAL_ONLY" });
+      updateAccount(editingId, safeIdentityPatch(draft));
     } else {
       createAccount({
-        ...draft,
+        ...safeIdentityPatch(draft),
         connectionState: "MANUAL_ONLY",
         connectionMethod: "MANUAL",
       });
     }
-    setDraft(blank());
+    closeComposer();
+  };
+
+  const startAdd = () => {
     setEditingId(null);
+    setDraft(blank());
+    setIdentityInput("");
+    setDetection(null);
+    setErrors({});
+    setSelectedId(null);
+    setComposerOpen(true);
   };
 
   const startEdit = (account) => {
@@ -245,13 +278,19 @@ export default function AccountsPage() {
     setDetection(parseSocialIdentity(account.profileUrl || account.handle || "", { platform: account.platform }));
     setErrors({});
     setSelectedId(null);
+    setComposerOpen(true);
   };
 
   return (
     <PageShell dense>
       <PageHeader
-        title="Accounts"
-        description="Social accounts belong to the active profile. Pasting a URL identifies the account. It does not connect it."
+        title="Social Accounts"
+        description={`Social accounts and channels for ${brandName}. A pasted URL identifies the account. It does not connect it.`}
+        actions={(
+          <button type="button" className="rl-btn" onClick={startAdd}>
+            + Add social account
+          </button>
+        )}
       />
 
       {setupMessage ? (
@@ -259,27 +298,91 @@ export default function AccountsPage() {
           {setupMessage}
         </div>
       ) : null}
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-rl_border bg-rl_surface/40 p-5">
-        <h2 className="rl-label">{editingId ? "Edit account" : "Add account"}</h2>
-        <FormField id="acc-identity" label="Profile / channel URL or handle">
-          <input
-            id="acc-identity"
-            className={fieldClass}
-            placeholder="https://www.instagram.com/example or @example"
-            value={identityInput}
-            onChange={(event) => applyIdentity(event.target.value)}
-          />
-        </FormField>
-        {detection?.ok && detection.platform ? (
-          <p className="text-sm text-rl_text">
-            Detected: {detection.platform} {formatHandle(detection.handle)}
-            <span className="ml-2 text-xs text-rl_muted">Manual until you connect</span>
-          </p>
-        ) : null}
-        {detection && !detection.ok && identityInput.trim() ? (
-          <p className="text-sm text-rl_warning">{detection.error}</p>
-        ) : null}
-        <div className="grid gap-4 md:grid-cols-2">
+
+      {accounts.length === 0 ? (
+        <EmptyState
+          title="No social accounts added yet."
+          body="Add the Instagram, YouTube, or other channels this workspace publishes from. Pasting a URL never marks an account Connected."
+          action={(
+            <button type="button" className="rl-btn" onClick={startAdd}>
+              Add social account
+            </button>
+          )}
+        />
+      ) : (
+        <ul className="grid gap-4 md:grid-cols-2">
+          {accounts.map((account) => {
+            const usedBy = campaigns.filter((campaign) => (campaign.accountIds || []).includes(account.id)).length;
+            const view = displayConnectionState(account, { providerReadiness: readinessFor(account.platform) });
+            const health = HEALTH[view.code] || HEALTH.MANUAL_ONLY;
+            const caps = capabilityBits(account.platform);
+            return (
+              <li key={account.id}>
+                <article className="flex h-full flex-col rounded-2xl border border-rl_border bg-rl_surface p-5 shadow-rl_soft">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="flex items-center gap-2 text-sm font-semibold text-rl_text">
+                        <PlatformIcon platform={account.platform} size="sm" />
+                        {account.platform}
+                      </h2>
+                      <p className="mt-1 truncate text-base font-medium text-rl_text">
+                        {account.displayName || formatHandle(account.handle) || "Untitled account"}
+                      </p>
+                    </div>
+                    <StatusBadge value={view.code} label={health.label} tone={health.tone} />
+                  </div>
+                  {formatHandle(account.handle) ? (
+                    <p className="mt-2 text-sm text-rl_muted">{formatHandle(account.handle)}</p>
+                  ) : null}
+                  {account.profileUrl ? (
+                    <p className="mt-1 truncate text-sm text-rl_muted">{account.profileUrl}</p>
+                  ) : null}
+                  <dl className="mt-4 space-y-2 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-rl_muted">Connection</dt>
+                      <dd className="text-right text-rl_text">{health.label}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-rl_muted">Capabilities</dt>
+                      <dd className="text-right text-rl_text">{caps.length ? caps.join(" · ") : "—"}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-rl_muted">Campaigns</dt>
+                      <dd className="text-right text-rl_text">{usedBy}</dd>
+                    </div>
+                  </dl>
+                  <div className="mt-auto pt-4">
+                    <button
+                      type="button"
+                      className="rl-btn-ghost w-full"
+                      onClick={() => setSelectedId(account.id)}
+                    >
+                      Manage
+                    </button>
+                  </div>
+                </article>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <SideSheet
+        open={composerOpen}
+        onClose={closeComposer}
+        title={editingId ? "Edit social account" : "Add social account"}
+        subtitle="Identifier only. This never marks the account Connected."
+        width="md"
+        footer={(
+          <div className="flex justify-end gap-2">
+            <button type="button" className="rl-btn-ghost" onClick={closeComposer}>Cancel</button>
+            <button type="submit" form="social-account-composer" className="rl-btn">
+              {editingId ? "Save" : "Add social account"}
+            </button>
+          </div>
+        )}
+      >
+        <form id="social-account-composer" onSubmit={handleSubmit} className="space-y-4">
           <FormField id="acc-platform" label="Platform" error={errors.platform}>
             <select
               id="acc-platform"
@@ -287,8 +390,8 @@ export default function AccountsPage() {
               value={draft.platform}
               onChange={(e) => {
                 const platform = e.target.value;
-                setDraft({ ...draft, platform });
-                if (identityInput) applyIdentity(identityInput);
+                if (identityInput) applyIdentity(identityInput, platform, { preferPlatform: true });
+                else setDraft({ ...draft, platform });
               }}
             >
               {PLATFORMS.map((platform) => (
@@ -296,133 +399,44 @@ export default function AccountsPage() {
               ))}
             </select>
           </FormField>
-          <FormField id="acc-name" label="Display name" error={errors.displayName}>
-            <input id="acc-name" className={fieldClass} value={draft.displayName} onChange={(e) => setDraft({ ...draft, displayName: e.target.value })} />
-          </FormField>
-          <FormField id="acc-handle" label="Handle">
-            <input id="acc-handle" className={fieldClass} placeholder="@you" value={draft.handle} onChange={(e) => setDraft({ ...draft, handle: e.target.value })} />
-          </FormField>
-        </div>
-        <p className="rl-meta">
-          Connection: {displayConnectionState(draft, { providerReadiness: readinessFor(draft.platform) }).label}. {softCapabilityLine(draft.platform)} URL detection never marks an account Connected.
-        </p>
-        <div className="flex items-center justify-between rounded-xl border border-rl_border px-4 py-3">
-          <div>
-            <p className="text-sm font-medium text-rl_text">Active account</p>
-            <p className="rl-meta">Inactive accounts stay in the registry.</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setDraft({ ...draft, active: !draft.active })}
-            className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${
-              draft.active ? "bg-rl_ok text-white" : "border border-rl_border text-rl_muted"
-            }`}
-            aria-pressed={draft.active}
-          >
-            {draft.active ? "Active" : "Inactive"}
-          </button>
-        </div>
-        <details className="rounded-xl border border-rl_border px-4 py-3">
-          <summary className="cursor-pointer rl-label">
-            More details
-          </summary>
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <FormField id="acc-url" label="Profile URL" error={errors.profileUrl}>
+          {composerFields.identity ? (
+            <FormField id="acc-identity" label={identityHintForPlatform(draft.platform)}>
+              <input
+                id="acc-identity"
+                className={fieldClass}
+                placeholder={identityHintForPlatform(draft.platform)}
+                value={identityInput}
+                onChange={(event) => applyIdentity(event.target.value)}
+              />
+            </FormField>
+          ) : null}
+          {detection?.ok && detection.platform ? (
+            <p className="text-sm text-rl_text">
+              Detected: {detection.platform} {formatHandle(detection.handle)}
+              <span className="ml-2 text-xs text-rl_muted">Not connected</span>
+            </p>
+          ) : null}
+          {detection && !detection.ok && identityInput.trim() ? (
+            <p className="text-sm text-rl_warning">{detection.error}</p>
+          ) : null}
+          {composerFields.displayName ? (
+            <FormField id="acc-name" label="Display name" error={errors.displayName}>
+              <input id="acc-name" className={fieldClass} value={draft.displayName} onChange={(e) => setDraft({ ...draft, displayName: e.target.value })} />
+            </FormField>
+          ) : null}
+          {composerFields.handle ? (
+            <FormField id="acc-handle" label="Handle">
+              <input id="acc-handle" className={fieldClass} placeholder="@you" value={draft.handle} onChange={(e) => setDraft({ ...draft, handle: e.target.value })} />
+            </FormField>
+          ) : null}
+          {composerFields.profileUrl ? (
+            <FormField id="acc-url" label="Profile URL">
               <input id="acc-url" className={fieldClass} placeholder="https://" value={draft.profileUrl} onChange={(e) => setDraft({ ...draft, profileUrl: e.target.value })} />
             </FormField>
-            <FormField id="acc-purpose" label="Account purpose">
-              <input id="acc-purpose" className={fieldClass} value={draft.purpose} onChange={(e) => setDraft({ ...draft, purpose: e.target.value })} />
-            </FormField>
-            <FormField id="acc-followers" label="Follower count (manual)">
-              <input id="acc-followers" className={fieldClass} value={draft.followerCount} onChange={(e) => setDraft({ ...draft, followerCount: e.target.value })} />
-            </FormField>
-            <FormField id="acc-provider-id" label="Provider account ID">
-              <input id="acc-provider-id" className={fieldClass} value={draft.providerAccountId} onChange={(e) => setDraft({ ...draft, providerAccountId: e.target.value })} />
-            </FormField>
-            <FormField id="acc-permission" label="Publishing permission">
-              <select id="acc-permission" className={fieldClass} value={draft.publishPermission} onChange={(e) => setDraft({ ...draft, publishPermission: e.target.value })}>
-                {PUBLISH_PERMISSIONS.map((id) => (
-                  <option key={id} value={id}>{PUBLISH_PERMISSION_LABELS[id]}</option>
-                ))}
-              </select>
-            </FormField>
-            <FormField id="acc-role" label="Account role">
-              <input id="acc-role" className={fieldClass} value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value, campaignRole: e.target.value })} />
-            </FormField>
-            <FormField id="acc-content" label="Primary content type">
-              <input id="acc-content" className={fieldClass} value={draft.primaryContentType} onChange={(e) => setDraft({ ...draft, primaryContentType: e.target.value })} />
-            </FormField>
-            <FormField id="acc-cta" label="Default CTA">
-              <input id="acc-cta" className={fieldClass} value={draft.defaultCta} onChange={(e) => setDraft({ ...draft, defaultCta: e.target.value })} />
-            </FormField>
-            <FormField id="acc-metrics" label="Last metrics update">
-              <input id="acc-metrics" type="date" className={fieldClass} value={draft.lastMetricsUpdate} onChange={(e) => setDraft({ ...draft, lastMetricsUpdate: e.target.value })} />
-            </FormField>
-            <FormField id="acc-audience" label="Audience notes">
-              <textarea id="acc-audience" className={fieldClass} rows={2} value={draft.audienceNotes} onChange={(e) => setDraft({ ...draft, audienceNotes: e.target.value })} />
-            </FormField>
-            <FormField id="acc-strengths" label="Platform strengths">
-              <textarea id="acc-strengths" className={fieldClass} rows={2} value={draft.platformStrengths} onChange={(e) => setDraft({ ...draft, platformStrengths: e.target.value })} />
-            </FormField>
-            <FormField id="acc-weaknesses" label="Platform weaknesses">
-              <textarea id="acc-weaknesses" className={fieldClass} rows={2} value={draft.platformWeaknesses} onChange={(e) => setDraft({ ...draft, platformWeaknesses: e.target.value })} />
-            </FormField>
-            <FormField id="acc-posting" label="Posting notes">
-              <textarea id="acc-posting" className={fieldClass} rows={2} value={draft.postingNotes} onChange={(e) => setDraft({ ...draft, postingNotes: e.target.value })} />
-            </FormField>
-            <div className="md:col-span-2">
-              <FormField id="acc-notes" label="Notes">
-                <textarea id="acc-notes" className={fieldClass} rows={3} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
-              </FormField>
-            </div>
-          </div>
-        </details>
-        <button type="submit" className="rl-btn">
-          {editingId ? "Update account" : "Add account"}
-        </button>
-      </form>
-
-      {accounts.length === 0 ? (
-        <EmptyState title="No accounts yet" body="Add the real profiles you publish from." />
-      ) : (
-        <ul className="divide-y divide-rl_border border-y border-rl_border">
-          {accounts.map((account) => {
-            const usedBy = campaigns.filter((campaign) => (campaign.accountIds || []).includes(account.id)).length;
-            const view = displayConnectionState(account, { providerReadiness: readinessFor(account.platform) });
-            const health = HEALTH[view.code] || HEALTH.MANUAL_ONLY;
-            return (
-              <li key={account.id}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(account.id)}
-                  className="flex w-full flex-col gap-2 py-3.5 text-left transition-colors hover:bg-rl_surfaceSoft/30 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="flex items-center gap-2 text-sm font-semibold text-rl_text">
-                        <PlatformIcon platform={account.platform} size="sm" />
-                        {account.platform}
-                      </h2>
-                      <StatusBadge value={view.code} label={health.label} tone={health.tone} />
-                    </div>
-                    <p className="mt-1 text-sm text-rl_text">
-                      {formatHandle(account.handle) || account.displayName || "No handle"}
-                    </p>
-                    <p className="mt-0.5 text-sm text-rl_muted">
-                      {view.hint}
-                      {view.code === "CONNECTED" && (account.lastSuccessfulSync || account.lastSync)
-                        ? ` · Last synced ${formatStamp(account.lastSuccessfulSync || account.lastSync)}`
-                        : ""}
-                      {` · ${usedBy} campaign${usedBy === 1 ? "" : "s"}`}
-                    </p>
-                  </div>
-                  <span className="text-[11px] uppercase tracking-[0.12em] text-rl_muted">Manage</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+          ) : null}
+          {composerFields.note ? <p className="text-sm text-rl_muted">{composerFields.note}</p> : null}
+        </form>
+      </SideSheet>
 
       <AccountDetailSheet
         account={selected}
@@ -434,6 +448,7 @@ export default function AccountsPage() {
         onEdit={startEdit}
         onDelete={setPendingDelete}
         onToggleActive={(account) => updateAccount(account.id, { active: account.active === false })}
+        onSaveIdentity={(account, patch) => updateAccount(account.id, safeIdentityPatch(patch))}
         onConnect={runConnect}
         onReconnect={runConnect}
         onRefresh={runRefresh}
@@ -467,12 +482,53 @@ function AccountDetailSheet({
   onEdit,
   onDelete,
   onToggleActive,
+  onSaveIdentity,
   onConnect,
   onReconnect,
   onRefresh,
   onDisconnect,
 }) {
   if (!account) return null;
+  return (
+    <AccountDetailSheetBody
+      key={account.id}
+      account={account}
+      campaigns={campaigns}
+      content={content}
+      busy={busy}
+      providerReadiness={providerReadiness}
+      onClose={onClose}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      onToggleActive={onToggleActive}
+      onSaveIdentity={onSaveIdentity}
+      onConnect={onConnect}
+      onReconnect={onReconnect}
+      onRefresh={onRefresh}
+      onDisconnect={onDisconnect}
+    />
+  );
+}
+
+function AccountDetailSheetBody({
+  account,
+  campaigns,
+  content,
+  busy,
+  providerReadiness = "",
+  onClose,
+  onEdit,
+  onDelete,
+  onToggleActive,
+  onSaveIdentity,
+  onConnect,
+  onReconnect,
+  onRefresh,
+  onDisconnect,
+}) {
+  const [name, setName] = useState(account.displayName || "");
+  const [handle, setHandle] = useState(account.handle || "");
+  const [url, setUrl] = useState(account.profileUrl || "");
 
   const view = displayConnectionState(account, { providerReadiness });
   const health = healthFor(view.code);
@@ -517,7 +573,7 @@ function AccountDetailSheet({
               <Link to="/analytics" className="rl-btn-ghost" onClick={onClose}>Open analytics</Link>
             </>
           )}
-          <button type="button" className="rl-btn-ghost" onClick={() => onEdit(account)}>Edit</button>
+          <button type="button" className="rl-btn-ghost" onClick={() => onEdit(account)}>Edit identifiers</button>
           <button type="button" className="rl-btn-ghost" onClick={() => onToggleActive(account)}>
             {account.active === false ? "Activate" : "Deactivate"}
           </button>
@@ -528,30 +584,40 @@ function AccountDetailSheet({
       )}
     >
       <div className="space-y-5">
+        <form
+          className="space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSaveIdentity(account, { ...account, displayName: name, handle, profileUrl: url });
+          }}
+        >
+          <p className="rl-label">Identifiers</p>
+          <FormField id="manage-name" label="Display name">
+            <input id="manage-name" className={fieldClass} value={name} onChange={(e) => setName(e.target.value)} />
+          </FormField>
+          <FormField id="manage-handle" label="Handle">
+            <input id="manage-handle" className={fieldClass} value={handle} onChange={(e) => setHandle(e.target.value)} />
+          </FormField>
+          <FormField id="manage-url" label="Profile URL">
+            <input id="manage-url" className={fieldClass} value={url} onChange={(e) => setUrl(e.target.value)} />
+          </FormField>
+          <button type="submit" className="rl-btn-ghost">Save identifiers</button>
+          <p className="text-xs text-rl_muted">
+            Connection identity, provider account ID, tokens, and workspace ownership cannot be edited here.
+          </p>
+        </form>
+
         <div>
           <p className="rl-label">Connection</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge value={view.code} label={health.label} tone={health.tone} />
           </div>
           <p className="mt-2 text-sm text-rl_textSecondary">{view.hint}</p>
-          <p className="mt-2 text-sm text-rl_textSecondary">{softCapabilityLine(account.platform)}</p>
           <p className="mt-1 text-sm text-rl_muted">
             Last sync: {account.lastSuccessfulSync || account.lastSync ? formatStamp(account.lastSuccessfulSync || account.lastSync) : "—"}
-            {" · "}
-            Analytics: {account.analyticsFreshness ? formatStamp(account.analyticsFreshness) : "—"}
-          </p>
-          <p className="mt-1 text-sm text-rl_muted">
-            Publishing: {PUBLISH_PERMISSION_LABELS[account.publishPermission] || account.publishPermission}
-            {" · "}
-            Analytics: {view.code === "CONNECTED" ? "Available when provider permits" : "Manual / unavailable"}
           </p>
           {(account.lastErrorSummary || account.connectionError) && (
             <p className="mt-2 text-sm text-rl_danger">{account.lastErrorSummary || account.connectionError}</p>
-          )}
-          {needsReconnect && (
-            <p className="mt-2 text-sm text-rl_danger">
-              {account.platform} needs to be reconnected.
-            </p>
           )}
         </div>
 
@@ -570,17 +636,6 @@ function AccountDetailSheet({
           <p className="mt-2 text-sm text-rl_text">
             {usedCampaigns.length} campaign{usedCampaigns.length === 1 ? "" : "s"}
           </p>
-          {usedCampaigns.length > 0 && (
-            <ul className="mt-2 space-y-1 text-sm text-rl_textSecondary">
-              {usedCampaigns.slice(0, 5).map((campaign) => (
-                <li key={campaign.id}>
-                  <Link to={`/campaigns/${campaign.id}`} className="hover:underline" onClick={onClose}>
-                    {campaign.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
 
         <div>
@@ -602,17 +657,6 @@ function AccountDetailSheet({
             </ul>
           )}
         </div>
-
-        {account.profileUrl && (
-          <a
-            href={account.profileUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-block text-xs text-rl_muted underline underline-offset-4"
-          >
-            Open profile
-          </a>
-        )}
       </div>
     </SideSheet>
   );
