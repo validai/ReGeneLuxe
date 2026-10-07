@@ -20,16 +20,6 @@ export const authConfig = {
     maxAge: 30 * 24 * 60 * 60,
     updateAge: 24 * 60 * 60,
   },
-  cookies: {
-    sessionToken: {
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: String(process.env.AUTH_URL || process.env.NEXTAUTH_URL || "").startsWith("https:"),
-      },
-    },
-  },
   providers: [
     Google({
       authorization: {

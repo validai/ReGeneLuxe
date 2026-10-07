@@ -56,6 +56,35 @@ export function withCanonicalHostHeaders(headers, origin = getCanonicalOrigin())
   return next;
 }
 
+export function cookieHeaderHasPkce(cookieHeader) {
+  return /(?:^|;\s*)(?:__Secure-)?authjs\.pkce\.code_verifier=/.test(String(cookieHeader || ""));
+}
+
+export function mergeAuthCookieHeader(headerCookie, jarCookie) {
+  const header = String(headerCookie || "");
+  const jar = String(jarCookie || "");
+  if (cookieHeaderHasPkce(header)) return header;
+  if (jar) return jar;
+  return header;
+}
+
+/**
+ * Rebuild the Auth.js request on the canonical origin without dropping PKCE/state cookies.
+ * Next.js can report `localhost` even when the browser is on `127.0.0.1`.
+ */
+export function toCanonicalAuthRequest(req, extraCookieHeader = "") {
+  const url = canonicalRequestUrl(req.url);
+  const headers = withCanonicalHostHeaders(req.headers);
+  const merged = mergeAuthCookieHeader(headers.get("cookie"), extraCookieHeader);
+  if (merged) headers.set("cookie", merged);
+  const init = { method: req.method, headers };
+  if (req.method !== "GET" && req.method !== "HEAD" && req.body) {
+    init.body = req.body;
+    init.duplex = "half";
+  }
+  return new Request(url, init);
+}
+
 export function googleCallbackUrl() {
   return `${getCanonicalOrigin()}/api/auth/callback/google`;
 }

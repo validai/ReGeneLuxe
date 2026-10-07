@@ -6,10 +6,16 @@ import { findOperatorByGoogleSub } from "./server/db/operatorRepository.js";
 import { isEmailAllowed } from "./server/auth/allowlist.js";
 
 function logAuthError(error: unknown) {
-  const err = error as { type?: string; name?: string; cause?: { err?: { error?: string }; error?: string } };
+  const err = error as {
+    type?: string;
+    name?: string;
+    message?: string;
+    cause?: { message?: string; err?: { message?: string; error?: string }; error?: string };
+  };
   const name = err?.type || err?.name || "AuthError";
-  const code = err?.cause?.err?.error || err?.cause?.error;
-  console.error("[auth]", name, code || "");
+  const message = String(err?.message || "").replace(/\s*Read more at \S+/g, "").trim();
+  const cause = err?.cause?.err?.message || err?.cause?.message || err?.cause?.err?.error || err?.cause?.error || "";
+  console.error("[auth]", name, message, cause);
 }
 
 export const authOptions = {

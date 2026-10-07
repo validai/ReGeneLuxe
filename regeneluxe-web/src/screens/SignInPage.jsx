@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import BrandTitle from "../components/BrandTitle.jsx";
-import { signInWithGoogle } from "../../app/actions/auth";
 
 function GoogleMark() {
   return (
@@ -15,6 +15,15 @@ function GoogleMark() {
 }
 
 export default function SignInPage({ errorMessage = "", signedOut = false }) {
+  const [csrfToken, setCsrfToken] = useState("");
+
+  useEffect(() => {
+    fetch("/api/auth/csrf", { credentials: "same-origin" })
+      .then((response) => response.json())
+      .then((data) => setCsrfToken(String(data?.csrfToken || "")))
+      .catch(() => setCsrfToken(""));
+  }, []);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-rl_bg px-4 text-rl_text">
       <div className="w-full max-w-md space-y-8 text-center">
@@ -57,10 +66,13 @@ export default function SignInPage({ errorMessage = "", signedOut = false }) {
               {errorMessage}
             </p>
           ) : null}
-          <form action={signInWithGoogle}>
+          <form action="/api/auth/signin/google" method="post">
+            <input type="hidden" name="csrfToken" value={csrfToken} />
+            <input type="hidden" name="callbackUrl" value="/" />
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-3 rounded-lg border border-rl_border bg-white px-4 py-3 text-sm font-semibold text-[#1f1f1f] shadow-sm transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/50"
+              disabled={!csrfToken}
+              className="flex w-full items-center justify-center gap-3 rounded-lg border border-rl_border bg-white px-4 py-3 text-sm font-semibold text-[#1f1f1f] shadow-sm transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/50 disabled:cursor-wait disabled:opacity-70"
             >
               <GoogleMark />
               Continue with Google

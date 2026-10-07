@@ -98,4 +98,15 @@ describe("account Google scopes stay separate from Gmail", () => {
     expect(config).not.toContain("gmail.readonly");
     expect(config).not.toContain("/api/oauth/gmail/callback");
   });
+
+  it("starts Google login through the Auth.js HTTP route so PKCE cookies are set on the 302", () => {
+    const signInPage = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../../src/screens/SignInPage.jsx"),
+      "utf8",
+    );
+    expect(signInPage).toContain('action="/api/auth/signin/google"');
+    expect(signInPage).toContain('method="post"');
+    expect(signInPage).toContain('name="csrfToken"');
+    expect(signInPage).not.toContain("signInWithGoogle");
+  });
 });

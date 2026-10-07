@@ -1,12 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   canonicalRequestUrl,
+  cookieHeaderHasPkce,
   getCanonicalOrigin,
   googleCallbackUrl,
   gmailCallbackUrl,
   youtubeCallbackUrl,
   isLoopbackHostname,
+  mergeAuthCookieHeader,
   shouldRedirectLocalhostAlias,
+  toCanonicalAuthRequest,
   toCanonicalPath,
   withCanonicalHostHeaders,
 } from "./origin.js";
@@ -78,5 +81,28 @@ describe("canonical auth origin", () => {
   it("redirects Host localhost but not 127.0.0.1", () => {
     expect(shouldRedirectLocalhostAlias("localhost:5174")).toBe(true);
     expect(shouldRedirectLocalhostAlias("127.0.0.1:5174")).toBe(false);
+  });
+
+  it("preserves PKCE cookies when canonicalizing a localhost Auth.js callback", () => {
+    process.env.AUTH_URL = "http://127.0.0.1:5174";
+    const pkce = "authjs.pkce.code_verifier=sealed-value";
+    expect(cookieHeaderHasPkce(pkce)).toBe(true);
+    expect(mergeAuthCookieHeader("", pkce)).toBe(pkce);
+    expect(mergeAuthCookieHeader("theme=dark", pkce)).toBe(pkce);
+
+    const incoming = new Request("http://localhost:5174/api/auth/callback/google?code=abc", {
+      headers: { cookie: pkce, host: "localhost:5174" },
+    });
+    const canonical = toCanonicalAuthRequest(incoming);
+    expect(canonical.url).toBe("http://127.0.0.1:5174/api/auth/callback/google?code=abc");
+    expect(canonical.headers.get("cookie")).toBe(pkce);
+    expect(canonical.headers.get("host")).toBe("127.0.0.1:5174");
+  });
+
+  it("copies PKCE cookies from the Next.js cookie jar when the Request header is empty", () => {
+    process.env.AUTH_URL = "http://127.0.0.1:5174";
+    const incoming = new Request("http://localhost:5174/api/auth/callback/google?code=abc");
+    const canonical = toCanonicalAuthRequest(incoming, "authjs.pkce.code_verifier=from-jar");
+    expect(canonical.headers.get("cookie")).toBe("authjs.pkce.code_verifier=from-jar");
   });
 });
