@@ -34,6 +34,13 @@ export function getDurableBootError() {
   return bootError;
 }
 
+/** Test helper — clears cached health so fetch-failure cases start unknown. */
+export function resetDurableHealthForTests() {
+  lastDbHealth = null;
+  lastSync = null;
+  bootError = null;
+}
+
 function collectLocalStorageDump() {
   if (!hasStorage()) return {};
   const dump = {};
@@ -150,28 +157,45 @@ export function persistCollectionToSqlite() {
 
 export async function fetchDbHealth() {
   try {
-    const response = await fetch("/api/db/health", { cache: "no-store" });
+    const response = await fetch("/api/db/health", { cache: "no-store", credentials: "same-origin" });
     const body = await response.json().catch(() => null);
-    if (!response.ok || !body || typeof body !== "object") {
+    if (!body || typeof body !== "object" || !body.sync || typeof body.sync !== "object") {
       throw new Error(body?.local?.error || body?.error || "Database health unavailable");
     }
-    lastDbHealth = body;
-    if (body.sync) lastSync = body.sync;
+    lastDbHealth = {
+      ...body,
+      fetchFailed: body.fetchFailed === true || !response.ok,
+    };
+    lastSync = body.sync;
     return lastDbHealth;
   } catch (error) {
-    const previous = lastDbHealth?.sync || lastSync || {};
-    const configured = Boolean(previous.cloudConfigured);
+    const message = error instanceof Error ? error.message : String(error);
+    const previousHealth = lastDbHealth && typeof lastDbHealth === "object" ? lastDbHealth : {};
+    const previous = previousHealth.sync || lastSync || {};
+    const configuredKnown = previous.cloudConfigured === true || previous.cloudConfigured === false;
     lastDbHealth = {
       ok: false,
-      local: { healthy: false, error: error instanceof Error ? error.message : String(error) },
-      sync: {
-        ...previous,
-        cloudConfigured: configured,
-        cloudReachable: configured ? false : Boolean(previous.cloudReachable),
-        state: configured ? "OFFLINE" : (previous.state || "ERROR"),
-        pendingOutbox: previous.pendingOutbox ?? 0,
-        error: error instanceof Error ? error.message : String(error),
-      },
+      fetchFailed: true,
+      error: message,
+      local: configuredKnown
+        ? { ...previousHealth.local, error: message }
+        : { healthy: null, error: message },
+      sync: configuredKnown
+        ? {
+          ...previous,
+          cloudReachable: previous.cloudConfigured ? false : previous.cloudReachable,
+          state: previous.cloudConfigured ? "OFFLINE" : (previous.state || "LOCAL_ONLY"),
+          error: message,
+        }
+        : {
+          cloudConfigured: null,
+          cloudReachable: null,
+          state: "UNKNOWN",
+          lastSyncAt: null,
+          pendingOutbox: null,
+          pendingJobs: null,
+          error: message,
+        },
     };
     lastSync = lastDbHealth.sync;
     return lastDbHealth;

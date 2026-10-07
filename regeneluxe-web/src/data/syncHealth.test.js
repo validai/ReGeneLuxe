@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { displayCloudDatabaseStatus, displayCloudSyncStatus } from "./syncHealth.js";
+import {
+  displayCloudDatabaseStatus,
+  displayCloudSyncStatus,
+  formatDataSyncDisplay,
+  formatSyncLine,
+  mergeHealthWithSyncStatus,
+} from "./syncHealth.js";
 
 describe("cloud sync health labels", () => {
   it("does not call configured Turso 'Offline (not configured)'", () => {
@@ -52,5 +58,77 @@ describe("cloud sync health labels", () => {
     };
     expect(displayCloudDatabaseStatus(sync)).toBe("Not configured");
     expect(displayCloudSyncStatus(sync)).toBe("Local only");
+  });
+});
+
+describe("formatDataSyncDisplay", () => {
+  it("does not show Healthy or a bare dash while health is still loading", () => {
+    const rows = formatDataSyncDisplay(null);
+    expect(formatSyncLine(rows.local)).toBe("— (Waiting for database health)");
+    expect(formatSyncLine(rows.cloud)).toBe("— (Waiting for database health)");
+    expect(formatSyncLine(rows.sync)).toBe("— (Waiting for database health)");
+    expect(formatSyncLine(rows.pending)).toBe("— (Waiting for database health)");
+    expect(formatSyncLine(rows.local)).not.toBe("Healthy");
+  });
+
+  it("keeps authoritative Connected/Synced instead of a dash", () => {
+    const rows = formatDataSyncDisplay({
+      ok: true,
+      local: { healthy: true },
+      sync: {
+        cloudConfigured: true,
+        cloudReachable: true,
+        state: "SYNCED",
+        pendingOutbox: 0,
+        lastSyncAt: "2026-09-19T21:06:24.112Z",
+        localHealthy: true,
+      },
+    });
+    expect(formatSyncLine(rows.local)).toBe("Healthy");
+    expect(formatSyncLine(rows.cloud)).toBe("Connected");
+    expect(formatSyncLine(rows.sync)).toBe("Synced");
+    expect(formatSyncLine(rows.pending)).toBe("0");
+    expect(formatSyncLine(rows.cloud)).not.toContain("—");
+  });
+
+  it("does not call a health fetch failure Not configured", () => {
+    const rows = formatDataSyncDisplay({
+      ok: false,
+      fetchFailed: true,
+      error: "Failed to fetch",
+      local: { healthy: null, error: "Failed to fetch" },
+      sync: { cloudConfigured: null, state: "UNKNOWN", error: "Failed to fetch", pendingOutbox: null },
+    });
+    expect(formatSyncLine(rows.cloud)).toMatch(/^— \(/);
+    expect(formatSyncLine(rows.cloud)).toMatch(/Failed to fetch/);
+    expect(formatSyncLine(rows.cloud)).not.toBe("Not configured");
+    expect(formatSyncLine(rows.local)).not.toBe("Healthy");
+  });
+
+  it("applies Sync now status onto existing health so the screen can refresh", () => {
+    const merged = mergeHealthWithSyncStatus(
+      {
+        ok: true,
+        local: { healthy: true },
+        sync: {
+          cloudConfigured: true,
+          cloudReachable: true,
+          state: "PENDING",
+          pendingOutbox: 2,
+          lastSyncAt: "2026-09-19T21:06:24.112Z",
+        },
+      },
+      {
+        cloudConfigured: true,
+        cloudReachable: true,
+        state: "SYNCED",
+        pendingOutbox: 0,
+        lastSyncAt: "2026-10-07T16:40:20.411Z",
+      },
+    );
+    const rows = formatDataSyncDisplay(merged);
+    expect(formatSyncLine(rows.sync)).toBe("Synced");
+    expect(formatSyncLine(rows.pending)).toBe("0");
+    expect(merged.sync.lastSyncAt).toBe("2026-10-07T16:40:20.411Z");
   });
 });

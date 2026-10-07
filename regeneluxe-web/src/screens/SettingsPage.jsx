@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { Link } from "@/nav";
 import PageShell from "../components/app/PageShell.jsx";
@@ -12,11 +14,11 @@ import { AI_MODES, AI_MODE_LABELS } from "../data/domain.js";
 import { updateSettings, resetAllLocalData } from "../data/settingsRepository.js";
 import { downloadBackupFile, importBackup, validateBackup } from "../data/backupService.js";
 import { getRuntimeStatus, getRuntimeHealth, saveRuntimeSecret } from "../data/runtimeClient.js";
-import { fetchDbHealth } from "../data/durableBootstrap.js";
+import { fetchDbHealth, getLastDbHealth } from "../data/durableBootstrap.js";
 import { useProfileSession } from "../components/app/ProfileSession.jsx";
 import { displayConnectionState, displayProfileConnection, formatHandle } from "../data/connectionStatus.js";
 import { displayAccountEmail } from "../data/googleIdentity.js";
-import { displayCloudDatabaseStatus, displayCloudSyncStatus } from "../data/syncHealth.js";
+import { formatDataSyncDisplay, formatSyncLine, mergeHealthWithSyncStatus } from "../data/syncHealth.js";
 import StatusBadge from "../components/app/StatusBadge.jsx";
 import { PlatformIcon } from "../components/app/Icon.jsx";
 
@@ -38,7 +40,10 @@ function explainRuntime(runtime) {
   return "Local runtime is running. AI is not configured yet.";
 }
 
-export default function SettingsPage() {
+/**
+ * @param {{ initialDbHealth?: object | null }} [props]
+ */
+export default function SettingsPage({ initialDbHealth = null } = {}) {
   const { settings, campaigns, accounts } = useAppData();
   const { operator, activeProfile, connections, refresh } = useProfileSession();
   const [providers, setProviders] = useState([]);
@@ -52,7 +57,7 @@ export default function SettingsPage() {
   const [apiKey, setApiKey] = useState("");
   const [runtimeNote, setRuntimeNote] = useState("");
 
-  const [dbHealth, setDbHealth] = useState(null);
+  const [dbHealth, setDbHealth] = useState(() => initialDbHealth || getLastDbHealth());
   const [connectionNote, setConnectionNote] = useState(() => {
     if (typeof window === "undefined") return "";
     const params = new URLSearchParams(window.location.search);
@@ -70,6 +75,7 @@ export default function SettingsPage() {
   const gmailView = displayProfileConnection(gmailConnection);
   const youtubeView = displayProfileConnection(youtubeConnection);
   const operatorEmail = displayAccountEmail(operator);
+  const dataSync = formatDataSyncDisplay(dbHealth);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -85,14 +91,33 @@ export default function SettingsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getRuntimeStatus(), getRuntimeHealth(), fetchDbHealth(), fetch("/api/connections").then((res) => res.json()).catch(() => ({}))])
-      .then(([status, nextHealth, nextDb, connectionBody]) => {
+    fetchDbHealth()
+      .then((nextDb) => {
+        if (!cancelled) setDbHealth(nextDb);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "Health request failed";
+        setDbHealth({
+          ok: false,
+          fetchFailed: true,
+          error: message,
+          local: { healthy: null, error: message },
+          sync: { cloudConfigured: null, state: "UNKNOWN", error: message, pendingOutbox: null },
+        });
+      });
+    Promise.all([
+      getRuntimeStatus(),
+      getRuntimeHealth(),
+      fetch("/api/connections", { credentials: "same-origin" }).then((res) => res.json()).catch(() => ({})),
+    ])
+      .then(([status, nextHealth, connectionBody]) => {
         if (cancelled) return;
         setRuntime(status);
         setHealth(nextHealth);
-        setDbHealth(nextDb);
         if (Array.isArray(connectionBody?.providers)) setProviders(connectionBody.providers);
       })
+      .catch(() => {})
       .finally(() => {
         if (!cancelled) setRuntimeLoading(false);
       });
@@ -573,37 +598,34 @@ export default function SettingsPage() {
               : youtubeView.label}
           </li>
           <li>
-            Local database ·{" "}
-            {dbHealth?.ok === false || dbHealth?.local?.healthy === false
-              ? `Error${dbHealth?.local?.error || dbHealth?.error ? ` — ${dbHealth.local?.error || dbHealth.error}` : ""}`
-              : "Healthy"}
+            Local database · {formatSyncLine(dataSync.local)}
           </li>
           <li>
-            Cloud database · {dbHealth ? displayCloudDatabaseStatus(dbHealth.sync) : "—"}
+            Cloud database · {formatSyncLine(dataSync.cloud)}
           </li>
           <li>
-            Cloud sync · {dbHealth ? displayCloudSyncStatus(dbHealth.sync) : "—"}
+            Cloud sync · {formatSyncLine(dataSync.sync)}
           </li>
           <li>
-            Last sync ·{" "}
-            {dbHealth?.sync?.lastSyncAt
-              ? new Date(dbHealth.sync.lastSyncAt).toLocaleString()
-              : "—"}
+            Last sync · {formatSyncLine(dataSync.lastSync)}
           </li>
           <li>
-            Pending operations · {dbHealth?.sync?.pendingOutbox ?? 0}
+            Pending operations · {formatSyncLine(dataSync.pending)}
           </li>
         </ul>
         <button
           type="button"
           className="rl-btn-ghost"
           onClick={async () => {
-            await fetch("/api/sync", {
+            const response = await fetch("/api/sync", {
               method: "POST",
+              credentials: "same-origin",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ pull: true, push: true }),
-            }).catch(() => {});
-            setDbHealth(await fetchDbHealth());
+            }).catch(() => null);
+            const body = await response?.json?.().catch(() => null);
+            const health = await fetchDbHealth();
+            setDbHealth(mergeHealthWithSyncStatus(health, body?.status));
           }}
         >
           Sync now
