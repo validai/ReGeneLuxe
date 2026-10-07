@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Space_Grotesk } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import "../src/index.css";
+
+const THEME_BOOT_SCRIPT = `(function(){try{var p=localStorage.getItem("regeneluxe.theme");var r=p==="light"?"light":p==="system"?(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):(p==="dark"?"dark":null);if(!r)return;document.documentElement.setAttribute("data-theme",r);document.documentElement.style.colorScheme=r;}catch(e){}})();`;
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -32,14 +35,20 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieTheme = (await cookies()).get("regeneluxe-theme")?.value;
+  const theme = cookieTheme === "light" ? "light" : "dark";
   return (
     <html
       lang="en"
-      data-theme="dark"
+      data-theme={theme}
+      style={{ colorScheme: theme }}
       suppressHydrationWarning
       className={`${GeistSans.variable} ${spaceGrotesk.variable}`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
       <body className="min-h-screen bg-rl_bg font-sans text-rl_text antialiased">
         {children}
       </body>

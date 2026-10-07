@@ -16,12 +16,12 @@
   --bg-app: 9 11 16;                 /* #090B10 */
   --bg-surface: 20 24 33;            /* #141821 */
   --bg-surface-raised: 28 34 48;     /* derived graphite */
-  --bg-hover: 34 42 58;
-  --bg-selected: 38 46 68;
+  --bg-hover: 26 31 42;             /* #1A1F2A */
+  --bg-selected: 36 34 62;
 
-  --border-subtle: 30 38 54;
-  --border-default: 42 52 72;
-  --border-strong: 58 70 96;
+  --border-subtle: 34 41 56;         /* #222938 */
+  --border-default: 34 41 56;
+  --border-strong: 48 58 78;
 
   --text-primary: 247 249 252;       /* #F7F9FC */
   --text-secondary: 167 176 192;     /* #A7B0C0 */

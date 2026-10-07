@@ -17,6 +17,9 @@ export function getSettings() {
 
 export function updateSettings(patch) {
   const next = emptySettings({ ...getSettings(), ...patch, schemaVersion: SCHEMA_VERSION });
+  if (Object.prototype.hasOwnProperty.call(patch, "theme")) {
+    applyTheme(next.theme, { persist: true });
+  }
   return bridgeSaveSettings(STORAGE_KEYS.settings, next);
 }
 
@@ -25,13 +28,25 @@ export function replaceSettings(settings) {
   return bridgeSaveSettings(STORAGE_KEYS.settings, next);
 }
 
-export function applyTheme(theme = "dark") {
+const THEME_STORAGE_KEY = "regeneluxe.theme";
+const THEME_COOKIE = "regeneluxe-theme";
+
+export function applyTheme(theme = "dark", { persist = false } = {}) {
   if (typeof document === "undefined") return "dark";
-  const resolved = theme === "system"
+  const preference = theme === "system" || theme === "light" ? theme : "dark";
+  const resolved = preference === "system"
     ? (window.matchMedia?.("(prefers-color-scheme: light)")?.matches ? "light" : "dark")
-    : (theme === "light" ? "light" : "dark");
+    : preference;
   document.documentElement.dataset.theme = resolved;
   document.documentElement.style.colorScheme = resolved;
+  if (persist) {
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, preference);
+    } catch {
+      /* ignore quota / private mode */
+    }
+    document.cookie = `${THEME_COOKIE}=${resolved}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  }
   return resolved;
 }
 

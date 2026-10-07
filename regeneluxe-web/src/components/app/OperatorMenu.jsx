@@ -8,7 +8,7 @@ import { signOutOperator } from "../../../app/actions/auth";
 import { displayAccountEmail } from "../../data/googleIdentity.js";
 
 export default function OperatorMenu({ collapsed = false }) {
-  const { operator, activeProfile } = useProfileSession();
+  const { operator } = useProfileSession();
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
 
@@ -31,9 +31,8 @@ export default function OperatorMenu({ collapsed = false }) {
   if (!operator) return null;
 
   const googleEmail = displayAccountEmail(operator);
-  const brandName = activeProfile?.displayName || "";
-  const initial = (brandName || googleEmail || "?").slice(0, 1).toUpperCase();
-  const avatarUrl = activeProfile?.avatarUrl || operator.avatarUrl;
+  const googleName = operator.name || operator.displayName || "";
+  const initial = (googleEmail || googleName || "?").slice(0, 1).toUpperCase();
 
   return (
     <div ref={rootRef} className="relative">
@@ -48,13 +47,9 @@ export default function OperatorMenu({ collapsed = false }) {
         aria-label={googleEmail ? `Signed in as ${googleEmail}` : "Signed in with Google"}
         title={googleEmail}
       >
-        {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
-        ) : (
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-rl_surfaceActive text-xs font-semibold text-rl_text">
-            {initial}
-          </span>
-        )}
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-rl_surfaceActive text-xs font-semibold text-rl_text">
+          {initial}
+        </span>
         {!collapsed && (
           <span className="min-w-0">
             <span className="block truncate font-medium text-rl_text">{googleEmail}</span>

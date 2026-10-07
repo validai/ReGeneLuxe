@@ -49,7 +49,7 @@ describe("Social Accounts page", () => {
     expect(screen.getAllByRole("button", { name: /add social account/i }).length).toBeGreaterThan(0);
   });
 
-  it("renders one card per social account", () => {
+  it("renders one card per social account", async () => {
     createAccount({
       platform: "Instagram",
       displayName: "Coast IG",
@@ -64,7 +64,7 @@ describe("Social Accounts page", () => {
       connectionState: "NOT_CONNECTED",
     });
     renderAccounts();
-    expect(screen.getByText("Coast IG")).toBeInTheDocument();
+    expect(await screen.findByText("Coast IG")).toBeInTheDocument();
     expect(screen.getByText("Coast YT")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /^manage$/i })).toHaveLength(2);
     expect(screen.queryByRole("heading", { name: /add account/i })).not.toBeInTheDocument();
@@ -85,7 +85,7 @@ describe("Social Accounts page", () => {
     expect(screen.getByLabelText(/youtube channel url/i)).toBeInTheDocument();
   });
 
-  it("lets Manage edit identifiers without exposing provider identity fields", () => {
+  it("lets Manage edit identifiers without exposing provider identity fields", async () => {
     createAccount({
       id: "acc_ig",
       platform: "Instagram",
@@ -94,7 +94,7 @@ describe("Social Accounts page", () => {
       connectionState: "SETUP_REQUIRED",
     });
     renderAccounts();
-    fireEvent.click(screen.getByRole("button", { name: /^manage$/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /^manage$/i }));
     expect(screen.getByLabelText(/display name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^handle$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/profile url/i)).toBeInTheDocument();

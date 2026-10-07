@@ -40,14 +40,14 @@ export default function SocialAccountPicker({
       ? "All social accounts"
       : "No social accounts";
 
+  if (collapsed) return null;
+
   if (!accounts.length) {
     return (
       <div className={collapsed ? "px-2 pb-3" : "px-3 pb-3"}>
         <Link
           href="/accounts"
-          className={`flex items-center rounded-lg border border-dashed border-rl_border text-rl_muted transition-colors hover:border-rl_accent/40 hover:text-rl_text ${
-            collapsed ? "h-10 w-10 justify-center" : "gap-2 px-2 py-2 text-sm"
-          }`}
+          className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-rl_muted transition-colors hover:bg-rl_surfaceHover hover:text-rl_text"
           title="Add social account"
           aria-label="Add social account"
         >
@@ -67,9 +67,7 @@ export default function SocialAccountPicker({
       )}
       <button
         type="button"
-        className={`flex items-center rounded-lg border border-rl_border bg-rl_bg/40 text-left transition-colors hover:border-rl_accent/40 ${
-          collapsed ? "h-10 w-10 justify-center" : "w-full gap-2 px-2 py-2"
-        }`}
+        className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-rl_surfaceHover"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="listbox"

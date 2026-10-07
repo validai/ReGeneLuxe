@@ -76,6 +76,7 @@ export default function AccountsPage() {
   const { accounts, campaigns, content } = useAppData();
   const { activeProfile } = useProfileSession();
   const toast = useToast();
+  const [hydrated, setHydrated] = useState(false);
   const [draft, setDraft] = useState(blank());
   const [composerOpen, setComposerOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -118,6 +119,7 @@ export default function AccountsPage() {
   };
 
   useEffect(() => {
+    setHydrated(true);
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const connect = params.get("connect");
@@ -287,7 +289,7 @@ export default function AccountsPage() {
         title="Social Accounts"
         description={`Social accounts and channels for ${brandName}. A pasted URL identifies the account. It does not connect it.`}
         actions={(
-          <button type="button" className="rl-btn" onClick={startAdd}>
+          <button type="button" className="rl-btn whitespace-nowrap" onClick={startAdd}>
             + Add social account
           </button>
         )}
@@ -299,7 +301,7 @@ export default function AccountsPage() {
         </div>
       ) : null}
 
-      {accounts.length === 0 ? (
+      {(hydrated ? accounts : []).length === 0 ? (
         <EmptyState
           title="No social accounts added yet."
           body="Add the Instagram, YouTube, or other channels this workspace publishes from. Pasting a URL never marks an account Connected."
@@ -310,8 +312,8 @@ export default function AccountsPage() {
           )}
         />
       ) : (
-        <ul className="grid gap-4 md:grid-cols-2">
-          {accounts.map((account) => {
+        <ul className="grid gap-4">
+          {(hydrated ? accounts : []).map((account) => {
             const usedBy = campaigns.filter((campaign) => (campaign.accountIds || []).includes(account.id)).length;
             const view = displayConnectionState(account, { providerReadiness: readinessFor(account.platform) });
             const health = HEALTH[view.code] || HEALTH.MANUAL_ONLY;

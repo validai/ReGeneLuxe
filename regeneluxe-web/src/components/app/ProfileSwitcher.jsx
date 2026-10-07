@@ -42,7 +42,7 @@ export default function ProfileSwitcher({ collapsed = false }) {
         className={`flex items-center rounded-lg text-left transition-colors hover:bg-rl_surfaceHover ${
           collapsed
             ? "h-10 w-10 justify-center"
-            : "w-full gap-2 border border-rl_border bg-rl_bg/40 px-2 py-2 hover:border-rl_accent/40"
+            : "w-full gap-2.5 px-2 py-1.5"
         }`}
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
@@ -50,13 +50,13 @@ export default function ProfileSwitcher({ collapsed = false }) {
         aria-label={activeProfile.displayName}
         title={activeProfile.displayName}
       >
-        {activeProfile.avatarUrl ? (
-          <img src={activeProfile.avatarUrl} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
-        ) : (
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rl_surfaceActive text-xs font-semibold">
-            {initial}
-          </span>
-        )}
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-rl_surfaceActive">
+          {activeProfile.avatarUrl ? (
+            <img src={activeProfile.avatarUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-xs font-semibold">{initial}</span>
+          )}
+        </span>
         {!collapsed && (
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium text-rl_text">{activeProfile.displayName}</span>

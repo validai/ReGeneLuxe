@@ -45,26 +45,33 @@ describe("workspace shell sidebar states", () => {
   it("renders expanded desktop labels and a collapse control", () => {
     renderShell({ collapsed: false });
     expect(screen.getByRole("button", { name: /collapse sidebar/i })).toBeInTheDocument();
+    expect(document.querySelector('[data-brand="regeneluxe"]')).toBeTruthy();
+    expect(screen.getAllByText("ReGeneLuxe").length).toBeGreaterThan(0);
+    expect(screen.queryByText("R")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^dashboard$/i })).toHaveTextContent("Dashboard");
     expect(screen.getByText("DJ Coast")).toBeInTheDocument();
     expect(screen.getByText("djcoast239@gmail.com")).toBeInTheDocument();
     expect(screen.getByText(/add social account/i)).toBeInTheDocument();
   });
 
-  it("renders compact icons without clipped card labels", () => {
+  it("renders compact icons without clipped card labels", async () => {
     renderShell({ collapsed: true });
-    expect(screen.getByRole("button", { name: /expand sidebar/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /expand sidebar/i })).toBeInTheDocument();
     expect(screen.queryByText("Collapse")).not.toBeInTheDocument();
     expect(screen.queryByText("Signed in with Google")).not.toBeInTheDocument();
     const compact = document.querySelector('[data-sidebar-state="compact"]');
     expect(compact).toBeTruthy();
-    expect(compact.className).toMatch(/overflow-x-hidden/);
+    expect(compact.querySelector(".overflow-x-hidden")).toBeTruthy();
+    expect(compact.className).toMatch(/shrink-0/);
+    expect(compact.querySelector('[data-brand="regeneluxe"]')).toBeTruthy();
+    expect(compact.textContent).not.toContain("ReGeneLuxe");
+    expect(screen.queryByText(/^R$/)).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
-  it("expands immediately from the compact control and persists the preference", () => {
+  it("expands immediately from the compact control and persists the preference", async () => {
     renderShell({ collapsed: true });
-    fireEvent.click(screen.getByRole("button", { name: /expand sidebar/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /expand sidebar/i }));
     expect(screen.getByRole("button", { name: /collapse sidebar/i })).toBeInTheDocument();
     expect(getSidebarCollapsed()).toBe(false);
     expect(localStorage.getItem("regeneluxe.sidebarCollapsed")).toBe("0");
@@ -79,7 +86,7 @@ describe("workspace shell sidebar states", () => {
     expect(document.querySelector('[data-sidebar-state="drawer"]')).toBeFalsy();
   });
 
-  it("shows a social-channel picker, not a workspace switcher", () => {
+  it("shows a social-channel picker, not a workspace switcher", async () => {
     createAccount({
       platform: "Instagram",
       displayName: "Coast IG",
@@ -87,7 +94,7 @@ describe("workspace shell sidebar states", () => {
       connectionState: "MANUAL_ONLY",
     });
     renderShell({ collapsed: false });
-    expect(screen.getByLabelText(/social channel filter/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/social channel filter/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/switch profile/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/switch brand/i)).not.toBeInTheDocument();
   });
