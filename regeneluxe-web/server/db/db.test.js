@@ -147,6 +147,10 @@ describe("server/db", () => {
 
     const second = await migrateLocalStorageDump(dump);
     expect(second.skipped).toBe(true);
+
+    const settings = await list("settings");
+    expect(settings).toHaveLength(1);
+    expect(settings[0]).toMatchObject({ id: "app", theme: "dark" });
   });
 
   it("metric snapshot indexes via insert", async () => {

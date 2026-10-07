@@ -10,6 +10,14 @@ import {
 } from "./repoBridge.js";
 import { resetOperationalStore, setOperationalPrimary } from "./operationalStore.js";
 import { queuePersistRecord } from "./dataClient.js";
+import {
+  DEFAULT_THEME,
+  normalizeThemePreference,
+  readPrefersLight,
+  resolveThemePreference,
+  writeThemeCookie,
+  writeThemePreference,
+} from "./theme.js";
 
 export function getSettings() {
   return bridgeGetSettings(STORAGE_KEYS.settings, emptySettings);
@@ -18,6 +26,7 @@ export function getSettings() {
 export function updateSettings(patch) {
   const next = emptySettings({ ...getSettings(), ...patch, schemaVersion: SCHEMA_VERSION });
   if (Object.prototype.hasOwnProperty.call(patch, "theme")) {
+    next.theme = normalizeThemePreference(patch.theme);
     applyTheme(next.theme, { persist: true });
   }
   return bridgeSaveSettings(STORAGE_KEYS.settings, next);
@@ -25,27 +34,21 @@ export function updateSettings(patch) {
 
 export function replaceSettings(settings) {
   const next = emptySettings(settings || {});
+  applyTheme(next.theme, { persist: true });
   return bridgeSaveSettings(STORAGE_KEYS.settings, next);
 }
 
-const THEME_STORAGE_KEY = "regeneluxe.theme";
-const THEME_COOKIE = "regeneluxe-theme";
-
-export function applyTheme(theme = "dark", { persist = false } = {}) {
-  if (typeof document === "undefined") return "dark";
-  const preference = theme === "system" || theme === "light" ? theme : "dark";
-  const resolved = preference === "system"
-    ? (window.matchMedia?.("(prefers-color-scheme: light)")?.matches ? "light" : "dark")
-    : preference;
+export function applyTheme(theme = DEFAULT_THEME, { persist = false } = {}) {
+  const preference = normalizeThemePreference(theme);
+  if (typeof document === "undefined") {
+    return preference === "system" ? DEFAULT_THEME : preference;
+  }
+  const resolved = resolveThemePreference(preference, readPrefersLight());
   document.documentElement.dataset.theme = resolved;
   document.documentElement.style.colorScheme = resolved;
   if (persist) {
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, preference);
-    } catch {
-      /* ignore quota / private mode */
-    }
-    document.cookie = `${THEME_COOKIE}=${resolved}; Path=/; Max-Age=31536000; SameSite=Lax`;
+    writeThemePreference(preference);
+    writeThemeCookie(resolved);
   }
   return resolved;
 }

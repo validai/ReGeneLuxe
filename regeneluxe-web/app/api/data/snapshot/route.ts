@@ -8,6 +8,7 @@ import { publicOperator, publicManagedProfile } from "../../../../src/data/profi
 import { stripSecretFields } from "../../../../src/data/secretFields.js";
 import { requireWorkspaceApi, deniedJson, jsonPrivate } from "../../../../server/auth/apiGuard.js";
 import { publicSnapshotForWorkspace } from "../../../../server/auth/tenantScope.js";
+import { selectSettingsRecord } from "../../../../src/data/theme.js";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,7 @@ async function snapshot() {
     list(COLLECTIONS.profile_connections),
   ]);
 
-  const settings = settingsRows[0] || null;
+  const settings = selectSettingsRecord(settingsRows);
   const prefs = Object.fromEntries(
     uiPrefs.map((row: { id: string; value?: unknown }) => [row.id, row.value]),
   );

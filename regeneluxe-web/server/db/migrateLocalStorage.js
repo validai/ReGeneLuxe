@@ -10,6 +10,7 @@ import {
   setMeta,
   upsert,
 } from "./repository.js";
+import { normalizeThemePreference, SETTINGS_RECORD_ID } from "../../src/data/theme.js";
 
 const LS = {
   campaigns: "rl_campaigns_v1",
@@ -116,7 +117,11 @@ export async function migrateLocalStorageDump(dump) {
   await replaceAll(COLLECTIONS.events, events, db);
 
   if (settings && typeof settings === "object" && !Array.isArray(settings)) {
-    await upsert(COLLECTIONS.settings, { id: "default", ...settings }, db);
+    await upsert(COLLECTIONS.settings, {
+      ...settings,
+      id: SETTINGS_RECORD_ID,
+      theme: normalizeThemePreference(settings.theme),
+    }, db);
   }
 
   const prefs = {

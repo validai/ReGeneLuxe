@@ -3,8 +3,7 @@ import { cookies } from "next/headers";
 import { Space_Grotesk } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import "../src/index.css";
-
-const THEME_BOOT_SCRIPT = `(function(){try{var p=localStorage.getItem("regeneluxe.theme");var r=p==="light"?"light":p==="system"?(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):(p==="dark"?"dark":null);if(!r)return;document.documentElement.setAttribute("data-theme",r);document.documentElement.style.colorScheme=r;}catch(e){}})();`;
+import { THEME_BOOT_SCRIPT, themeFromCookie } from "../src/data/theme.js";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -37,7 +36,7 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cookieTheme = (await cookies()).get("regeneluxe-theme")?.value;
-  const theme = cookieTheme === "light" ? "light" : "dark";
+  const theme = themeFromCookie(cookieTheme);
   return (
     <html
       lang="en"

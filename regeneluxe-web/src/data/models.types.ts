@@ -327,7 +327,7 @@ export interface Account {
 
 export interface AppSettings {
   defaultPlatforms: Platform[];
-  theme: string;
+  theme: "dark" | "light" | "system";
   aiMode: AiMode;
   schemaVersion: number;
 }

@@ -39,10 +39,10 @@ export default function ProfileSwitcher({ collapsed = false }) {
     <div ref={rootRef} className={`relative ${collapsed ? "px-2 pb-3" : "px-3 pb-3"}`}>
       <button
         type="button"
-        className={`flex items-center rounded-lg text-left transition-colors hover:bg-rl_surfaceHover ${
+        className={`flex items-center text-left transition-colors ${
           collapsed
-            ? "h-10 w-10 justify-center"
-            : "w-full gap-2.5 px-2 py-1.5"
+            ? "h-10 w-10 justify-center rounded-lg hover:bg-rl_surfaceHover"
+            : "w-full gap-2.5 rounded-xl border border-rl_border bg-[rgb(var(--bg-hover))] px-2.5 py-2 hover:border-rl_borderStrong"
         }`}
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}

@@ -15,6 +15,7 @@ import {
   getSettingsRecord,
 } from "./operationalStore.js";
 import { queuePersistRecord, queueRemoveRecord, queueSetMeta } from "./dataClient.js";
+import { LEGACY_SETTINGS_RECORD_ID, SETTINGS_RECORD_ID } from "./theme.js";
 import { readJson, writeJson, readString, writeString, removeKey } from "./storage.js";
 
 export function isSqliteAuthority() {
@@ -112,14 +113,18 @@ export function bridgeGetSettings(storageKey, emptyFactory) {
 }
 
 export function bridgeSaveSettings(storageKey, settings) {
-  const record = { id: settings.id || "app", ...settings };
+  const record = { ...settings, id: SETTINGS_RECORD_ID };
   if (isSqliteAuthority()) {
     upsertCollectionItem("settings", record);
     queuePersistRecord("settings", record);
-    return settings;
+    if (getCollectionItem("settings", LEGACY_SETTINGS_RECORD_ID)) {
+      removeCollectionItem("settings", LEGACY_SETTINGS_RECORD_ID);
+      queueRemoveRecord("settings", LEGACY_SETTINGS_RECORD_ID);
+    }
+    return record;
   }
-  writeJson(storageKey, settings);
-  return settings;
+  writeJson(storageKey, record);
+  return record;
 }
 
 export { getSettingsRecord };

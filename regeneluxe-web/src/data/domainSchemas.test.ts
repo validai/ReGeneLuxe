@@ -41,6 +41,12 @@ describe("domain schemas", () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("accepts only the closed theme set on app settings", () => {
+    expect(safeParseDomain("AppSettings", { id: "app", theme: "light" }).success).toBe(true);
+    expect(safeParseDomain("AppSettings", { id: "app", theme: "system" }).success).toBe(true);
+    expect(safeParseDomain("AppSettings", { id: "app", theme: "white" }).success).toBe(false);
+  });
+
   it("requires idempotency key on publication attempts", () => {
     const parsed = safeParseDomain("PublicationAttempt", {
       id: "att_1",

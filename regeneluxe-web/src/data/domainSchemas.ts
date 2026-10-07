@@ -233,7 +233,7 @@ export const JobSchema = z.object({
 export const AppSettingsSchema = z.object({
   id: z.string().default("app"),
   defaultPlatforms: z.array(z.string()).optional(),
-  theme: z.string().optional(),
+  theme: z.enum(["dark", "light", "system"]).optional(),
   aiMode: z.string().optional(),
   schemaVersion: z.number().optional(),
   timezone: z.string().optional(),

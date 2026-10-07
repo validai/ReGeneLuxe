@@ -1,4 +1,5 @@
 import { CAMPAIGN_TABS, CONNECTION_STATES, PUBLISH_PERMISSIONS, AI_MODES, LEGACY_SECTION_MAP, emptyInterpretation } from "./domain.js";
+import { normalizeThemePreference } from "./theme.js";
 import { createId, nowIso } from "./ids.js";
 
 export { createId, nowIso } from "./ids.js";
@@ -364,7 +365,7 @@ export function emptySettings(partial = {}) {
   return {
     id: partial.id || "app",
     defaultPlatforms: Array.isArray(partial.defaultPlatforms) ? partial.defaultPlatforms : [],
-    theme: partial.theme || "dark",
+    theme: normalizeThemePreference(partial.theme),
     aiMode: AI_MODES.includes(partial.aiMode) ? partial.aiMode : "ASSISTED",
     schemaVersion: SCHEMA_VERSION,
   };

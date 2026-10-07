@@ -8,6 +8,7 @@ import { ToastProvider } from "./ToastProvider.jsx";
 import ErrorBoundary from "../ErrorBoundary.jsx";
 import { useAppData } from "../../hooks/useAppData.js";
 import { applyTheme } from "../../data/settingsRepository.js";
+import { normalizeThemePreference } from "../../data/theme.js";
 import {
   bootstrapDurableStore,
   getLastSyncStatus,
@@ -33,14 +34,21 @@ export default function WorkspaceProviders({
   activeProfile = null,
   connections = null,
 }) {
-  const { settings } = useAppData();
+  const { settings, dataAuthority } = useAppData();
   const [commandOpen, setCommandOpen] = useState(false);
   const [syncBanner, setSyncBanner] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
-    applyTheme(settings.theme);
-  }, [settings.theme]);
+    if (dataAuthority !== "sqlite") return undefined;
+    const preference = normalizeThemePreference(settings?.theme);
+    applyTheme(preference, { persist: true });
+    if (preference !== "system" || typeof window.matchMedia !== "function") return undefined;
+    const media = window.matchMedia("(prefers-color-scheme: light)");
+    const onChange = () => applyTheme("system", { persist: true });
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, [dataAuthority, settings?.theme]);
 
   useEffect(() => {
     if (activeProfile?.id) setActiveProfileId(activeProfile.id);

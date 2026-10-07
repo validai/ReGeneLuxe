@@ -2,6 +2,7 @@
  * In-memory operational store — product SoT after SQLite bootstrap.
  * Test harness (Vitest) continues using localStorage via repositories.
  */
+import { selectSettingsRecord, SETTINGS_RECORD_ID } from "./theme.js";
 
 const listeners = new Set();
 let version = 0;
@@ -104,10 +105,11 @@ export function hydrateFromSnapshot(data) {
   replaceCollection("publication_attempts", data.publication_attempts || data.publicationAttempts || []);
   replaceCollection("experiments", data.experiments || []);
 
-  const settings = data.settings && typeof data.settings === "object"
-    ? [{ id: data.settings.id || "app", ...data.settings }]
-    : [{ id: "app" }];
-  replaceCollection("settings", settings);
+  const settingsSource = Array.isArray(data.settings)
+    ? data.settings
+    : (data.settings && typeof data.settings === "object" ? [data.settings] : []);
+  const settings = selectSettingsRecord(settingsSource) || { id: SETTINGS_RECORD_ID };
+  replaceCollection("settings", [settings]);
 
   if (data.activeCampaignId != null) setMetaValue("active_campaign_id", data.activeCampaignId);
   if (data.workingAccountId != null) setMetaValue("working_account_id", data.workingAccountId);
@@ -131,7 +133,7 @@ function normalizeSnapshots(raw) {
 }
 
 export function getSettingsRecord() {
-  return listCollection("settings")[0] || { id: "app" };
+  return selectSettingsRecord(listCollection("settings")) || { id: SETTINGS_RECORD_ID };
 }
 
 export function resetOperationalStore() {

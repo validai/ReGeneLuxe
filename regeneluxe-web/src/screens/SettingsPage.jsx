@@ -9,9 +9,11 @@ import ConfirmDialog from "../components/app/ConfirmDialog.jsx";
 import ChoiceChip from "../components/choices/ChoiceChip.jsx";
 import Skeleton from "../components/app/Skeleton.jsx";
 import { useAppData } from "../hooks/useAppData.js";
+import { isTestHarness } from "../data/access.ts";
 import { SCHEMA_VERSION, PLATFORMS, SOCIAL_CONNECTION_PLATFORMS } from "../data/models.js";
 import { AI_MODES, AI_MODE_LABELS } from "../data/domain.js";
 import { updateSettings } from "../data/settingsRepository.js";
+import { normalizeThemePreference, THEME_OPTIONS } from "../data/theme.js";
 import { downloadBackupFile, importBackup, validateBackup } from "../data/backupService.js";
 import { getRuntimeStatus, getRuntimeHealth, saveRuntimeSecret } from "../data/runtimeClient.js";
 import { fetchDbHealth, getLastDbHealth } from "../data/durableBootstrap.js";
@@ -21,12 +23,6 @@ import { displayAccountEmail } from "../data/googleIdentity.js";
 import { formatDataSyncDisplay, formatSyncLine, formatWorkspaceSummary, mergeHealthWithSyncStatus } from "../data/syncHealth.js";
 import StatusBadge from "../components/app/StatusBadge.jsx";
 import { PlatformIcon } from "../components/app/Icon.jsx";
-
-const THEMES = [
-  { id: "dark", label: "Dark" },
-  { id: "system", label: "System" },
-  { id: "light", label: "Light" },
-];
 
 function formatWhen(value) {
   if (!value) return "—";
@@ -44,7 +40,7 @@ function explainRuntime(runtime) {
  * @param {{ initialDbHealth?: object | null }} [props]
  */
 export default function SettingsPage({ initialDbHealth = null } = {}) {
-  const { settings, campaigns, accounts } = useAppData();
+  const { settings, campaigns, accounts, dataAuthority } = useAppData();
   const { operator, activeProfile, connections, refresh } = useProfileSession();
   const [providers, setProviders] = useState([]);
   const [importError, setImportError] = useState("");
@@ -85,6 +81,7 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
   });
   const resetPhraseExpected = `RESET ${String(activeProfile?.displayName || "WORKSPACE").toUpperCase()}`;
   const resetPhraseMatches = resetPhrase.trim() === resetPhraseExpected;
+  const themeKnown = isTestHarness() || dataAuthority === "sqlite";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -498,11 +495,11 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
         <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-rl_muted">Theme</h3>
         <p className="text-sm text-rl_muted">Dark is the designed workspace. Light and system are optional.</p>
         <div className="flex flex-wrap gap-2">
-          {THEMES.map((theme) => (
+          {THEME_OPTIONS.map((theme) => (
             <ChoiceChip
               key={theme.id}
               label={theme.label}
-              selected={(settings.theme || "dark") === theme.id}
+              selected={themeKnown && normalizeThemePreference(settings.theme) === theme.id}
               onClick={() => updateSettings({ theme: theme.id })}
             />
           ))}
