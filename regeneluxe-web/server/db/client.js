@@ -56,6 +56,9 @@ function createLocalClient() {
   if (isMemoryMode()) {
     return createClient({ url: ":memory:" });
   }
+  if (process.env.VITEST || process.env.NODE_ENV === "test") {
+    throw new Error("Automated tests must use an isolated SQLite database, never .regeneluxe/local.db");
+  }
   ensureDirs();
   const path = dbPath();
   return createClient({ url: `file:${path}` });
