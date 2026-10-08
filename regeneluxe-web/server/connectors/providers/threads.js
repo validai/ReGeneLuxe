@@ -89,24 +89,44 @@ threadsConnector._completeAuth = async ({ code, stateMeta, error, errorDescripti
       ok: false,
       connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: friendlyOAuthError("invalid_grant", "Threads"),
-      detail: tokenJson.error_message || tokenJson.error?.message,
     };
   }
+  const exchange = await fetch("https://graph.threads.net/access_token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "th_exchange_token",
+      client_secret: creds.clientSecret,
+      access_token: tokenJson.access_token,
+    }),
+  });
+  const exchangeJson = await exchange.json().catch(() => ({}));
+  const accessToken = exchange.ok && exchangeJson.access_token ? exchangeJson.access_token : tokenJson.access_token;
+  const profileRes = await fetch(`https://graph.threads.net/v1.0/me?fields=id,username,name&access_token=${encodeURIComponent(accessToken)}`);
+  const profile = await profileRes.json().catch(() => ({}));
+  if (!profileRes.ok || !profile.id) {
+    return {
+      ok: false,
+      connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED,
+      error: friendlyOAuthError("invalid_grant", "Threads"),
+    };
+  }
+  const expiresIn = Number(exchangeJson.expires_in || tokenJson.expires_in || 0);
   setAccountTokens("threads", stateMeta.accountId, {
-    accessToken: tokenJson.access_token,
+    accessToken,
     refreshToken: null,
-    expiresAt: null,
+    expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000).toISOString() : null,
     scopes: ["threads_basic", "threads_content_publish"],
-    providerAccountId: tokenJson.user_id ? String(tokenJson.user_id) : null,
+    providerAccountId: String(profile.id),
   });
   return {
     ok: true,
     connectionState: SOCIAL_CONNECTION_STATES.CONNECTED,
     profile: {
-      providerAccountId: tokenJson.user_id ? String(tokenJson.user_id) : null,
-      displayName: "",
-      handle: "",
-      profileUrl: "",
+      providerAccountId: String(profile.id),
+      displayName: profile.name || profile.username || "",
+      handle: profile.username ? `@${profile.username}` : "",
+      profileUrl: profile.username ? `https://www.threads.net/@${profile.username}` : "",
     },
   };
 };
@@ -163,10 +183,20 @@ threadsConnector._publishContent = async (_account, payload, tokens) => {
     }),
   });
   const published = await pubRes.json().catch(() => ({}));
-  if (!pubRes.ok) {
+  if (!pubRes.ok || !published.id) {
     return { ok: false, error: published.error?.message || "Threads publish failed." };
   }
-  return { ok: true, providerPostId: published.id || created.id, raw: published };
+  const linkRes = await fetch(
+    `https://graph.threads.net/v1.0/${published.id}?fields=id,permalink&access_token=${encodeURIComponent(tokens.accessToken)}`,
+  );
+  const link = await linkRes.json().catch(() => ({}));
+  return {
+    ok: true,
+    providerPostId: published.id,
+    externalUrl: link.permalink || "",
+    permalink: link.permalink || "",
+    providerStatus: "PUBLISHED",
+  };
 };
 
 threadsConnector._disconnect = async (account) => {

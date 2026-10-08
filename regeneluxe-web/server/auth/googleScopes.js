@@ -25,3 +25,16 @@ export const YOUTUBE_READONLY_SCOPES = [
 ];
 
 export const YOUTUBE_CONNECTION_SCOPE_STRING = YOUTUBE_READONLY_SCOPES.join(" ");
+
+export const YOUTUBE_UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload";
+
+/** Publish pilot: identity plus upload. Does not include Gmail or analytics scopes. */
+export const YOUTUBE_PILOT_SCOPES = [
+  "openid",
+  "email",
+  "profile",
+  "https://www.googleapis.com/auth/youtube.readonly",
+  YOUTUBE_UPLOAD_SCOPE,
+];
+
+export const YOUTUBE_PILOT_SCOPE_STRING = YOUTUBE_PILOT_SCOPES.join(" ");

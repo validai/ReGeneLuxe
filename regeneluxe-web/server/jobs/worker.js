@@ -12,10 +12,14 @@ import {
   get,
   COLLECTIONS,
 } from "../db/index.js";
+import { getLocalClient } from "../db/client.js";
 import { getConnector, normalizeProviderId } from "../connectors/registry.js";
 import { buildMetricSnapshotRecord } from "../connectors/normalizeMetrics.js";
 import { pushOutboxToRemote, reconcileWithRemote } from "../db/sync.js";
 import { publicationIdempotencyKey } from "../../src/data/idempotency.js";
+import { evaluatePublishGate } from "../../src/data/publishGate.js";
+import { isPilotProvider, variantForAccount } from "../../src/data/publishApproval.js";
+import { stripSecretFields } from "../../src/data/secretFields.js";
 import { recordBelongsToWorkspace, workspaceIdOf } from "../auth/tenantScope.js";
 
 const WORKER_ID = `worker_${process.pid}`;
@@ -136,18 +140,27 @@ async function handleRefreshConnection(payload = {}) {
   return { ok: true, profile: profile.profile };
 }
 
+async function consumeApproval(id) {
+  const now = nowIso();
+  const result = await getLocalClient().execute({
+    sql: `UPDATE entities
+          SET payload = json_set(payload, '$.consumedAt', ?),
+              updated_at = ?,
+              revision = revision + 1
+          WHERE collection = ?
+            AND id = ?
+            AND (json_extract(payload, '$.consumedAt') IS NULL OR json_extract(payload, '$.consumedAt') = '')`,
+    args: [now, now, COLLECTIONS.approvals, id],
+  });
+  return Number(result.rowsAffected || 0) === 1;
+}
+
 async function handlePublishContent(payload = {}) {
   const account = await loadAccount(payload.accountId);
   if (!account) throw new Error("Account not found.");
-  if (account.publishPermission === "ANALYZE_ONLY" || account.publishPermission === "DRAFT_ONLY") {
-    throw new Error(`Publishing blocked by permission ${account.publishPermission}.`);
-  }
-  if (account.publishPermission === "APPROVAL_REQUIRED" && !payload.approved) {
-    throw new Error("Approval required before publish.");
-  }
-
+  const provider = normalizeProviderId(account.platform);
   const contentRows = await list(COLLECTIONS.content);
-  const content = contentRows.find((c) => c.id === payload.contentId);
+  const content = contentRows.find((row) => row.id === payload.contentId);
   if (!content) throw new Error("Content not found.");
 
   const idempotencyKey = payload.idempotencyKey
@@ -157,47 +170,73 @@ async function handlePublishContent(payload = {}) {
       scheduledAt: payload.scheduledAt || content.scheduledAt,
     });
 
-  // Idempotency: if a successful attempt already exists, do not publish again.
   const attempts = await list(COLLECTIONS.publication_attempts).catch(() => []);
-  const priorSuccess = attempts.find((a) => (
-    a.idempotencyKey === idempotencyKey
-    && ["PUBLISHED", "CONFIRMED"].includes(a.state)
+  const priorSuccess = attempts.find((attempt) => (
+    attempt.idempotencyKey === idempotencyKey
+    && ["PUBLISHED", "CONFIRMED"].includes(attempt.state)
   ));
   if (priorSuccess) {
     return { ok: true, deduped: true, attempt: priorSuccess };
   }
 
+  const variant = variantForAccount(content, account);
+  let approval = null;
+  if (isPilotProvider(provider)) {
+    approval = payload.approvalId ? await get(COLLECTIONS.approvals, payload.approvalId) : null;
+    const gate = evaluatePublishGate({
+      account,
+      content,
+      approval,
+      workspaceId: payload.managedProfileId || account.managedProfileId || "",
+      operatorId: payload.operatorId || approval?.operatorId || "",
+    });
+    if (!gate.ok) {
+      await upsert(COLLECTIONS.publication_attempts, blockedAttempt({
+        content, account, provider, idempotencyKey, approvalId: payload.approvalId || "", error: gate.error,
+      }));
+      throw new Error(gate.error);
+    }
+    const consumed = await consumeApproval(approval.id);
+    if (!consumed) throw new Error("APPROVAL_CONSUMED");
+  } else {
+    if (account.publishPermission === "ANALYZE_ONLY" || account.publishPermission === "DRAFT_ONLY") {
+      throw new Error(`Publishing blocked by permission ${account.publishPermission}.`);
+    }
+    if (account.publishPermission === "APPROVAL_REQUIRED" && !payload.approved) {
+      throw new Error("Approval required before publish.");
+    }
+  }
+
   const attempt = {
-    id: createId("pub"),
-    contentId: content.id,
-    accountId: account.id,
-    platform: account.platform,
-    campaignId: content.campaignId || null,
-    idempotencyKey,
+    ...blockedAttempt({
+      content, account, provider, idempotencyKey, approvalId: approval?.id || "", error: "",
+    }),
     state: "ATTEMPTED",
-    providerResult: null,
     error: null,
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-    schemaVersion: 1,
   };
   await upsert(COLLECTIONS.publication_attempts, attempt);
 
   const connector = getConnector(account.platform);
   const result = await connector.publishContent(account, {
-    text: content.caption || content.title,
-    caption: content.caption,
-    mediaUrl: content.mediaRefs?.[0]?.url || content.mediaUrl,
-    imageUrl: content.imageUrl,
-    videoPath: content.videoPath,
+    text: variant.caption || variant.title,
+    caption: variant.caption,
+    title: variant.title,
+    mediaUrl: variant.mediaRef,
+    imageUrl: variant.mediaRef,
+    videoPath: content.videoPath || variant.mediaRef,
+    privacyStatus: "private",
   });
+  const safeResult = stripSecretFields(result || {});
 
   if (!result.ok) {
     const failed = {
       ...attempt,
       state: "FAILED",
       error: result.error || result.reason || "Publish failed",
-      providerResult: result.raw || result,
+      errorCategory: result.code || "PROVIDER_ERROR",
+      providerStatus: result.providerStatus || "",
+      providerResult: safeResult,
+      completedAt: nowIso(),
       updatedAt: nowIso(),
     };
     await upsert(COLLECTIONS.publication_attempts, failed);
@@ -212,11 +251,12 @@ async function handlePublishContent(payload = {}) {
   const published = {
     ...attempt,
     state: "PUBLISHED",
-    providerResult: {
-      providerPostId: result.providerPostId,
-      raw: result.raw || null,
-    },
+    providerPostId: result.providerPostId || "",
+    externalUrl: result.permalink || "",
+    providerStatus: provider === "youtube" ? "private" : (result.providerStatus || "PUBLISHED"),
+    providerResult: safeResult,
     error: null,
+    completedAt: nowIso(),
     updatedAt: nowIso(),
   };
   await upsert(COLLECTIONS.publication_attempts, published);
@@ -231,6 +271,30 @@ async function handlePublishContent(payload = {}) {
     updatedAt: nowIso(),
   });
   return { ok: true, attempt: published, providerPostId: result.providerPostId };
+}
+
+function blockedAttempt({ content, account, provider, idempotencyKey, approvalId, error }) {
+  const stamp = nowIso();
+  return {
+    id: createId("pub"),
+    provider,
+    accountId: account.id,
+    contentId: content.id,
+    campaignId: content.campaignId || null,
+    approvalId: approvalId || "",
+    idempotencyKey,
+    state: "FAILED",
+    errorCategory: error || "",
+    error: error || null,
+    providerPostId: "",
+    externalUrl: "",
+    providerStatus: "",
+    startedAt: stamp,
+    completedAt: error ? stamp : null,
+    createdAt: stamp,
+    updatedAt: stamp,
+    schemaVersion: 1,
+  };
 }
 
 async function handleCampaignMonitor(payload = {}) {

@@ -5,8 +5,9 @@ import { createOAuthState, friendlyOAuthError, pkcePair } from "../oauth/state.j
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
 import { readSecrets, writeSecrets } from "../../secrets.js";
 import { youtubeCallbackUrl } from "../../auth/origin.js";
-import { YOUTUBE_CONNECTION_SCOPE_STRING } from "../../auth/googleScopes.js";
+import { YOUTUBE_CONNECTION_SCOPE_STRING, YOUTUBE_PILOT_SCOPE_STRING } from "../../auth/googleScopes.js";
 import { friendlyGoogleApiError } from "../../auth/googleErrors.js";
+import { uploadPrivateYouTube } from "./youtubeUpload.js";
 
 export const youtubeConnector = baseConnector({
   provider: "youtube",
@@ -27,6 +28,7 @@ export const youtubeConnector = baseConnector({
     CAPABILITY.READ_CONTENT,
     CAPABILITY.READ_ACCOUNT_METRICS,
     CAPABILITY.READ_CONTENT_METRICS,
+    CAPABILITY.PUBLISH_VIDEO,
   ],
 });
 
@@ -58,6 +60,7 @@ youtubeConnector._beginAuth = async ({
   operatorId,
   connectionId,
   loginHint = "",
+  includeUpload = false,
 } = {}) => {
   const creds = youtubeConnector.getAppCredentials();
   const { verifier, challenge } = pkcePair();
@@ -78,7 +81,7 @@ youtubeConnector._beginAuth = async ({
   url.searchParams.set("client_id", creds.clientId);
   url.searchParams.set("redirect_uri", creds.redirectUri);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", YOUTUBE_CONNECTION_SCOPE_STRING);
+  url.searchParams.set("scope", includeUpload ? YOUTUBE_PILOT_SCOPE_STRING : YOUTUBE_CONNECTION_SCOPE_STRING);
   url.searchParams.set("access_type", "offline");
   url.searchParams.set("prompt", "consent");
   url.searchParams.set("state", state);
@@ -147,7 +150,7 @@ youtubeConnector._completeAuth = async ({ code, stateMeta, error, errorDescripti
   }
   const items = Array.isArray(channels.items) ? channels.items : [];
   const mapped = items.map(publicYoutubeChannel);
-  const channel = mapped[0];
+  const channel = mapped.length === 1 ? mapped[0] : null;
 
   const userinfoRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
     headers: { Authorization: `Bearer ${tokenJson.access_token}` },
@@ -159,12 +162,15 @@ youtubeConnector._completeAuth = async ({ code, stateMeta, error, errorDescripti
     refreshToken: tokenJson.refresh_token || null,
     expiresAt,
     scopes: String(tokenJson.scope || YOUTUBE_CONNECTION_SCOPE_STRING).split(/\s+/),
-    providerAccountId: channel?.id || userinfo.sub || null,
+    providerAccountId: channel?.id || null,
   });
 
   return {
-    ok: true,
-    connectionState: mapped.length ? "CONNECTED" : "ERROR",
+    ok: mapped.length > 0,
+    connectionState: channel ? "CONNECTED" : (mapped.length > 1 ? "SETUP_REQUIRED" : "ERROR"),
+    pendingSelection: mapped.length > 1,
+    pendingDestinations: mapped.length > 1 ? mapped : [],
+    error: mapped.length ? "" : "No YouTube channel was returned for this Google account.",
     profile: {
       googleAccountSub: userinfo.sub || "",
       email: userinfo.email || "",
@@ -289,11 +295,20 @@ youtubeConnector._getContentMetrics = async (_account, contentRef, tokens) => {
   };
 };
 
-youtubeConnector._publishContent = async (_account, payload) => {
-  if (!payload?.videoPath && !payload?.mediaUrl) {
-    return unavailable("YouTube publishing requires a video file (PUBLISH_VIDEO).");
+youtubeConnector._publishContent = async (_account, payload, tokens) => {
+  const filePath = payload?.videoPath || payload?.mediaUrl || "";
+  if (!filePath || String(filePath).startsWith("http")) {
+    return unavailable("YouTube pilot upload requires a local video file on the server.");
   }
-  return unavailable("Video upload resumable session is ready for wiring once media storage is attached.");
+  if (String(payload?.privacyStatus || "private").toLowerCase() !== "private") {
+    return { ok: false, error: "YOUTUBE_PILOT_PRIVATE_ONLY", code: "YOUTUBE_PILOT_PRIVATE_ONLY" };
+  }
+  return uploadPrivateYouTube({
+    accessToken: tokens.accessToken,
+    filePath,
+    title: payload?.title || payload?.caption || "ReGeneLuxe private pilot",
+    description: payload?.caption || "",
+  });
 };
 
 youtubeConnector._disconnect = async (account) => {

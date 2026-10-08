@@ -45,6 +45,8 @@ Pipeline: Content → Approval → `PUBLISH_CONTENT` job → connector → `publ
 
 Permissions: `ANALYZE_ONLY` | `DRAFT_ONLY` | `APPROVAL_REQUIRED` (default) | `AUTO_PUBLISH`.
 
+Instagram, Facebook, Threads, and YouTube ignore `AUTO_PUBLISH` during the platform pilot. Those providers need the fresh approval in `docs/PLATFORM_PILOT.md`.
+
 ## Analytics
 
 `POST /api/analytics/refresh` enqueues `REFRESH_ANALYTICS`. Normalized metrics use null for unsupported keys.

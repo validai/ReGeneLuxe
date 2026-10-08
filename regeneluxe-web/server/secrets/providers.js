@@ -56,10 +56,30 @@ function safeDecrypt(value) {
   }
 }
 
+/**
+ * @returns {{
+ *   accessToken: string | null,
+ *   refreshToken: string | null,
+ *   expiresAt: string | null,
+ *   scopes: string[],
+ *   providerAccountId: string | null,
+ *   updatedAt: string | null,
+ *   pages: Array<Record<string, unknown>>,
+ * } | null}
+ */
 export function getAccountTokens(provider, accountId) {
   const secrets = readSecrets();
   const row = secrets.providers?.[providerKey(provider, accountId)];
   if (!row) return null;
+  let pages = [];
+  if (row.pagesCipher) {
+    try {
+      const parsed = JSON.parse(safeDecrypt(row.pagesCipher) || "[]");
+      pages = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      pages = [];
+    }
+  }
   return {
     accessToken: safeDecrypt(row.accessToken),
     refreshToken: safeDecrypt(row.refreshToken),
@@ -67,15 +87,29 @@ export function getAccountTokens(provider, accountId) {
     scopes: row.scopes || [],
     providerAccountId: row.providerAccountId || null,
     updatedAt: row.updatedAt || null,
+    pages,
   };
 }
 
+/**
+ * @param {string} provider
+ * @param {string} accountId
+ * @param {{
+ *   accessToken?: string | null,
+ *   refreshToken?: string | null,
+ *   expiresAt?: string | null,
+ *   scopes?: string[],
+ *   providerAccountId?: string | null,
+ *   pages?: Array<Record<string, unknown>> | null,
+ * }} [tokens]
+ */
 export function setAccountTokens(provider, accountId, {
   accessToken,
   refreshToken,
   expiresAt = null,
   scopes = [],
   providerAccountId = null,
+  pages = null,
 } = {}) {
   if (!accountId) throw new Error("accountId required for token storage");
   const secrets = readSecrets();
@@ -89,6 +123,7 @@ export function setAccountTokens(provider, accountId, {
     expiresAt,
     scopes,
     providerAccountId,
+    pagesCipher: pages ? encryptSecret(JSON.stringify(pages)) : prev.pagesCipher,
     updatedAt: new Date().toISOString(),
   };
   writeSecrets(secrets);

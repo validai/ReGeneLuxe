@@ -108,26 +108,39 @@ export async function GET(
     }
 
     const profile = result.profile || {};
+    const connectionState = result.connectionState || "CONNECTED";
     const nextAccount = {
       ...account,
-      ...profile,
-      connectionState: "CONNECTED",
+      displayName: profile.displayName || account.displayName,
+      handle: profile.handle || account.handle,
+      profileUrl: profile.profileUrl || account.profileUrl,
+      providerAccountId: connectionState === "CONNECTED" ? (profile.providerAccountId || account.providerAccountId || "") : "",
+      pageId: profile.pageId || account.pageId || "",
+      pageName: profile.pageName || account.pageName || "",
+      pendingDestinations: result.pendingDestinations || profile.pendingDestinations || [],
+      connectionState,
       connectionMethod: "OAUTH",
-      lastSync: nowIso(),
-      lastSuccessfulSync: nowIso(),
-      lastErrorSummary: "",
+      lastErrorSummary: result.error || "",
       updatedAt: nowIso(),
     };
+    if (connectionState === "CONNECTED") {
+      nextAccount.lastSync = nowIso();
+      nextAccount.lastSuccessfulSync = nowIso();
+      nextAccount.lastVerifiedAt = nowIso();
+    }
     delete nextAccount.accessToken;
     delete nextAccount.refreshToken;
     delete nextAccount.token;
     delete nextAccount.clientSecret;
+    delete nextAccount.raw;
     await upsert(COLLECTIONS.accounts, nextAccount);
 
-    try {
-      await syncConnectedAccount(nextAccount);
-    } catch {
-      // ignore
+    if (connectionState === "CONNECTED") {
+      try {
+        await syncConnectedAccount(nextAccount);
+      } catch {
+        // ignore
+      }
     }
 
     return redirectTo(stateResult.returnTo || "/accounts", {

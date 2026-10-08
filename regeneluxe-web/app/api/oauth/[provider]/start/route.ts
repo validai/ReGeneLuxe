@@ -88,12 +88,14 @@ export async function POST(
     }
 
     const connector = getConnector(provider || account.platform);
+    const providerId = normalizeProviderId(provider || account.platform);
     const result = await connector.beginAuth({
       accountId,
       returnTo: safeReturnTo(body.returnTo, "/accounts"),
       loginHint: authz.activeProfile?.googleAccountEmail || authz.operator?.email || "",
       operatorId: authz.operator.id,
       managedProfileId: authz.workspace?.id || authz.activeProfile?.id || null,
+      includeUpload: providerId === "youtube",
     });
 
     if (!result.ok) {
