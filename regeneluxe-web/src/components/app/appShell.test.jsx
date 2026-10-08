@@ -45,8 +45,12 @@ describe("workspace shell sidebar states", () => {
   it("renders expanded desktop labels and a collapse control", () => {
     renderShell({ collapsed: false });
     expect(screen.getByRole("button", { name: /collapse sidebar/i })).toBeInTheDocument();
-    expect(document.querySelector('[data-brand="regeneluxe"]')).toBeTruthy();
-    expect(screen.getAllByText("ReGeneLuxe").length).toBeGreaterThan(0);
+    const expanded = document.querySelector('[data-sidebar-state="expanded"]');
+    expect(expanded.getAttribute("data-sidebar-rail")).toBe("permanent");
+    expect(expanded.getAttribute("data-sidebar-panel")).toBe("open");
+    expect(expanded.querySelector('[data-sidebar-chevron="left"]')).toBeTruthy();
+    expect(expanded.querySelector('[data-brand="regeneluxe"]')).toBeTruthy();
+    expect(expanded.textContent).toContain("ReGeneLuxe");
     expect(screen.queryByText("R")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^dashboard$/i })).toHaveTextContent("Dashboard");
     expect(screen.getByText("DJ Coast")).toBeInTheDocument();
@@ -61,6 +65,9 @@ describe("workspace shell sidebar states", () => {
     expect(screen.queryByText("Signed in with Google")).not.toBeInTheDocument();
     const compact = document.querySelector('[data-sidebar-state="compact"]');
     expect(compact).toBeTruthy();
+    expect(compact.getAttribute("data-sidebar-rail")).toBe("permanent");
+    expect(compact.getAttribute("data-sidebar-panel")).toBe("hidden");
+    expect(compact.querySelector('[data-sidebar-chevron="right"]')).toBeTruthy();
     expect(compact.querySelector(".overflow-x-hidden")).toBeTruthy();
     expect(compact.className).toMatch(/shrink-0/);
     expect(compact.querySelector('[data-brand="regeneluxe"]')).toBeTruthy();

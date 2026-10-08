@@ -12,7 +12,9 @@ import OperatorMenu from "./OperatorMenu.jsx";
 import SocialAccountPicker from "./SocialAccountPicker.jsx";
 
 /**
- * Native App Router shell — expanded desktop, compact desktop rail, mobile drawer.
+ * Native App Router shell.
+ * Desktop: permanent 72px icon rail plus a collapsible detail panel.
+ * Mobile: drawer. The desktop rail never collapses away.
  */
 
 const SIDEBAR_EVENT = "regeneluxe-sidebar";
@@ -47,6 +49,15 @@ function navClass(isActive, compact) {
   ].join(" ");
 }
 
+function desktopItemClass(isActive) {
+  return [
+    "flex w-full items-center text-left text-sm font-medium tracking-tight transition-colors duration-rl",
+    isActive
+      ? "bg-[rgb(var(--accent-primary)/0.16)] text-rl_text shadow-[inset_2px_0_0_0_rgb(var(--rl-accent))]"
+      : "text-rl_textSecondary hover:bg-rl_surfaceHover hover:text-rl_text",
+  ].join(" ");
+}
+
 function AppBrand({ compact, onNavigate }) {
   return (
     <Link
@@ -54,10 +65,11 @@ function AppBrand({ compact, onNavigate }) {
       title="ReGeneLuxe"
       aria-label="ReGeneLuxe"
       onClick={onNavigate}
-      className={compact ? "flex h-10 w-10 items-center justify-center" : "flex min-w-0 items-center gap-2.5"}
+      className={compact ? "flex h-10 w-10 items-center justify-center" : "flex min-w-0 items-center"}
     >
-      <BrandMark size={compact ? 32 : 28} />
-      {!compact && (
+      {compact ? (
+        <BrandMark size={32} />
+      ) : (
         <span className="truncate font-display text-base font-semibold tracking-tight text-rl_text">
           ReGeneLuxe
         </span>
@@ -66,7 +78,7 @@ function AppBrand({ compact, onNavigate }) {
   );
 }
 
-function EdgeHandle({ collapsed, onClick }) {
+function SeamChevron({ collapsed, onClick }) {
   const label = collapsed ? "Expand sidebar" : "Collapse sidebar";
   return (
     <button
@@ -75,9 +87,10 @@ function EdgeHandle({ collapsed, onClick }) {
       aria-pressed={collapsed}
       aria-label={label}
       title={label}
-      className="absolute right-0 top-1/2 z-50 flex h-7 w-7 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-rl_border bg-rl_surface text-rl_text shadow-[0_0_0_4px_rgb(var(--bg-app))] hover:border-rl_accent hover:text-[rgb(var(--accent-secondary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--focus-ring)/0.55)]"
+      data-sidebar-chevron={collapsed ? "right" : "left"}
+      className="absolute left-[4.5rem] top-[3.25rem] z-50 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-rl_border bg-rl_surface text-rl_text shadow-[0_0_0_3px_rgb(var(--bg-surface))] hover:border-rl_accent hover:text-[rgb(var(--accent-secondary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--focus-ring)/0.55)]"
     >
-      <NavIcon name={collapsed ? "expand" : "collapse"} size={16} />
+      <NavIcon name={collapsed ? "expand" : "collapse"} size={14} />
     </button>
   );
 }
@@ -188,6 +201,7 @@ function SidebarBody({
 
 export default function AppShellNext({ children, onOpenCommand }) {
   const pathname = usePathname() || "/";
+  const router = useRouter();
   const { accounts, workingAccountId } = useAppData();
   const collapsed = useSyncExternalStore(subscribeSidebar, getSidebarCollapsed, () => false);
   const chromeReady = useSyncExternalStore(() => () => {}, () => true, () => false);
@@ -218,20 +232,119 @@ export default function AppShellNext({ children, onOpenCommand }) {
 
       <aside
         data-sidebar-state={collapsed ? "compact" : "expanded"}
-        className={`sticky top-0 z-40 hidden h-screen shrink-0 lg:block ${
+        data-sidebar-rail="permanent"
+        data-sidebar-panel={collapsed ? "hidden" : "open"}
+        className={`sticky top-0 z-40 hidden h-screen shrink-0 overflow-visible lg:flex ${
           collapsed ? "w-sidebar-collapsed min-w-[4.5rem]" : "w-sidebar min-w-[15rem]"
         }`}
       >
-        <div className="relative h-full">
-          <EdgeHandle collapsed={collapsed} onClick={toggleCollapsed} />
-          <div className="flex h-full flex-col overflow-x-hidden overflow-y-hidden border-r border-rl_border bg-rl_surface pb-24">
-            <SidebarBody
-              compact={collapsed}
-              pathname={pathname}
-              accounts={chromeReady ? accounts : []}
-              workingAccountId={workingAccountId}
-              onOpenCommand={onOpenCommand}
-            />
+        <SeamChevron collapsed={collapsed} onClick={toggleCollapsed} />
+        <div className="relative flex h-full w-full flex-col overflow-x-hidden overflow-y-hidden border-r border-rl_border bg-rl_surface pb-16">
+          <Link
+            href="/"
+            title="ReGeneLuxe"
+            aria-label="ReGeneLuxe"
+            className="flex items-center pt-4"
+          >
+            <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">
+              <BrandMark size={32} />
+            </span>
+            {!collapsed ? (
+              <span className="min-w-0 flex-1 truncate pl-2 pr-3 font-display text-base font-semibold tracking-tight text-rl_text">
+                ReGeneLuxe
+              </span>
+            ) : null}
+          </Link>
+
+          <button
+            type="button"
+            className="mt-6 flex w-full items-center"
+            onClick={() => router.push("/content/new")}
+            title="Create"
+            aria-label="Create"
+          >
+            <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-rl_accent text-white">
+                <NavIcon name="create" size={20} />
+              </span>
+            </span>
+            {!collapsed ? (
+              <span className="mr-3 flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-rl_accent text-sm font-semibold text-white">
+                Create
+              </span>
+            ) : null}
+          </button>
+
+          <div className="mt-3">
+            <ProfileSwitcher layout="split" showDetail={!collapsed} />
+          </div>
+          <div className="mx-3 my-2 h-px shrink-0 bg-rl_border" role="separator" />
+          <SocialAccountPicker
+            accounts={chromeReady ? accounts : []}
+            workingAccountId={workingAccountId}
+            layout="split"
+            showDetail={!collapsed}
+          />
+
+          <nav className="mt-1 min-h-0 flex-1 space-y-0.5 overflow-y-auto pb-2" aria-label="Main">
+            {LINKS.map((link) => {
+              const isActive = linkActive(pathname, link.to, link.end);
+              return (
+                <Link
+                  key={link.to}
+                  href={link.to}
+                  title={link.label}
+                  aria-label={link.label}
+                  aria-current={isActive ? "page" : undefined}
+                  className={desktopItemClass(isActive)}
+                >
+                  <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">
+                    <NavIcon name={link.icon} size={20} className={isActive ? "text-[rgb(var(--accent-secondary))]" : "text-current"} />
+                  </span>
+                  {!collapsed ? <span className="min-w-0 flex-1 truncate pr-3">{link.label}</span> : null}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="mt-auto shrink-0 space-y-0.5 border-t border-rl_border py-2">
+            <Link
+              href="/queue"
+              title="Queue"
+              aria-label="Queue"
+              aria-current={linkActive(pathname, "/queue") ? "page" : undefined}
+              className={desktopItemClass(linkActive(pathname, "/queue"))}
+            >
+              <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">
+                <NavIcon name="queue" size={20} />
+              </span>
+              {!collapsed ? <span className="min-w-0 flex-1 truncate pr-3">Queue</span> : null}
+            </Link>
+            <button
+              type="button"
+              className={desktopItemClass(false)}
+              onClick={onOpenCommand}
+              title="Search (⌘K)"
+              aria-label="Search"
+            >
+              <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">
+                <NavIcon name="search" size={20} />
+              </span>
+              {!collapsed ? <span className="min-w-0 flex-1 truncate pr-3">Search</span> : null}
+            </button>
+            <Link
+              href="/settings"
+              title="Settings"
+              aria-label="Settings"
+              aria-current={linkActive(pathname, "/settings") ? "page" : undefined}
+              className={desktopItemClass(linkActive(pathname, "/settings"))}
+            >
+              <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">
+                <NavIcon name="settings" size={20} />
+              </span>
+              {!collapsed ? <span className="min-w-0 flex-1 truncate pr-3">Settings</span> : null}
+            </Link>
+            <OperatorMenu layout="split" showDetail={!collapsed} />
           </div>
         </div>
       </aside>
@@ -248,9 +361,8 @@ export default function AppShellNext({ children, onOpenCommand }) {
             >
               <NavIcon name="menu" size={18} />
             </button>
-            <Link href="/" className="flex min-w-0 items-center gap-2" aria-label="ReGeneLuxe">
-              <BrandMark size={22} />
-              <span className="truncate font-display text-sm font-semibold tracking-tight text-rl_text">ReGeneLuxe</span>
+            <Link href="/" className="min-w-0 truncate font-display text-sm font-semibold tracking-tight text-rl_text" aria-label="ReGeneLuxe">
+              ReGeneLuxe
             </Link>
           </div>
           <div className="flex items-center gap-2">

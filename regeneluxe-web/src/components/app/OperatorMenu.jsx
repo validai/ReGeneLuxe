@@ -7,7 +7,7 @@ import { useProfileSession } from "./ProfileSession.jsx";
 import { signOutOperator } from "../../../app/actions/auth";
 import { displayAccountEmail } from "../../data/googleIdentity.js";
 
-export default function OperatorMenu({ collapsed = false }) {
+export default function OperatorMenu({ collapsed = false, layout = "stack", showDetail = true }) {
   const { operator } = useProfileSession();
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
@@ -33,6 +33,72 @@ export default function OperatorMenu({ collapsed = false }) {
   const googleEmail = displayAccountEmail(operator);
   const googleName = operator.name || operator.displayName || "";
   const initial = (googleEmail || googleName || "?").slice(0, 1).toUpperCase();
+  const monogram = (
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-rl_surfaceActive text-xs font-semibold text-rl_text">
+      {initial}
+    </span>
+  );
+
+  if (layout === "split") {
+    return (
+      <div ref={rootRef} className="relative">
+        <button
+          type="button"
+          className="flex w-full items-center py-1 text-left text-sm text-rl_muted transition-colors duration-rl hover:bg-rl_surfaceHover hover:text-rl_text"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          aria-haspopup="menu"
+          aria-label={googleEmail ? `Signed in as ${googleEmail}` : "Signed in with Google"}
+          title={googleEmail || "Signed in with Google"}
+        >
+          <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">{monogram}</span>
+          {showDetail ? (
+            <span className="min-w-0 flex-1 pr-3">
+              <span className="block truncate font-medium text-rl_text">{googleEmail}</span>
+              <span className="block truncate text-[11px]">Signed in with Google</span>
+            </span>
+          ) : null}
+        </button>
+        {open ? (
+          <div
+            role="menu"
+            className={`absolute bottom-full z-50 mb-2 w-56 overflow-hidden rounded-xl border border-rl_border bg-rl_surfaceRaised shadow-lg ${
+              showDetail ? "left-[4.5rem]" : "left-full ml-2"
+            }`}
+          >
+            <Link
+              href="/settings#account"
+              role="menuitem"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm text-rl_text hover:bg-rl_surfaceHover"
+              onClick={() => setOpen(false)}
+            >
+              <GearSix size={16} />
+              Account
+            </Link>
+            <Link
+              href="/settings#connections"
+              role="menuitem"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm text-rl_text hover:bg-rl_surfaceHover"
+              onClick={() => setOpen(false)}
+            >
+              <PlugsConnected size={16} />
+              Connections
+            </Link>
+            <form action={signOutOperator}>
+              <button
+                type="submit"
+                role="menuitem"
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-rl_text hover:bg-rl_surfaceHover"
+              >
+                <SignOut size={16} />
+                Sign out
+              </button>
+            </form>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div ref={rootRef} className="relative">

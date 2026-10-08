@@ -141,6 +141,21 @@ describe("auth and profile chrome", () => {
     expect(screen.queryByText("Profile Owner")).not.toBeInTheDocument();
     expect(screen.queryByText("validsstudio@gmail.com")).not.toBeInTheDocument();
   });
+
+  it("does not reuse the DJ Coast brand avatar on the signed-in Google control", () => {
+    render(
+      <ProfileSessionProvider
+        operator={{ id: "opr_1", name: "Coast Ent", email: "djcoast239@gmail.com" }}
+        profiles={[{ id: "prf_1", displayName: "DJ Coast", avatarUrl: "/api/media/brand.png" }]}
+        activeProfile={{ id: "prf_1", displayName: "DJ Coast", avatarUrl: "/api/media/brand.png" }}
+      >
+        <OperatorMenu />
+      </ProfileSessionProvider>,
+    );
+    expect(screen.getByText("djcoast239@gmail.com")).toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.getByText("D")).toBeInTheDocument();
+  });
 });
 
 describe("profile setup image and field diagnostics", () => {

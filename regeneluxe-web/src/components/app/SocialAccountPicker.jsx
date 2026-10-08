@@ -13,6 +13,8 @@ export default function SocialAccountPicker({
   accounts = [],
   workingAccountId = "",
   collapsed = false,
+  layout = "stack",
+  showDetail = true,
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
@@ -40,7 +42,96 @@ export default function SocialAccountPicker({
       ? "All social accounts"
       : "No social accounts";
 
-  if (collapsed) return null;
+  if (layout !== "split" && collapsed) return null;
+
+  if (layout === "split") {
+    const icon = selected ? (
+      <PlatformIcon platform={selected.platform} size={18} />
+    ) : (
+      <NavIcon name="social" size={20} />
+    );
+    if (!accounts.length) {
+      return (
+        <Link
+          href="/accounts"
+          title="Add social account"
+          aria-label="Add social account"
+          className="flex items-center text-sm text-rl_muted transition-colors hover:bg-rl_surfaceHover hover:text-rl_text"
+        >
+          <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">
+            <NavIcon name="social" size={20} />
+          </span>
+          {showDetail ? <span className="min-w-0 flex-1 truncate pr-3">Add social account</span> : null}
+        </Link>
+      );
+    }
+    return (
+      <div ref={rootRef} className="relative">
+        <button
+          type="button"
+          className="flex w-full items-center py-1 text-left transition-colors hover:bg-rl_surfaceHover"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          aria-label={`Social channel filter: ${selectedLabel}`}
+          title={selectedLabel}
+        >
+          <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">{icon}</span>
+          {showDetail ? (
+            <span className="min-w-0 flex-1 pr-3">
+              <span className="rl-label">Social channel</span>
+              <span className="block truncate text-sm text-rl_text">{selectedLabel}</span>
+            </span>
+          ) : null}
+        </button>
+        {open ? (
+          <div
+            role="listbox"
+            aria-label="Social channels"
+            className={`absolute z-50 mt-1 w-56 overflow-hidden rounded-xl border border-rl_border bg-rl_surfaceRaised shadow-lg ${
+              showDetail ? "left-[4.5rem]" : "left-full ml-2"
+            }`}
+          >
+            <button
+              type="button"
+              role="option"
+              aria-selected={!selected}
+              className="block w-full px-3 py-2.5 text-left text-sm text-rl_text hover:bg-rl_surfaceHover"
+              onClick={() => {
+                setWorkingAccountId("");
+                setOpen(false);
+              }}
+            >
+              All social accounts
+            </button>
+            {accounts.map((account) => {
+              const view = displayConnectionState(account);
+              const label = account.displayName || account.handle || account.platform;
+              return (
+                <button
+                  key={account.id}
+                  type="button"
+                  role="option"
+                  aria-selected={account.id === workingAccountId}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-rl_text hover:bg-rl_surfaceHover"
+                  onClick={() => {
+                    setWorkingAccountId(account.id);
+                    setOpen(false);
+                  }}
+                >
+                  <PlatformIcon platform={account.platform} size={16} />
+                  <span className="min-w-0 flex-1 truncate">{label}</span>
+                  <span className="shrink-0 text-[11px] uppercase tracking-[0.12em] text-rl_muted">
+                    {view.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   if (!accounts.length) {
     return (
@@ -77,7 +168,7 @@ export default function SocialAccountPicker({
         {selected ? (
           <PlatformIcon platform={selected.platform} size={18} />
         ) : (
-          <NavIcon name="accounts" size={18} />
+          <NavIcon name="social" size={18} />
         )}
         {!collapsed && (
           <span className="min-w-0 flex-1 truncate text-sm text-rl_text">{selectedLabel}</span>
