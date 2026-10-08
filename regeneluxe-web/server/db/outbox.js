@@ -76,13 +76,35 @@ export async function listPending({ limit = 100 } = {}, client = null) {
   const now = nowIso();
   const result = await db.execute({
     sql: `SELECT * FROM outbox
-      WHERE state = ?
+      WHERE state IN (?, ?)
         AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
       ORDER BY created_at ASC
       LIMIT ?`,
-    args: [OUTBOX_STATES.PENDING, now, limit],
+    args: [OUTBOX_STATES.PENDING, OUTBOX_STATES.ERROR, now, limit],
   });
   return result.rows.map(rowToOutbox);
+}
+
+/** Pending live writes must not recreate a row after a local delete. */
+export async function supersedePendingUpserts(collection, recordId, client = null) {
+  const db = clientOr(client);
+  const now = nowIso();
+  await db.execute({
+    sql: `UPDATE outbox
+      SET state = ?, updated_at = ?, last_error = ?
+      WHERE collection = ? AND record_id = ? AND op = ?
+        AND state IN (?, ?)`,
+    args: [
+      OUTBOX_STATES.DONE,
+      now,
+      "superseded by delete",
+      collection,
+      recordId,
+      OUTBOX_OPS.UPSERT,
+      OUTBOX_STATES.PENDING,
+      OUTBOX_STATES.ERROR,
+    ],
+  });
 }
 
 export async function markState(id, state, { lastError = null, nextAttemptAt = null } = {}, client = null) {

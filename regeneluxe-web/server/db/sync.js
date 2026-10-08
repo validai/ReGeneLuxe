@@ -3,8 +3,9 @@ import { APPEND_ONLY_COLLECTIONS, MUTABLE_COLLECTIONS, COLLECTIONS } from "./col
 import { migrate, SCHEMA_VERSION } from "./migrations.js";
 import { claimBatch, markState, OUTBOX_OPS, OUTBOX_STATES } from "./outbox.js";
 import { listJobs, JOB_STATES } from "./jobs.js";
-import { getMeta, setMeta, get as getLocal, upsert as upsertLocal } from "./repository.js";
+import { getMeta, setMeta, get as getLocal, upsert as upsertLocal, writeTombstone } from "./repository.js";
 import { applyRemoteRecord } from "../auth/identityLock.js";
+import { stripSecretFields } from "../../src/data/secretFields.js";
 
 let remoteProbeCache = { at: 0, reachable: null, error: null };
 
@@ -145,13 +146,72 @@ async function remoteUpsertEntity(remote, item) {
   });
 }
 
-async function remoteSoftDelete(remote, collection, id, revision) {
-  const now = new Date().toISOString();
-  await remote.execute({
-    sql: `UPDATE entities SET deleted_at = ?, updated_at = ?, revision = ?, sync_status = 'SYNCED'
-      WHERE collection = ? AND id = ?`,
-    args: [now, now, revision || 1, collection, id],
+function workspaceMismatch(left, right) {
+  const a = left?.managedProfileId || null;
+  const b = right?.managedProfileId || null;
+  return Boolean(a && b && a !== b);
+}
+
+function tombstoneBody(localRecord, item) {
+  const source = stripSecretFields({
+    ...(localRecord || {}),
+    ...(item.payload || {}),
+    id: item.recordId,
   });
+  delete source.revision;
+  delete source.syncStatus;
+  delete source.deletedAt;
+  delete source.schemaVersion;
+  return source;
+}
+
+/**
+ * Write a remote tombstone even when the live row is missing.
+ * An equal or older remote live row is replaced. A remote tombstone that is
+ * already at least as new is left in place.
+ */
+async function remotePersistTombstone(remote, item, localRecord) {
+  const remoteRow = await remoteGetEntity(remote, item.collection, item.recordId);
+  const remoteRecord = parseRemoteRow(remoteRow);
+  if (workspaceMismatch(localRecord || item.payload, remoteRecord)) {
+    return { ok: false, reason: "workspace_mismatch" };
+  }
+
+  const localRev = Number(item.revision || localRecord?.revision || 1);
+  const remoteRev = Number(remoteRow?.revision || 0);
+  if (remoteRow?.deleted_at && remoteRev >= localRev) {
+    return { ok: true, reason: "already_tombstoned" };
+  }
+
+  const deletedAt = localRecord?.deletedAt || item.payload?.deletedAt || new Date().toISOString();
+  const revision = Math.max(localRev, remoteRev || localRev);
+  const payload = tombstoneBody(localRecord, item);
+  const createdAt = localRecord?.createdAt || remoteRecord?.createdAt || deletedAt;
+  const updatedAt = deletedAt;
+
+  await remote.execute({
+    sql: `INSERT INTO entities (
+      collection, id, payload, created_at, updated_at, schema_version, revision, sync_status, deleted_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'SYNCED', ?)
+    ON CONFLICT(collection, id) DO UPDATE SET
+      payload = excluded.payload,
+      updated_at = excluded.updated_at,
+      schema_version = excluded.schema_version,
+      revision = excluded.revision,
+      sync_status = 'SYNCED',
+      deleted_at = excluded.deleted_at`,
+    args: [
+      item.collection,
+      item.recordId,
+      JSON.stringify(payload),
+      createdAt,
+      updatedAt,
+      SCHEMA_VERSION,
+      revision,
+      deletedAt,
+    ],
+  });
+  return { ok: true, reason: remoteRow ? "updated" : "inserted" };
 }
 
 /**
@@ -182,8 +242,14 @@ export async function pushOutboxToRemote() {
       const mutable = MUTABLE_COLLECTIONS.has(item.collection);
 
       if (item.op === OUTBOX_OPS.DELETE) {
-        if (remoteRow) {
-          await remoteSoftDelete(remote, item.collection, item.recordId, item.revision);
+        const localRecord = await getLocal(item.collection, item.recordId, local);
+        const persisted = await remotePersistTombstone(remote, item, localRecord);
+        if (!persisted.ok) {
+          await markState(item.id, OUTBOX_STATES.CONFLICT, {
+            lastError: persisted.reason,
+          }, local);
+          conflicts += 1;
+          continue;
         }
         await markState(item.id, OUTBOX_STATES.DONE, {}, local);
         await local.execute({
@@ -191,6 +257,16 @@ export async function pushOutboxToRemote() {
           args: [item.collection, item.recordId],
         });
         pushed += 1;
+        continue;
+      }
+
+      const localForUpsert = await getLocal(item.collection, item.recordId, local);
+      if (localForUpsert?.deletedAt && Number(localForUpsert.revision || 0) >= Number(item.revision || 0)) {
+        await markState(item.id, OUTBOX_STATES.DONE, { lastError: "superseded by delete" }, local);
+        continue;
+      }
+      if (remoteRow?.deleted_at && Number(remoteRow.revision || 0) >= Number(item.revision || 0)) {
+        await markState(item.id, OUTBOX_STATES.DONE, { lastError: "remote tombstone is newer" }, local);
         continue;
       }
 
@@ -255,6 +331,7 @@ export async function pushOutboxToRemote() {
  *
  * Append-only: insert missing by stable id; never replace existing.
  * Mutable: higher revision wins; local-newer stays local (pending push).
+ * A local tombstone is never cleared by a remote live row.
  */
 export async function pullRemoteToLocal() {
   const remote = getRemoteClient();
@@ -277,6 +354,14 @@ export async function pullRemoteToLocal() {
       const remoteRecord = parseRemoteRow(row);
       if (!remoteRecord?.id) continue;
       const localRecord = await getLocal(collection, remoteRecord.id, local);
+      if (localRecord?.deletedAt) {
+        skippedCount += 1;
+        continue;
+      }
+      if (localRecord && workspaceMismatch(localRecord, remoteRecord)) {
+        skippedCount += 1;
+        continue;
+      }
       const appendOnly = APPEND_ONLY_COLLECTIONS.has(collection) || collection === "metric_snapshots";
       const mutable = MUTABLE_COLLECTIONS.has(collection);
 
@@ -323,18 +408,18 @@ export async function pullRemoteToLocal() {
       args: [collection],
     });
     for (const row of deletedRemote.rows || []) {
-      const localRecord = await getLocal(collection, row.id, local);
-      if (!localRecord || localRecord.deletedAt) continue;
-      if (Number(row.revision || 0) >= Number(localRecord.revision || 0)) {
-        await local.execute({
-          sql: `UPDATE entities SET deleted_at = ?, updated_at = ?, revision = ?, sync_status = 'SYNCED'
-            WHERE collection = ? AND id = ?`,
-          args: [row.deleted_at, row.updated_at || new Date().toISOString(), row.revision || 1, collection, row.id],
-        });
-        pulled += 1;
-      } else {
-        conflicts += 1;
-      }
+      const remoteRecord = parseRemoteRow(row);
+      if (!remoteRecord?.id) continue;
+      const applied = await writeTombstone(collection, {
+        id: remoteRecord.id,
+        deletedAt: remoteRecord.deletedAt,
+        updatedAt: remoteRecord.updatedAt,
+        revision: remoteRecord.revision || 1,
+        record: remoteRecord,
+      }, local);
+      if (applied.applied) pulled += 1;
+      else if (applied.reason === "local_newer") conflicts += 1;
+      else skippedCount += 1;
     }
   }
 

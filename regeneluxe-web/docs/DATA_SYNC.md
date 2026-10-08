@@ -29,11 +29,38 @@
 - Higher revision wins
 - Equal → keep local
 - Local newer → stay local, remain pending for push
-- Soft-delete: apply when remote revision ≥ local
+
+## Durable tombstones
+
+`repository.remove()` soft-deletes the entity (`deleted_at`, bumped `revision`) and enqueues one `DELETE` outbox row, keyed `delete:<collection>:<id>`. Repeating remove does not clear the tombstone or insert a second delete. Normal reads omit tombstoned rows. Sync still loads them.
+
+Identifiers from `createId` are not reused. Calling `upsert` on a tombstoned id returns the tombstone and does not clear `deleted_at`. Intentional recreation uses a new id. Pull is not restore.
+
+### Conflict rule
+
+| Local | Remote | Result |
+| --- | --- | --- |
+| Tombstone | Live, any revision | Keep the local tombstone. Pull does not resurrect. |
+| Tombstone | Tombstone | Stay deleted. The higher revision updates tombstone metadata. |
+| Live | Tombstone, remote revision ≥ local | Local becomes a tombstone. |
+| Live | Tombstone, remote revision < local | Keep the local live row. Counted as a conflict. |
+| Live | Live | Higher revision wins. Equal keeps local. |
+| Missing | Tombstone | Insert a local tombstone so a later live copy cannot recreate the row. |
+| Missing | Live | Insert the live row. |
+
+Workspace: when both rows have `managedProfileId` and they differ, the tombstone is not applied across that boundary.
+
+### DELETE done
+
+`DONE` is written only after a remote tombstone exists. If the remote row is missing, push inserts one. If it is already tombstoned at an equal or newer revision, push leaves it. A network failure leaves the outbox `ERROR` and the local tombstone in place. Due `ERROR` rows are claimed again. `DONE` does not mean "the remote select returned no row."
+
+Restart keeps the tombstone because it is a row in local SQLite. A later pull of a stale live copy does not clear `deleted_at`.
+
+Tombstones are not garbage-collected. Compaction can wait until a remote tombstone is known to be ahead of every replica.
 
 ## Offline
 
-App opens from local SQLite without Turso. Edits enqueue outbox (`PENDING`). Reconnect runs pull then push (`reconcileWithRemote`).
+App opens from local SQLite without Turso. A local delete still hides the entity and keeps the tombstone while the outbox stays `PENDING`. Edits enqueue outbox (`PENDING`). Reconnect runs pull then push (`reconcileWithRemote`). Cloud outage does not undelete.
 
 ## Secrets
 

@@ -5,6 +5,8 @@ import { dbPath, ensureDirs, quarantineDir } from "./paths.js";
 
 let localClient = null;
 let remoteClient = null;
+let localOverride = null;
+let remoteOverride = null;
 let unhealthy = null;
 
 export function isMemoryMode() {
@@ -65,6 +67,7 @@ function createLocalClient() {
 }
 
 export function getLocalClient() {
+  if (localOverride) return localOverride;
   if (unhealthy && !isMemoryMode()) {
     throw new Error(`Local DB unhealthy: ${unhealthy.message}`);
   }
@@ -75,6 +78,7 @@ export function getLocalClient() {
 }
 
 export function getRemoteClient() {
+  if (remoteOverride) return remoteOverride;
   const url = process.env.TURSO_DATABASE_URL;
   const authToken = process.env.TURSO_AUTH_TOKEN;
   if (!url || !authToken) return null;
@@ -84,22 +88,33 @@ export function getRemoteClient() {
   return remoteClient;
 }
 
-export async function closeDb() {
-  if (localClient) {
-    try {
-      localClient.close();
-    } catch {
-      /* ignore */
-    }
-    localClient = null;
+/** Point sync at isolated clients. Refuses to run outside Vitest. */
+export function setTestClients({ local, remote } = {}) {
+  if (!process.env.VITEST && process.env.NODE_ENV !== "test") {
+    throw new Error("setTestClients is only allowed in test mode");
   }
-  if (remoteClient) {
+  if (local !== undefined) {
+    localOverride = local;
+    localClient = local;
+  }
+  if (remote !== undefined) {
+    remoteOverride = remote;
+    remoteClient = remote;
+  }
+}
+
+export async function closeDb() {
+  const unique = [...new Set([localClient, remoteClient].filter(Boolean))];
+  localClient = null;
+  remoteClient = null;
+  localOverride = null;
+  remoteOverride = null;
+  for (const client of unique) {
     try {
-      remoteClient.close();
+      client.close();
     } catch {
       /* ignore */
     }
-    remoteClient = null;
   }
 }
 
@@ -108,6 +123,8 @@ export async function resetDbForTests() {
   if (!isMemoryMode()) {
     throw new Error("resetDbForTests is only allowed in memory mode");
   }
+  localOverride = null;
+  remoteOverride = null;
   await closeDb();
   clearUnhealthy();
   localClient = createLocalClient();

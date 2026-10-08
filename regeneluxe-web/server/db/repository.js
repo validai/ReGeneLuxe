@@ -1,7 +1,7 @@
 import { nowIso } from "../../src/data/ids.js";
 import { getLocalClient } from "./client.js";
 import { SCHEMA_VERSION } from "./migrations.js";
-import { enqueue as enqueueOutbox, OUTBOX_OPS } from "./outbox.js";
+import { enqueue as enqueueOutbox, OUTBOX_OPS, supersedePendingUpserts } from "./outbox.js";
 
 function clientOr(c) {
   return c || getLocalClient();
@@ -107,6 +107,9 @@ export async function upsert(collection, record, client = null, options = {}) {
   }
   const db = clientOr(client);
   const existing = await get(collection, record.id, db);
+  if (existing?.deletedAt) {
+    return existing;
+  }
   const now = nowIso();
   const createdAt = existing?.createdAt || record.createdAt || now;
   const revision = options.forceRevision != null
@@ -175,10 +178,34 @@ export async function upsert(collection, record, client = null, options = {}) {
   return get(collection, record.id, db);
 }
 
+function tombstonePayload(existing, deletedAt) {
+  return {
+    id: existing.id,
+    managedProfileId: existing.managedProfileId || null,
+    deletedAt,
+  };
+}
+
 export async function remove(collection, id, client = null) {
   const db = clientOr(client);
   const existing = await get(collection, id, db);
   if (!existing) return null;
+
+  if (existing.deletedAt) {
+    await supersedePendingUpserts(collection, id, db);
+    await enqueueOutbox(
+      {
+        collection,
+        recordId: id,
+        op: OUTBOX_OPS.DELETE,
+        payload: tombstonePayload(existing, existing.deletedAt),
+        revision: existing.revision,
+        idempotencyKey: `delete:${collection}:${id}`,
+      },
+      db,
+    );
+    return existing;
+  }
 
   const now = nowIso();
   const revision = (existing.revision || 0) + 1;
@@ -197,19 +224,89 @@ export async function remove(collection, id, client = null) {
     });
   }
 
+  await supersedePendingUpserts(collection, id, db);
   await enqueueOutbox(
     {
       collection,
       recordId: id,
       op: OUTBOX_OPS.DELETE,
-      payload: null,
+      payload: tombstonePayload(existing, now),
       revision,
-      idempotencyKey: `${collection}:${id}:${revision}`,
+      idempotencyKey: `delete:${collection}:${id}`,
     },
     db,
   );
 
   return get(collection, id, db);
+}
+
+/**
+ * Persist a tombstone from reconciliation. Never clears deleted_at.
+ * A newer local live row is left unchanged. Workspace ids must match when both are set.
+ */
+export async function writeTombstone(collection, spec, client = null) {
+  const db = clientOr(client);
+  const existing = await get(collection, spec.id, db);
+  const remoteWorkspace = spec.record?.managedProfileId || null;
+  const localWorkspace = existing?.managedProfileId || null;
+  if (localWorkspace && remoteWorkspace && localWorkspace !== remoteWorkspace) {
+    return { applied: false, reason: "workspace_mismatch", record: existing };
+  }
+  if (existing?.deletedAt && Number(existing.revision || 0) >= Number(spec.revision || 0)) {
+    return { applied: false, reason: "already_tombstoned", record: existing };
+  }
+  if (existing && !existing.deletedAt && Number(existing.revision || 0) > Number(spec.revision || 0)) {
+    return { applied: false, reason: "local_newer", record: existing };
+  }
+
+  const deletedAt = spec.deletedAt || existing?.deletedAt || nowIso();
+  const updatedAt = spec.updatedAt || deletedAt;
+  const revision = Number(spec.revision || existing?.revision || 1);
+  const createdAt = existing?.createdAt || spec.record?.createdAt || deletedAt;
+  const payload = {
+    ...(spec.record || {}),
+    ...(existing || {}),
+    id: spec.id,
+    createdAt,
+    updatedAt,
+  };
+  delete payload.revision;
+  delete payload.syncStatus;
+  delete payload.deletedAt;
+  delete payload.schemaVersion;
+
+  await db.execute({
+    sql: `INSERT INTO entities (
+      collection, id, payload, created_at, updated_at, schema_version, revision, sync_status, deleted_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'SYNCED', ?)
+    ON CONFLICT(collection, id) DO UPDATE SET
+      payload = excluded.payload,
+      updated_at = excluded.updated_at,
+      schema_version = excluded.schema_version,
+      revision = excluded.revision,
+      sync_status = 'SYNCED',
+      deleted_at = excluded.deleted_at`,
+    args: [
+      collection,
+      spec.id,
+      JSON.stringify(payload),
+      createdAt,
+      updatedAt,
+      SCHEMA_VERSION,
+      revision,
+      deletedAt,
+    ],
+  });
+
+  if (isAnalyticsCollection(collection)) {
+    await db.execute({
+      sql: `UPDATE metric_snapshots SET deleted_at = ?, updated_at = ?, revision = ?, sync_status = 'SYNCED'
+        WHERE id = ?`,
+      args: [deletedAt, updatedAt, revision, spec.id],
+    });
+  }
+
+  return { applied: true, reason: "tombstoned", record: await get(collection, spec.id, db) };
 }
 
 export async function replaceAll(collection, records, client = null) {
