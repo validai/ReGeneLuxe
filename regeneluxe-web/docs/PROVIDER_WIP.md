@@ -57,7 +57,6 @@ These audit findings are still open. This checkpoint does not remediate them.
 
 - Delete/tombstone resurrection (`acc_test` and remote-delete reconciliation)
 - Duplicate boot requests (`/api/db/health`, snapshot, sync)
-- Overlapping connection-status definitions (`PROFILE_CONNECTION_STATES`, `CONNECTION_LABELS`, `CONNECTION_HINTS`, and `StatusBadge` tones)
 - Producer-less jobs: `RUN_CAMPAIGN_MONITOR`, `RUN_CAMPAIGN_BRAIN`, `EVALUATE_EXPERIMENT`
 - `runCampaignBrain()` is not wired into the worker
 - Stale-code candidates (Vite shell, `server/index.js`, and related leftovers) were not deleted
@@ -66,5 +65,6 @@ These audit findings are still open. This checkpoint does not remediate them.
 
 ## Status model
 
-The Gmail flow uses `CONNECTED`, `NOT_CONNECTED`, `RECONNECT_REQUIRED`, `SYNCING`, and `ERROR`.
-Those labels still live in more than one module. Consolidating them is a later checkpoint.
+Provider and social connection states, labels, and badge tones are defined once in `src/data/statusContracts.js`. See `docs/CONNECTION_STATUS.md`.
+
+The Gmail flow uses `CONNECTED`, `NOT_CONNECTED`, `RECONNECT_REQUIRED`, `SETUP_REQUIRED`, `SYNCING`, and `ERROR`. `ERROR` and `RECONNECT_REQUIRED` stay distinct.

@@ -622,7 +622,7 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
             <li>Application schema version {SCHEMA_VERSION}</li>
             <li>Signed-in Google account · {operatorEmail || "Not signed in"}</li>
             <li>
-              Gmail · {gmailActive ? (gmailView.code === "SYNCING" ? "Syncing" : "Connected") : gmailView.label}
+              Gmail · {gmailView.label}
               {gmailActive ? (
                 <>
                   {" · "}Last sync {formatWhen(gmailConnection.lastSuccessfulSyncAt || gmailConnection.lastSyncAt)}

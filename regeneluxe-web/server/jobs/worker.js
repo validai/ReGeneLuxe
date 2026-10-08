@@ -1,4 +1,5 @@
 import { createId, nowIso } from "../../src/data/ids.js";
+import { SOCIAL_CONNECTION_STATES } from "../../src/data/statusContracts.js";
 import {
   claimNextJob,
   completeJob,
@@ -37,7 +38,7 @@ async function handleRefreshAnalytics(payload = {}) {
   const accountId = payload.accountId;
   const account = await loadAccount(accountId);
   if (!account) throw new Error("Account not found for analytics refresh.");
-  if (account.connectionState !== "CONNECTED") {
+  if (account.connectionState !== SOCIAL_CONNECTION_STATES.CONNECTED) {
     throw new Error(`Account is ${account.connectionState || "not connected"} — cannot refresh provider analytics.`);
   }
   const connector = getConnector(account.platform);
@@ -116,7 +117,7 @@ async function handleRefreshConnection(payload = {}) {
   if (!profile.ok) {
     await upsert(COLLECTIONS.accounts, {
       ...account,
-      connectionState: profile.connectionState || "RECONNECT_REQUIRED",
+      connectionState: profile.connectionState || SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED,
       lastErrorSummary: profile.error || profile.reason || "Refresh failed",
       updatedAt: nowIso(),
     });
@@ -125,7 +126,7 @@ async function handleRefreshConnection(payload = {}) {
   await upsert(COLLECTIONS.accounts, {
     ...account,
     ...profile.profile,
-    connectionState: "CONNECTED",
+    connectionState: SOCIAL_CONNECTION_STATES.CONNECTED,
     connectionMethod: "OAUTH",
     lastSync: nowIso(),
     lastSuccessfulSync: nowIso(),

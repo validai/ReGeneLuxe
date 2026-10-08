@@ -1,4 +1,5 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
+import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
 import { baseConnector, unavailable } from "../base.js";
 import { createOAuthState, friendlyOAuthError } from "../oauth/state.js";
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
@@ -61,13 +62,13 @@ tiktokConnector._completeAuth = async ({ code, stateMeta, error, errorDescriptio
   if (error) {
     return {
       ok: false,
-      connectionState: "ERROR",
+      connectionState: SOCIAL_CONNECTION_STATES.ERROR,
       error: friendlyOAuthError(error, "TikTok"),
       detail: errorDescription || error,
     };
   }
   if (!code) {
-    return { ok: false, connectionState: "ERROR", error: friendlyOAuthError("missing_code", "TikTok") };
+    return { ok: false, connectionState: SOCIAL_CONNECTION_STATES.ERROR, error: friendlyOAuthError("missing_code", "TikTok") };
   }
   const creds = tiktokConnector.getAppCredentials();
   const tokenRes = await fetch("https://open.tiktokapis.com/v2/oauth/token/", {
@@ -86,7 +87,7 @@ tiktokConnector._completeAuth = async ({ code, stateMeta, error, errorDescriptio
   if (!tokenRes.ok || !data.access_token) {
     return {
       ok: false,
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: friendlyOAuthError("invalid_grant", "TikTok"),
       detail: tokenJson.error_description || tokenJson.error || "Token exchange failed",
     };
@@ -102,7 +103,7 @@ tiktokConnector._completeAuth = async ({ code, stateMeta, error, errorDescriptio
   });
   return {
     ok: true,
-    connectionState: "CONNECTED",
+    connectionState: SOCIAL_CONNECTION_STATES.CONNECTED,
     profile: {
       providerAccountId: data.open_id || null,
       displayName: "",
@@ -122,7 +123,7 @@ tiktokConnector._getProfile = async (_account, tokens) => {
   if (!res.ok) {
     return {
       ok: false,
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: friendlyOAuthError("invalid_grant", "TikTok"),
     };
   }
@@ -144,5 +145,5 @@ tiktokConnector._getContentMetrics = async () => unavailable("TikTok content met
 tiktokConnector._publishContent = async () => unavailable("TikTok publishing available after provider approval.");
 tiktokConnector._disconnect = async (account) => {
   clearAccountTokens("tiktok", account.id);
-  return { ok: true, connectionState: "UNCONNECTED" };
+  return { ok: true, connectionState: SOCIAL_CONNECTION_STATES.UNCONNECTED };
 };

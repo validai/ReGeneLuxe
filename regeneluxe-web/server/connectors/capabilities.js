@@ -29,6 +29,10 @@ export const LEGACY_CAPABILITY_MAP = Object.freeze({
   DELETE_POST: CAPABILITY.DELETE_CONTENT,
 });
 
+/**
+ * Capability readiness for a platform. This is not the live connection state.
+ * Live grants use PROVIDER_CONNECTION_STATES. Social rows use CONNECTION_STATES.
+ */
 export const PROVIDER_READINESS = Object.freeze({
   IMPLEMENTED: "IMPLEMENTED",
   SETUP_REQUIRED: "SETUP_REQUIRED",
@@ -36,17 +40,7 @@ export const PROVIDER_READINESS = Object.freeze({
   UNSUPPORTED: "UNSUPPORTED",
 });
 
-export const CONNECTION_STATES = Object.freeze([
-  "MANUAL_ONLY",
-  "UNCONNECTED",
-  "CONNECTING",
-  "CONNECTED",
-  "AUTH_EXPIRED",
-  "RECONNECT_REQUIRED",
-  "ERROR",
-  "UNSUPPORTED",
-  "SETUP_REQUIRED",
-]);
+export { SOCIAL_CONNECTION_STATE_LIST as CONNECTION_STATES } from "../../src/data/statusContracts.js";
 
 export function expandCapabilities(list = []) {
   const out = new Set();

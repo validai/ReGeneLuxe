@@ -117,7 +117,7 @@ export async function completeGmailAuth({
   if (!stateResult.ok) {
     return {
       ok: false,
-      connectionState: "ERROR",
+      connectionState: PROFILE_CONNECTION_STATES.ERROR,
       error: stateResult.error,
       redirectTo: settingsRedirect({ gmail: "error", message: stateResult.error }),
     };
@@ -289,7 +289,7 @@ export async function refreshGmailConnection({ operator, activeProfile } = {}) {
     });
     return {
       ok: false,
-      connectionState: "NOT_CONNECTED",
+      connectionState: PROFILE_CONNECTION_STATES.NOT_CONNECTED,
       error: "Gmail is not connected.",
       connection: publicProfileConnection(next),
     };
@@ -355,7 +355,7 @@ export async function disconnectGmailConnection({ operator, activeProfile } = {}
   const preservedCount = await countGmailMessagesForProfile(activeProfile.id);
   return {
     ok: true,
-    connectionState: "NOT_CONNECTED",
+    connectionState: PROFILE_CONNECTION_STATES.NOT_CONNECTED,
     connection: publicProfileConnection(next),
     profilePreserved: Boolean(profileStillThere),
     recordsPreserved: preservedCount,

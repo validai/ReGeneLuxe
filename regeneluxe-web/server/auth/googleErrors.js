@@ -1,5 +1,7 @@
 /** Operator-facing Google API errors. Never dump raw provider JSON. */
 
+import { PROVIDER_CONNECTION_STATES } from "../../src/data/statusContracts.js";
+
 export function googleApiDisabledMessage(service) {
   if (service === "gmail") {
     return "Gmail API needs to be enabled for the ReGeneLuxe Google Cloud project.";
@@ -29,7 +31,7 @@ export function friendlyGoogleApiError(json, status, service = "google") {
   if (status === 429 || /rate.?limit|ratelimit|quota|userRateLimit/i.test(blob)) {
     return {
       code: "RATE_LIMITED",
-      connectionState: "ERROR",
+      connectionState: PROVIDER_CONNECTION_STATES.ERROR,
       retryable: true,
       error: service === "gmail"
         ? "Gmail is temporarily unavailable. ReGeneLuxe will retry."
@@ -39,7 +41,7 @@ export function friendlyGoogleApiError(json, status, service = "google") {
   if (status >= 500) {
     return {
       code: "UNAVAILABLE",
-      connectionState: "ERROR",
+      connectionState: PROVIDER_CONNECTION_STATES.ERROR,
       retryable: true,
       error: service === "gmail"
         ? "Gmail is temporarily unavailable. ReGeneLuxe will retry."
@@ -49,7 +51,7 @@ export function friendlyGoogleApiError(json, status, service = "google") {
   if (status === 401 || /invalid.?credentials|authError|unauthorized/i.test(blob)) {
     return {
       code: "REVOKED",
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: PROVIDER_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: googleRevokedMessage(service === "gmail" ? "Gmail" : service === "youtube" ? "YouTube" : "Google"),
     };
   }
@@ -64,20 +66,22 @@ export function friendlyGoogleApiError(json, status, service = "google") {
         : "youtube";
     return {
       code: "SETUP_REQUIRED",
-      connectionState: "SETUP_REQUIRED",
+      connectionState: PROVIDER_CONNECTION_STATES.SETUP_REQUIRED,
       error: googleApiDisabledMessage(kind),
     };
   }
   if (status === 403 && /insufficient.?permission|insufficientPermissions/i.test(blob)) {
     return {
       code: "RECONNECT_REQUIRED",
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: PROVIDER_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: googleRevokedMessage(service === "gmail" ? "Gmail" : "YouTube"),
     };
   }
   return {
     code: "ERROR",
-    connectionState: status === 401 || status === 403 ? "RECONNECT_REQUIRED" : "ERROR",
+    connectionState: status === 401 || status === 403
+      ? PROVIDER_CONNECTION_STATES.RECONNECT_REQUIRED
+      : PROVIDER_CONNECTION_STATES.ERROR,
     error: service === "gmail"
       ? "Gmail could not complete this request. Try again or reconnect."
       : "YouTube could not complete this request. Try again or reconnect.",

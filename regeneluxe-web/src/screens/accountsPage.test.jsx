@@ -99,8 +99,24 @@ describe("Social Accounts page", () => {
     expect(screen.getByLabelText(/^handle$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/profile url/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/provider account id/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText("Setup required").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Unknown")).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/display name/i), { target: { value: "DJ Coast IG" } });
     fireEvent.click(screen.getByRole("button", { name: /save identifiers/i }));
     expect(screen.getByDisplayValue("DJ Coast IG")).toBeInTheDocument();
+  });
+
+  it("shows Unknown instead of Connected for an unrecognized account state", async () => {
+    createAccount({
+      platform: "Instagram",
+      displayName: "Odd Account",
+      handle: "@odd",
+      connectionState: "BANANA",
+    });
+    renderAccounts();
+    expect(await screen.findByText("Odd Account")).toBeInTheDocument();
+    expect(screen.getAllByText("Unknown").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Connected")).not.toBeInTheDocument();
+    expect(screen.queryByText("Setup required")).not.toBeInTheDocument();
   });
 });

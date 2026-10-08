@@ -1,5 +1,5 @@
 import { listContent, listSnapshots, listDecisions } from "../collectionRepository.js";
-import { CONNECTION_LABELS } from "../domain.js";
+import { labelForConnectionState } from "../statusContracts.js";
 
 /**
  * Per-account intelligence findings for Campaign Brain.
@@ -46,7 +46,7 @@ export function analyzeAccountChannel(account, { campaignId } = {}) {
     accountId: account.id,
     platform: account.platform,
     handle: account.handle || account.displayName,
-    connection: CONNECTION_LABELS[account.connectionState] || "Manual",
+    connection: labelForConnectionState(account.connectionState),
     connectionState: account.connectionState || "MANUAL_ONLY",
     strengths: account.platformStrengths || "",
     weaknesses: account.platformWeaknesses || "",

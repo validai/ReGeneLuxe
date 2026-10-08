@@ -1,4 +1,4 @@
-import { CAMPAIGN_TABS, CONNECTION_STATES, PUBLISH_PERMISSIONS, AI_MODES, LEGACY_SECTION_MAP, emptyInterpretation } from "./domain.js";
+import { CAMPAIGN_TABS, PUBLISH_PERMISSIONS, AI_MODES, LEGACY_SECTION_MAP, emptyInterpretation } from "./domain.js";
 import { normalizeThemePreference } from "./theme.js";
 import { createId, nowIso } from "./ids.js";
 
@@ -334,7 +334,7 @@ export function emptyAccount(partial = {}) {
     notes: partial.notes || "",
     connectionMethod: partial.connectionMethod || "MANUAL",
     providerAccountId: partial.providerAccountId || "",
-    connectionState: CONNECTION_STATES.includes(partial.connectionState)
+    connectionState: partial.connectionState
       ? partial.connectionState
       : (partial.connectionMethod === "MANUAL" || !partial.connectionMethod ? "MANUAL_ONLY" : "UNCONNECTED"),
     lastSync: partial.lastSync || partial.lastSuccessfulSync || "",

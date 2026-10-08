@@ -44,15 +44,37 @@ export type AssetStatus =
   | "SKIPPED"
   | (string & {});
 
-export type ConnectionState =
+/**
+ * Social account connectionState.
+ * Provider grants use ProviderConnectionState.
+ * DISCONNECTED is not a stored connection state.
+ * Job state and database sync health are separate domains.
+ * Runtime values live in src/data/statusContracts.js.
+ */
+export type SocialConnectionState =
   | "MANUAL_ONLY"
   | "UNCONNECTED"
+  | "NOT_CONNECTED"
   | "CONNECTING"
   | "CONNECTED"
   | "AUTH_EXPIRED"
+  | "RECONNECT_REQUIRED"
   | "ERROR"
-  | "DISCONNECTED"
-  | (string & {});
+  | "UNSUPPORTED"
+  | "SETUP_REQUIRED"
+  | "PROVIDER_REVIEW_REQUIRED";
+
+/** Live Gmail / YouTube profile connection. */
+export type ProviderConnectionState =
+  | "CONNECTED"
+  | "NOT_CONNECTED"
+  | "RECONNECT_REQUIRED"
+  | "SETUP_REQUIRED"
+  | "SYNCING"
+  | "ERROR";
+
+/** @deprecated Prefer SocialConnectionState or ProviderConnectionState. */
+export type ConnectionState = SocialConnectionState;
 
 export type PublishPermission =
   | "ANALYZE_ONLY"

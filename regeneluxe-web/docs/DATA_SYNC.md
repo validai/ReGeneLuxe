@@ -13,6 +13,8 @@
 
 `LOCAL_ONLY` · `PENDING` · `SYNCING` · `SYNCED` · `ERROR` · `CONFLICT`
 
+These are database replica states. They are not Gmail/YouTube connection states and they are not social account states. See `docs/CONNECTION_STATUS.md`.
+
 ## Conflict rules
 
 ### Append-only

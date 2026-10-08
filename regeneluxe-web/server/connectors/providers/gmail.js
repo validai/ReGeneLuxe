@@ -1,4 +1,5 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
+import { PROVIDER_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
 import { baseConnector, envCredentials, unavailable } from "../base.js";
 import { createOAuthState, friendlyOAuthError, pkcePair } from "../oauth/state.js";
 import { clearAccountTokens, getAccountTokens, setAccountTokens } from "../../secrets/providers.js";
@@ -133,7 +134,7 @@ async function exchangeCode({ code, state }) {
   if (!tokenRes.ok || !tokenJson.access_token) {
     return {
       ok: false,
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: PROVIDER_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: friendlyOAuthError("invalid_grant", "Gmail"),
       detail: tokenJson.error_description || tokenJson.error || "Token exchange failed",
     };
@@ -177,13 +178,13 @@ gmailConnector._completeAuth = async ({ code, stateMeta, error, errorDescription
     const denied = error === "access_denied";
     return {
       ok: false,
-      connectionState: denied ? "NOT_CONNECTED" : "ERROR",
+      connectionState: denied ? PROVIDER_CONNECTION_STATES.NOT_CONNECTED : PROVIDER_CONNECTION_STATES.ERROR,
       error: friendlyOAuthError(error, "Gmail"),
       detail: errorDescription || error,
     };
   }
   if (!code) {
-    return { ok: false, connectionState: "ERROR", error: friendlyOAuthError("missing_code", "Gmail") };
+    return { ok: false, connectionState: PROVIDER_CONNECTION_STATES.ERROR, error: friendlyOAuthError("missing_code", "Gmail") };
   }
 
   const exchanged = await exchangeCode({ code, state });
@@ -193,21 +194,21 @@ gmailConnector._completeAuth = async ({ code, stateMeta, error, errorDescription
   if (!hasGmailReadonly(grantedScopes)) {
     return {
       ok: false,
-      connectionState: "ERROR",
+      connectionState: PROVIDER_CONNECTION_STATES.ERROR,
       error: "Gmail was not granted read access. Approve gmail.readonly and try again.",
     };
   }
 
   const userinfo = await fetchUserInfo(tokenJson.access_token);
   if (!userinfo.ok) {
-    return { ok: false, connectionState: "ERROR", error: userinfo.error };
+    return { ok: false, connectionState: PROVIDER_CONNECTION_STATES.ERROR, error: userinfo.error };
   }
 
   const mailbox = await fetchGmailProfile(tokenJson.access_token);
   if (!mailbox.ok) {
     return {
       ok: false,
-      connectionState: mailbox.connectionState || "ERROR",
+      connectionState: mailbox.connectionState || PROVIDER_CONNECTION_STATES.ERROR,
       error: mailbox.error,
     };
   }
@@ -226,7 +227,7 @@ gmailConnector._completeAuth = async ({ code, stateMeta, error, errorDescription
 
   return {
     ok: true,
-    connectionState: "CONNECTED",
+    connectionState: PROVIDER_CONNECTION_STATES.CONNECTED,
     profile: {
       googleAccountSub: userinfo.profile.sub || "",
       email: mailbox.profile.emailAddress || userinfo.profile.email || "",
@@ -254,7 +255,7 @@ gmailConnector._refreshAuth = async (account, tokens) => {
   if (!tokens?.refreshToken) {
     return {
       ok: false,
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: PROVIDER_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: "Gmail needs to be reconnected.",
     };
   }
@@ -274,7 +275,7 @@ gmailConnector._refreshAuth = async (account, tokens) => {
   if (!tokenRes.ok || !tokenJson.access_token) {
     return {
       ok: false,
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: PROVIDER_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: "Gmail access was revoked. Reconnect Gmail to continue syncing.",
       detail: tokenJson.error_description || tokenJson.error || "Token refresh failed",
     };
@@ -311,5 +312,5 @@ gmailConnector._disconnect = async (account) => {
     }
   }
   clearAccountTokens("gmail", account?.id);
-  return { ok: true, connectionState: "NOT_CONNECTED" };
+  return { ok: true, connectionState: PROVIDER_CONNECTION_STATES.NOT_CONNECTED };
 };

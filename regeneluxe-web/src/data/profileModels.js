@@ -1,6 +1,7 @@
 import { createId, nowIso } from "./ids.js";
 import { PLATFORMS } from "./models.js";
 import { sanitizeAvatarUrl } from "./profileImage.js";
+import { PROVIDER_CONNECTION_STATES } from "./statusContracts.js";
 
 export const PROFILE_STATUSES = ["ACTIVE", "INACTIVE"];
 
@@ -11,14 +12,7 @@ export const PROFILE_CONNECTION_KINDS = {
   SOCIAL: "SOCIAL",
 };
 
-export const PROFILE_CONNECTION_STATES = {
-  CONNECTED: "CONNECTED",
-  NOT_CONNECTED: "NOT_CONNECTED",
-  RECONNECT_REQUIRED: "RECONNECT_REQUIRED",
-  SETUP_REQUIRED: "SETUP_REQUIRED",
-  SYNCING: "SYNCING",
-  ERROR: "ERROR",
-};
+export const PROFILE_CONNECTION_STATES = PROVIDER_CONNECTION_STATES;
 
 export const PROFILE_CONNECTION_SERVICES = {
   GOOGLE_GMAIL: "GOOGLE_GMAIL",

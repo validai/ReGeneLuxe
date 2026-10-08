@@ -1,4 +1,5 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
+import { PROVIDER_CONNECTION_STATES, SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
 import { baseConnector, envCredentials, unavailable } from "../base.js";
 import { createOAuthState, friendlyOAuthError, pkcePair } from "../oauth/state.js";
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
@@ -91,13 +92,13 @@ youtubeConnector._completeAuth = async ({ code, stateMeta, error, errorDescripti
   if (error) {
     return {
       ok: false,
-      connectionState: "ERROR",
+      connectionState: PROVIDER_CONNECTION_STATES.ERROR,
       error: friendlyOAuthError(error, "YouTube"),
       detail: errorDescription || error,
     };
   }
   if (!code) {
-    return { ok: false, connectionState: "ERROR", error: friendlyOAuthError("missing_code", "YouTube") };
+    return { ok: false, connectionState: PROVIDER_CONNECTION_STATES.ERROR, error: friendlyOAuthError("missing_code", "YouTube") };
   }
   const creds = youtubeConnector.getAppCredentials();
   const secrets = readSecrets();
@@ -125,7 +126,7 @@ youtubeConnector._completeAuth = async ({ code, stateMeta, error, errorDescripti
   if (!tokenRes.ok || !tokenJson.access_token) {
     return {
       ok: false,
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: PROVIDER_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: friendlyOAuthError("invalid_grant", "YouTube"),
       detail: tokenJson.error_description || tokenJson.error || "Token exchange failed",
     };
@@ -204,7 +205,7 @@ youtubeConnector._getProfile = async (_account, tokens) => {
   if (!res.ok) {
     return {
       ok: false,
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: PROVIDER_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: friendlyOAuthError("invalid_grant", "YouTube"),
       detail: json.error?.message,
     };
@@ -297,5 +298,5 @@ youtubeConnector._publishContent = async (_account, payload) => {
 
 youtubeConnector._disconnect = async (account) => {
   clearAccountTokens("youtube", account.id);
-  return { ok: true, connectionState: "UNCONNECTED" };
+  return { ok: true, connectionState: SOCIAL_CONNECTION_STATES.UNCONNECTED };
 };

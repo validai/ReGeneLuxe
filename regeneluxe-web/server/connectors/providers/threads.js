@@ -1,4 +1,5 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
+import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
 import { baseConnector, unavailable } from "../base.js";
 import { createOAuthState, friendlyOAuthError } from "../oauth/state.js";
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
@@ -67,9 +68,9 @@ threadsConnector._beginAuth = async ({ accountId, returnTo, operatorId = null, m
 
 threadsConnector._completeAuth = async ({ code, stateMeta, error, errorDescription }) => {
   if (error) {
-    return { ok: false, connectionState: "ERROR", error: friendlyOAuthError(error, "Threads"), detail: errorDescription };
+    return { ok: false, connectionState: SOCIAL_CONNECTION_STATES.ERROR, error: friendlyOAuthError(error, "Threads"), detail: errorDescription };
   }
-  if (!code) return { ok: false, connectionState: "ERROR", error: friendlyOAuthError("missing_code", "Threads") };
+  if (!code) return { ok: false, connectionState: SOCIAL_CONNECTION_STATES.ERROR, error: friendlyOAuthError("missing_code", "Threads") };
   const creds = threadsConnector.getAppCredentials();
   const tokenRes = await fetch("https://graph.threads.net/oauth/access_token", {
     method: "POST",
@@ -86,7 +87,7 @@ threadsConnector._completeAuth = async ({ code, stateMeta, error, errorDescripti
   if (!tokenRes.ok || !tokenJson.access_token) {
     return {
       ok: false,
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: friendlyOAuthError("invalid_grant", "Threads"),
       detail: tokenJson.error_message || tokenJson.error?.message,
     };
@@ -100,7 +101,7 @@ threadsConnector._completeAuth = async ({ code, stateMeta, error, errorDescripti
   });
   return {
     ok: true,
-    connectionState: "CONNECTED",
+    connectionState: SOCIAL_CONNECTION_STATES.CONNECTED,
     profile: {
       providerAccountId: tokenJson.user_id ? String(tokenJson.user_id) : null,
       displayName: "",
@@ -117,7 +118,7 @@ threadsConnector._getProfile = async (_account, tokens) => {
   );
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    return { ok: false, connectionState: "RECONNECT_REQUIRED", error: friendlyOAuthError("invalid_grant", "Threads") };
+    return { ok: false, connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED, error: friendlyOAuthError("invalid_grant", "Threads") };
   }
   return {
     ok: true,
@@ -170,5 +171,5 @@ threadsConnector._publishContent = async (_account, payload, tokens) => {
 
 threadsConnector._disconnect = async (account) => {
   clearAccountTokens("threads", account.id);
-  return { ok: true, connectionState: "UNCONNECTED" };
+  return { ok: true, connectionState: SOCIAL_CONNECTION_STATES.UNCONNECTED };
 };

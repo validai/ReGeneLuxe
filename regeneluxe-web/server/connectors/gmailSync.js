@@ -185,7 +185,7 @@ async function gmailFetch(path, accessToken) {
     return {
       ok: false,
       code: "UNAVAILABLE",
-      connectionState: "ERROR",
+      connectionState: PROFILE_CONNECTION_STATES.ERROR,
       retryable: true,
       error: "Gmail is temporarily unavailable. ReGeneLuxe will retry.",
     };
@@ -196,7 +196,7 @@ async function gmailFetch(path, accessToken) {
       return {
         ok: false,
         code: "RATE_LIMITED",
-        connectionState: "ERROR",
+        connectionState: PROFILE_CONNECTION_STATES.ERROR,
         retryable: true,
         error: "Gmail is temporarily unavailable. ReGeneLuxe will retry.",
       };
@@ -220,17 +220,17 @@ async function gmailFetchWithRetry(path, accessToken, { retries = 5 } = {}) {
 
 export async function verifyGmailAccess({ connection, operator } = {}) {
   if (!connection?.id) {
-    return { ok: false, connectionState: "NOT_CONNECTED", error: "Gmail is not connected." };
+    return { ok: false, connectionState: PROFILE_CONNECTION_STATES.NOT_CONNECTED, error: "Gmail is not connected." };
   }
   let tokens = getAccountTokens("gmail", connection.id);
   if (!tokens?.accessToken && !tokens?.refreshToken) {
-    return { ok: false, connectionState: "NOT_CONNECTED", error: "Gmail is not connected." };
+    return { ok: false, connectionState: PROFILE_CONNECTION_STATES.NOT_CONNECTED, error: "Gmail is not connected." };
   }
   const scopes = tokens.scopes || connection.grantedScopes || [];
   if (scopes.length && !scopes.includes(GMAIL_READONLY_SCOPE)) {
     return {
       ok: false,
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: PROFILE_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: "Gmail was not granted read access. Approve gmail.readonly and try again.",
     };
   }
@@ -253,7 +253,7 @@ export async function verifyGmailAccess({ connection, operator } = {}) {
       email: verified.profile?.email,
     });
     if (!identity.ok) {
-      return { ok: false, connectionState: "ERROR", error: identity.error };
+      return { ok: false, connectionState: PROFILE_CONNECTION_STATES.ERROR, error: identity.error };
     }
   }
   return verified;
@@ -318,7 +318,7 @@ async function storeMessages(connection, ids, accessToken) {
       accessToken,
     );
     if (!detail.ok) {
-      if (detail.connectionState === "SETUP_REQUIRED" || detail.connectionState === "RECONNECT_REQUIRED") {
+      if (detail.connectionState === PROFILE_CONNECTION_STATES.SETUP_REQUIRED || detail.connectionState === PROFILE_CONNECTION_STATES.RECONNECT_REQUIRED) {
         return { ...detail, created, updated, indexedCount: byProviderId.size };
       }
       if (detail.retryable) return { ...detail, created, updated, indexedCount: byProviderId.size };
@@ -347,7 +347,7 @@ export async function syncGmailMessages({ connection, accessToken, operator } = 
   if (!token) {
     return {
       ok: false,
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: PROFILE_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: "Gmail access was revoked. Reconnect Gmail to continue syncing.",
       indexedCount: 0,
       lastAttemptedSyncAt: attemptedAt,
@@ -359,7 +359,7 @@ export async function syncGmailMessages({ connection, accessToken, operator } = 
   let listed;
   if (useHistory) {
     listed = await listHistoryMessageIds(token, cursor.historyId, GMAIL_SYNC_MAX_MESSAGES);
-    if (!listed.ok && listed.connectionState !== "SETUP_REQUIRED" && listed.connectionState !== "RECONNECT_REQUIRED") {
+    if (!listed.ok && listed.connectionState !== PROFILE_CONNECTION_STATES.SETUP_REQUIRED && listed.connectionState !== PROFILE_CONNECTION_STATES.RECONNECT_REQUIRED) {
       listed = await listWindowMessageIds(token, { max: GMAIL_SYNC_MAX_MESSAGES });
     }
   } else if (cursor.listPageToken) {

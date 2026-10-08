@@ -1,4 +1,5 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
+import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
 import { baseConnector, unavailable } from "../base.js";
 import { createOAuthState, friendlyOAuthError } from "../oauth/state.js";
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
@@ -47,9 +48,9 @@ soundcloudConnector._beginAuth = async ({ accountId, returnTo, operatorId = null
 
 soundcloudConnector._completeAuth = async ({ code, stateMeta, error, errorDescription }) => {
   if (error) {
-    return { ok: false, connectionState: "ERROR", error: friendlyOAuthError(error, "SoundCloud"), detail: errorDescription };
+    return { ok: false, connectionState: SOCIAL_CONNECTION_STATES.ERROR, error: friendlyOAuthError(error, "SoundCloud"), detail: errorDescription };
   }
-  if (!code) return { ok: false, connectionState: "ERROR", error: friendlyOAuthError("missing_code", "SoundCloud") };
+  if (!code) return { ok: false, connectionState: SOCIAL_CONNECTION_STATES.ERROR, error: friendlyOAuthError("missing_code", "SoundCloud") };
   const creds = soundcloudConnector.getAppCredentials();
   const tokenRes = await fetch("https://api.soundcloud.com/oauth2/token", {
     method: "POST",
@@ -66,7 +67,7 @@ soundcloudConnector._completeAuth = async ({ code, stateMeta, error, errorDescri
   if (!tokenRes.ok || !tokenJson.access_token) {
     return {
       ok: false,
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: friendlyOAuthError("invalid_grant", "SoundCloud"),
       detail: tokenJson.error_description || tokenJson.error,
     };
@@ -90,7 +91,7 @@ soundcloudConnector._completeAuth = async ({ code, stateMeta, error, errorDescri
   }
   return {
     ok: true,
-    connectionState: "CONNECTED",
+    connectionState: SOCIAL_CONNECTION_STATES.CONNECTED,
     profile: {
       providerAccountId: me.id ? String(me.id) : null,
       displayName: me.username || me.full_name || "",
@@ -108,7 +109,7 @@ soundcloudConnector._getProfile = async (_account, tokens) => {
   });
   const me = await res.json().catch(() => ({}));
   if (!res.ok) {
-    return { ok: false, connectionState: "RECONNECT_REQUIRED", error: friendlyOAuthError("invalid_grant", "SoundCloud") };
+    return { ok: false, connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED, error: friendlyOAuthError("invalid_grant", "SoundCloud") };
   }
   return {
     ok: true,
@@ -170,5 +171,5 @@ soundcloudConnector._getContentMetrics = async (_account, contentRef, tokens) =>
 
 soundcloudConnector._disconnect = async (account) => {
   clearAccountTokens("soundcloud", account.id);
-  return { ok: true, connectionState: "UNCONNECTED" };
+  return { ok: true, connectionState: SOCIAL_CONNECTION_STATES.UNCONNECTED };
 };

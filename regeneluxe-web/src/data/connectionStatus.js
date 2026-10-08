@@ -1,19 +1,11 @@
-import { CONNECTION_LABELS } from "./domain.js";
+import {
+  CONNECTION_HINTS,
+  MANUAL_UNSUPPORTED_HINT,
+  providerPresentation,
+  socialPresentation,
+} from "./statusContracts.js";
 
-export const CONNECTION_HINTS = {
-  CONNECTED: "Authenticated with the provider.",
-  MANUAL_ONLY: "Not authenticated",
-  UNCONNECTED: "Not authenticated",
-  SETUP_REQUIRED: "Provider configuration is required before connecting.",
-  RECONNECT_REQUIRED: "Provider auth expired or was revoked.",
-  AUTH_EXPIRED: "Provider auth expired or was revoked.",
-  PROVIDER_REVIEW_REQUIRED: "Integration exists but provider approval blocks activation.",
-  UNSUPPORTED: "Not connected",
-  MANUAL_UNSUPPORTED: "Manual account available. No authenticated connector yet.",
-  CONNECTING: "Authorization in progress.",
-  SYNCING: "Syncing Gmail…",
-  ERROR: "Provider auth expired or was revoked.",
-};
+export { CONNECTION_HINTS };
 
 export function formatHandle(handle) {
   const raw = String(handle || "").trim();
@@ -22,115 +14,48 @@ export function formatHandle(handle) {
   return raw.startsWith("@") ? raw : `@${raw.replace(/^@+/, "")}`;
 }
 
+function withErrorHint(view, connection) {
+  const errorHint = connection?.lastErrorSummary || "";
+  if (!errorHint || view.code === "CONNECTED" || view.code === "NOT_CONNECTED" || view.code === "UNKNOWN") {
+    return view;
+  }
+  return { ...view, hint: errorHint };
+}
+
+const READINESS_PLACEHOLDERS = new Set(["", "MANUAL_ONLY", "UNCONNECTED", "NOT_CONNECTED"]);
+
 export function displayConnectionState(account, { providerReadiness = "" } = {}) {
-  const state = account?.connectionState || "MANUAL_ONLY";
-  if (state === "CONNECTED") {
-    return {
-      code: "CONNECTED",
-      label: CONNECTION_LABELS.CONNECTED,
-      hint: CONNECTION_HINTS.CONNECTED,
-    };
+  const state = account?.connectionState || "";
+  if (state === "CONNECTED") return socialPresentation("CONNECTED");
+  if (state === "CONNECTING") return socialPresentation("CONNECTING");
+  if (state === "RECONNECT_REQUIRED" || state === "AUTH_EXPIRED") return socialPresentation(state);
+  if (state === "ERROR") return socialPresentation("ERROR");
+
+  const placeholder = READINESS_PLACEHOLDERS.has(state);
+  if (state === "MANUAL_ONLY" && providerReadiness === "UNSUPPORTED") {
+    return { ...socialPresentation("MANUAL_ONLY"), hint: MANUAL_UNSUPPORTED_HINT };
   }
-  if (state === "CONNECTING") {
-    return {
-      code: "CONNECTING",
-      label: CONNECTION_LABELS.CONNECTING,
-      hint: CONNECTION_HINTS.CONNECTING,
-    };
+  if (state === "UNSUPPORTED" || (placeholder && providerReadiness === "UNSUPPORTED")) {
+    return socialPresentation("UNSUPPORTED");
   }
-  if (state === "RECONNECT_REQUIRED" || state === "AUTH_EXPIRED" || state === "ERROR") {
-    return {
-      code: "RECONNECT_REQUIRED",
-      label: CONNECTION_LABELS.RECONNECT_REQUIRED,
-      hint: CONNECTION_HINTS.RECONNECT_REQUIRED,
-    };
+  if (state === "PROVIDER_REVIEW_REQUIRED" || (placeholder && providerReadiness === "PROVIDER_REVIEW_REQUIRED")) {
+    return socialPresentation("PROVIDER_REVIEW_REQUIRED");
   }
-  const unsupportedConnector = state === "UNSUPPORTED" || providerReadiness === "UNSUPPORTED";
-  if (unsupportedConnector && state === "MANUAL_ONLY") {
-    return {
-      code: "MANUAL_ONLY",
-      label: CONNECTION_LABELS.MANUAL_ONLY,
-      hint: CONNECTION_HINTS.MANUAL_UNSUPPORTED,
-    };
+  if (state === "SETUP_REQUIRED" || (placeholder && providerReadiness === "SETUP_REQUIRED")) {
+    return socialPresentation("SETUP_REQUIRED");
   }
-  if (unsupportedConnector) {
-    return {
-      code: "UNSUPPORTED",
-      label: CONNECTION_LABELS.UNSUPPORTED,
-      hint: CONNECTION_HINTS.UNSUPPORTED,
-    };
-  }
-  if (state === "PROVIDER_REVIEW_REQUIRED" || providerReadiness === "PROVIDER_REVIEW_REQUIRED") {
-    return {
-      code: "PROVIDER_REVIEW_REQUIRED",
-      label: CONNECTION_LABELS.PROVIDER_REVIEW_REQUIRED,
-      hint: CONNECTION_HINTS.PROVIDER_REVIEW_REQUIRED,
-    };
-  }
-  if (state === "SETUP_REQUIRED" || providerReadiness === "SETUP_REQUIRED") {
-    return {
-      code: "SETUP_REQUIRED",
-      label: CONNECTION_LABELS.SETUP_REQUIRED,
-      hint: CONNECTION_HINTS.SETUP_REQUIRED,
-    };
-  }
-  if (state === "UNCONNECTED") {
-    return {
-      code: "UNCONNECTED",
-      label: CONNECTION_LABELS.UNCONNECTED,
-      hint: CONNECTION_HINTS.UNCONNECTED,
-    };
-  }
-  return {
-    code: "MANUAL_ONLY",
-    label: CONNECTION_LABELS.MANUAL_ONLY,
-    hint: CONNECTION_HINTS.MANUAL_ONLY,
-  };
+  if (state === "UNCONNECTED" || state === "NOT_CONNECTED") return socialPresentation(state);
+  if (!state) return socialPresentation("MANUAL_ONLY");
+  return socialPresentation(state);
 }
 
 export function displayProfileConnection(connection) {
-  const status = connection?.status || connection?.connectionState || "NOT_CONNECTED";
-  const errorHint = connection?.lastErrorSummary || "";
-  if (status === "CONNECTED") {
-    return {
-      code: "CONNECTED",
-      label: CONNECTION_LABELS.CONNECTED,
-      hint: CONNECTION_HINTS.CONNECTED,
-    };
+  const status = connection?.status || connection?.connectionState || "";
+  if (!status) return providerPresentation("NOT_CONNECTED");
+  if (status === "AUTH_EXPIRED") {
+    return withErrorHint(providerPresentation("RECONNECT_REQUIRED"), connection);
   }
-  if (status === "SYNCING") {
-    return {
-      code: "SYNCING",
-      label: CONNECTION_LABELS.SYNCING,
-      hint: errorHint || CONNECTION_HINTS.SYNCING,
-    };
-  }
-  if (status === "SETUP_REQUIRED") {
-    return {
-      code: "SETUP_REQUIRED",
-      label: CONNECTION_LABELS.SETUP_REQUIRED,
-      hint: errorHint || CONNECTION_HINTS.SETUP_REQUIRED,
-    };
-  }
-  if (status === "RECONNECT_REQUIRED" || status === "AUTH_EXPIRED") {
-    return {
-      code: "RECONNECT_REQUIRED",
-      label: CONNECTION_LABELS.RECONNECT_REQUIRED,
-      hint: errorHint || CONNECTION_HINTS.RECONNECT_REQUIRED,
-    };
-  }
-  if (status === "ERROR") {
-    return {
-      code: "ERROR",
-      label: CONNECTION_LABELS.ERROR,
-      hint: errorHint || CONNECTION_HINTS.ERROR,
-    };
-  }
-  return {
-    code: "NOT_CONNECTED",
-    label: CONNECTION_LABELS.NOT_CONNECTED || CONNECTION_LABELS.UNCONNECTED,
-    hint: CONNECTION_LABELS.NOT_CONNECTED || CONNECTION_LABELS.UNCONNECTED,
-  };
+  return withErrorHint(providerPresentation(status), connection);
 }
 
 export function socialAccountFilterLabel(account, options = {}) {

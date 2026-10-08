@@ -1,4 +1,5 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
+import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
 import { baseConnector, unavailable } from "../base.js";
 import { createOAuthState, friendlyOAuthError, pkcePair } from "../oauth/state.js";
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
@@ -50,9 +51,9 @@ xConnector._beginAuth = async ({ accountId, returnTo, operatorId = null, managed
 
 xConnector._completeAuth = async ({ code, stateMeta, error, errorDescription, state }) => {
   if (error) {
-    return { ok: false, connectionState: "ERROR", error: friendlyOAuthError(error, "X"), detail: errorDescription };
+    return { ok: false, connectionState: SOCIAL_CONNECTION_STATES.ERROR, error: friendlyOAuthError(error, "X"), detail: errorDescription };
   }
-  if (!code) return { ok: false, connectionState: "ERROR", error: friendlyOAuthError("missing_code", "X") };
+  if (!code) return { ok: false, connectionState: SOCIAL_CONNECTION_STATES.ERROR, error: friendlyOAuthError("missing_code", "X") };
   const creds = xConnector.getAppCredentials();
   const secrets = readSecrets();
   const verifier = secrets.oauthPkce?.[state];
@@ -78,7 +79,7 @@ xConnector._completeAuth = async ({ code, stateMeta, error, errorDescription, st
   if (!tokenRes.ok || !tokenJson.access_token) {
     return {
       ok: false,
-      connectionState: "RECONNECT_REQUIRED",
+      connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED,
       error: friendlyOAuthError("invalid_grant", "X"),
       detail: tokenJson.error_description || tokenJson.error,
     };
@@ -110,7 +111,7 @@ xConnector._completeAuth = async ({ code, stateMeta, error, errorDescription, st
   }
   return {
     ok: true,
-    connectionState: "CONNECTED",
+    connectionState: SOCIAL_CONNECTION_STATES.CONNECTED,
     profile: {
       providerAccountId: user.id || null,
       displayName: user.name || "",
@@ -128,7 +129,7 @@ xConnector._getProfile = async (_account, tokens) => {
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    return { ok: false, connectionState: "RECONNECT_REQUIRED", error: friendlyOAuthError("invalid_grant", "X") };
+    return { ok: false, connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED, error: friendlyOAuthError("invalid_grant", "X") };
   }
   const user = json.data || {};
   return {
@@ -190,5 +191,5 @@ xConnector._publishContent = async (_account, payload, tokens) => {
 
 xConnector._disconnect = async (account) => {
   clearAccountTokens("x", account.id);
-  return { ok: true, connectionState: "UNCONNECTED" };
+  return { ok: true, connectionState: SOCIAL_CONNECTION_STATES.UNCONNECTED };
 };

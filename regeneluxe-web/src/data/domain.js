@@ -1,31 +1,9 @@
 import { createId, nowIso } from "./ids.js";
 
-export const CONNECTION_STATES = [
-  "MANUAL_ONLY",
-  "UNCONNECTED",
-  "CONNECTING",
-  "CONNECTED",
-  "AUTH_EXPIRED",
-  "RECONNECT_REQUIRED",
-  "ERROR",
-  "UNSUPPORTED",
-  "SETUP_REQUIRED",
-];
-
-export const CONNECTION_LABELS = {
-  MANUAL_ONLY: "Manual",
-  UNCONNECTED: "Not connected",
-  NOT_CONNECTED: "Not connected",
-  CONNECTING: "Connecting",
-  CONNECTED: "Connected",
-  AUTH_EXPIRED: "Reconnect required",
-  RECONNECT_REQUIRED: "Reconnect required",
-  ERROR: "Reconnect required",
-  UNSUPPORTED: "Unsupported",
-  SETUP_REQUIRED: "Setup required",
-  SYNCING: "Syncing",
-  PROVIDER_REVIEW_REQUIRED: "Provider review required",
-};
+export {
+  SOCIAL_CONNECTION_STATE_LIST as CONNECTION_STATES,
+  CONNECTION_LABELS,
+} from "./statusContracts.js";
 
 export const CAPABILITIES = {
   READ_PROFILE: "READ_PROFILE",

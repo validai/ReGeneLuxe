@@ -1,4 +1,5 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
+import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
 import { baseConnector, unavailable } from "../base.js";
 import { createOAuthState, friendlyOAuthError } from "../oauth/state.js";
 import {
@@ -69,13 +70,13 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
     if (error) {
       return {
         ok: false,
-        connectionState: "ERROR",
+        connectionState: SOCIAL_CONNECTION_STATES.ERROR,
         error: friendlyOAuthError(error, displayName),
         detail: errorDescription || error,
       };
     }
     if (!code) {
-      return { ok: false, connectionState: "ERROR", error: friendlyOAuthError("missing_code", displayName) };
+      return { ok: false, connectionState: SOCIAL_CONNECTION_STATES.ERROR, error: friendlyOAuthError("missing_code", displayName) };
     }
     const creds = connector.getAppCredentials();
     const tokenUrl = new URL("https://graph.facebook.com/v21.0/oauth/access_token");
@@ -89,7 +90,7 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
     if (!tokenRes.ok || !tokenJson.access_token) {
       return {
         ok: false,
-        connectionState: "RECONNECT_REQUIRED",
+        connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED,
         error: friendlyOAuthError(tokenJson.error?.code || "invalid_grant", displayName),
         detail: tokenJson.error?.message || "Token exchange failed",
       };
@@ -122,7 +123,7 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
 
     return {
       ok: true,
-      connectionState: "CONNECTED",
+      connectionState: SOCIAL_CONNECTION_STATES.CONNECTED,
       profile: {
         providerAccountId: me.id || null,
         displayName: me.name || "",
@@ -140,7 +141,7 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
     if (!res.ok) {
       return {
         ok: false,
-        connectionState: "RECONNECT_REQUIRED",
+        connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED,
         error: friendlyOAuthError("invalid_grant", displayName),
         detail: json.error?.message,
       };
@@ -192,7 +193,7 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
 
   connector._disconnect = async (account) => {
     clearAccountTokens(provider, account.id);
-    return { ok: true, connectionState: "UNCONNECTED" };
+    return { ok: true, connectionState: SOCIAL_CONNECTION_STATES.UNCONNECTED };
   };
 
   return connector;

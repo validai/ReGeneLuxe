@@ -32,24 +32,6 @@ const blank = () => emptyAccount({
   active: true,
 });
 
-const HEALTH = {
-  CONNECTED: { label: "Connected", tone: "bg-rl_ok/15 text-rl_ok" },
-  AUTH_EXPIRED: { label: "Reconnect required", tone: "bg-rl_warning/15 text-rl_warning" },
-  RECONNECT_REQUIRED: { label: "Reconnect required", tone: "bg-rl_warning/15 text-rl_warning" },
-  ERROR: { label: "Error", tone: "bg-rl_danger/15 text-rl_danger" },
-  MANUAL_ONLY: { label: "Not connected", tone: "bg-rl_surfaceSoft text-rl_muted" },
-  UNCONNECTED: { label: "Not connected", tone: "bg-rl_surfaceSoft text-rl_muted" },
-  CONNECTING: { label: "Connecting", tone: "bg-rl_warning/15 text-rl_warning" },
-  SETUP_REQUIRED: { label: "Setup required", tone: "bg-rl_warning/15 text-rl_warning" },
-  UNSUPPORTED: { label: "Unsupported", tone: "bg-rl_surfaceSoft text-rl_muted" },
-  PROVIDER_REVIEW_REQUIRED: { label: "Provider review required", tone: "bg-rl_warning/15 text-rl_warning" },
-  NOT_CONNECTED: { label: "Not connected", tone: "bg-rl_surfaceSoft text-rl_muted" },
-};
-
-function healthFor(connectionState) {
-  return HEALTH[connectionState] || HEALTH.MANUAL_ONLY;
-}
-
 function capabilityBits(platform) {
   const media = publishMediaSupport(platform);
   return [
@@ -316,7 +298,6 @@ export default function AccountsPage() {
           {(hydrated ? accounts : []).map((account) => {
             const usedBy = campaigns.filter((campaign) => (campaign.accountIds || []).includes(account.id)).length;
             const view = displayConnectionState(account, { providerReadiness: readinessFor(account.platform) });
-            const health = HEALTH[view.code] || HEALTH.MANUAL_ONLY;
             const caps = capabilityBits(account.platform);
             return (
               <li key={account.id}>
@@ -331,7 +312,7 @@ export default function AccountsPage() {
                         {account.displayName || formatHandle(account.handle) || "Untitled account"}
                       </p>
                     </div>
-                    <StatusBadge value={view.code} label={health.label} tone={health.tone} />
+                    <StatusBadge value={view.code} label={view.label} tone={view.toneClass} />
                   </div>
                   {formatHandle(account.handle) ? (
                     <p className="mt-2 text-sm text-rl_muted">{formatHandle(account.handle)}</p>
@@ -342,7 +323,7 @@ export default function AccountsPage() {
                   <dl className="mt-4 space-y-2 text-sm">
                     <div className="flex justify-between gap-3">
                       <dt className="text-rl_muted">Connection</dt>
-                      <dd className="text-right text-rl_text">{health.label}</dd>
+                      <dd className="text-right text-rl_text">{view.label}</dd>
                     </div>
                     <div className="flex justify-between gap-3">
                       <dt className="text-rl_muted">Capabilities</dt>
@@ -533,7 +514,6 @@ function AccountDetailSheetBody({
   const [url, setUrl] = useState(account.profileUrl || "");
 
   const view = displayConnectionState(account, { providerReadiness });
-  const health = healthFor(view.code);
   const needsReconnect = ["ERROR", "AUTH_EXPIRED", "RECONNECT_REQUIRED"].includes(view.code);
   const canConnect = view.code !== "CONNECTED"
     && view.code !== "UNSUPPORTED"
@@ -612,7 +592,7 @@ function AccountDetailSheetBody({
         <div>
           <p className="rl-label">Connection</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <StatusBadge value={view.code} label={health.label} tone={health.tone} />
+            <StatusBadge value={view.code} label={view.label} tone={view.toneClass} />
           </div>
           <p className="mt-2 text-sm text-rl_textSecondary">{view.hint}</p>
           <p className="mt-1 text-sm text-rl_muted">

@@ -85,7 +85,7 @@ export async function startYoutubeAuth({ operator, activeProfile, returnTo = "/s
   if (youtubeConnector.resolveReadiness?.() === "SETUP_REQUIRED") {
     return {
       ok: false,
-      connectionState: "SETUP_REQUIRED",
+      connectionState: PROFILE_CONNECTION_STATES.SETUP_REQUIRED,
       error: "YouTube Data API must be enabled before channel data can sync.",
       redirectTo: settingsRedirect({ youtube: "error", message: "YouTube Data API must be enabled before channel data can sync." }),
     };
@@ -272,7 +272,7 @@ export async function reconcileYoutubeAccount(profile, channel) {
     profileUrl: channel.profileUrl || match?.profileUrl || `https://www.youtube.com/channel/${channel.id}`,
     providerAccountId: channel.id,
     connectionMethod: "OAUTH",
-    connectionState: "CONNECTED",
+    connectionState: PROFILE_CONNECTION_STATES.CONNECTED,
     followerCount: channel.subscriberCount ?? match?.followerCount ?? "",
     managedProfileId: profile.id,
     lastSuccessfulSync: nowIso(),
@@ -295,7 +295,7 @@ export async function syncYoutubeChannel({ connection } = {}) {
   }
   const tokens = getAccountTokens("youtube", connection.id);
   if (!tokens?.accessToken) {
-    return { ok: false, connectionState: "RECONNECT_REQUIRED", error: "YouTube needs to be reconnected.", lastAttemptedSyncAt: attemptedAt };
+    return { ok: false, connectionState: PROFILE_CONNECTION_STATES.RECONNECT_REQUIRED, error: "YouTube needs to be reconnected.", lastAttemptedSyncAt: attemptedAt };
   }
   const channelRes = await youtubeGet(
     `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${encodeURIComponent(connection.channelId)}`,
@@ -418,7 +418,7 @@ export async function disconnectYoutubeConnection({ operator, activeProfile } = 
   const next = await upsertProfileConnection({ ...loaded.connection, ...disconnectedFields() });
   return {
     ok: true,
-    connectionState: "NOT_CONNECTED",
+    connectionState: PROFILE_CONNECTION_STATES.NOT_CONNECTED,
     connection: publicProfileConnection(next),
     profilePreserved: Boolean(await getManagedProfile(activeProfile.id)),
   };

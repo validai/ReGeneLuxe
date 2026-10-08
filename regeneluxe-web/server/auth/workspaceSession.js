@@ -2,7 +2,7 @@ import { auth } from "../../auth";
 import { initDb, setMeta } from "../db/index.js";
 import { getOperator } from "../db/operatorRepository.js";
 import { getWorkspaceForAccount, listProfileConnections } from "../db/managedProfileRepository.js";
-import { publicOperator, publicManagedProfile, publicProfileConnection } from "../../src/data/profileModels.js";
+import { publicOperator, publicManagedProfile, publicProfileConnection, PROFILE_CONNECTION_STATES } from "../../src/data/profileModels.js";
 import { isEmailAllowed } from "./allowlist.js";
 import { displayAccountEmail } from "../../src/data/googleIdentity.js";
 import { publicGmailForProfile } from "../connectors/gmailConnection.js";
@@ -58,7 +58,7 @@ export async function loadConnectionState(operator, activeProfile) {
   return {
     googleAccount: {
       kind: "GOOGLE_ACCOUNT",
-      status: "CONNECTED",
+      status: PROFILE_CONNECTION_STATES.CONNECTED,
       email: displayAccountEmail(operator),
       name: operator?.name || "",
       avatarUrl: operator?.avatarUrl || "",
@@ -66,8 +66,8 @@ export async function loadConnectionState(operator, activeProfile) {
     gmail: gmail || {
       kind: "GMAIL",
       provider: "gmail",
-      status: "NOT_CONNECTED",
-      connectionState: "NOT_CONNECTED",
+      status: PROFILE_CONNECTION_STATES.NOT_CONNECTED,
+      connectionState: PROFILE_CONNECTION_STATES.NOT_CONNECTED,
       email: "",
       displayLabel: "Gmail",
       permission: "readonly",
@@ -75,8 +75,8 @@ export async function loadConnectionState(operator, activeProfile) {
     youtube: youtube || {
       kind: "YOUTUBE",
       provider: "youtube",
-      status: "NOT_CONNECTED",
-      connectionState: "NOT_CONNECTED",
+      status: PROFILE_CONNECTION_STATES.NOT_CONNECTED,
+      connectionState: PROFILE_CONNECTION_STATES.NOT_CONNECTED,
       email: "",
       displayLabel: "YouTube",
       permission: "readonly",

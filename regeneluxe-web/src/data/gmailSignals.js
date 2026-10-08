@@ -1,3 +1,5 @@
+import { PROVIDER_CONNECTION_STATES } from "./statusContracts.js";
+
 /** Safe Campaign Brain fields only. Never include Gmail content. */
 
 export const GMAIL_BRAIN_KEYS = ["gmailConnected", "gmailLastSyncAt", "gmailFreshness"];
@@ -25,8 +27,8 @@ export function gmailBrainSignals(connection = {}) {
     || connection.gmailLastSyncAt
     || connection.gmailFreshness
     || null;
-  const connected = connection.status === "CONNECTED"
-    || connection.status === "SYNCING"
+  const connected = connection.status === PROVIDER_CONNECTION_STATES.CONNECTED
+    || connection.status === PROVIDER_CONNECTION_STATES.SYNCING
     || connection.gmailConnected === true
     || connection.connected === true;
   return {

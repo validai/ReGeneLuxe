@@ -1,4 +1,5 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
+import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
 import { baseConnector } from "../base.js";
 import { setAccountTokens, clearAccountTokens } from "../../secrets/providers.js";
 
@@ -54,7 +55,7 @@ export function createMockConnector({
     });
     return {
       ok: true,
-      connectionState: "CONNECTED",
+      connectionState: SOCIAL_CONNECTION_STATES.CONNECTED,
       profile: {
         providerAccountId: "mock_user_1",
         displayName: "Mock Artist",
@@ -144,7 +145,7 @@ export function createMockConnector({
 
   connector._disconnect = async (account) => {
     clearAccountTokens("mock", account.id);
-    return { ok: true, connectionState: "UNCONNECTED" };
+    return { ok: true, connectionState: SOCIAL_CONNECTION_STATES.UNCONNECTED };
   };
 
   return connector;
