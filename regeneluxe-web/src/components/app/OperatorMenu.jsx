@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { SignOut, GearSix, PlugsConnected } from "@phosphor-icons/react";
+import { GearSix, PlugsConnected } from "@phosphor-icons/react";
 import { useProfileSession } from "./ProfileSession.jsx";
-import { signOutOperator } from "../../../app/actions/auth";
 import { displayAccountEmail } from "../../data/googleIdentity.js";
 
 export default function OperatorMenu({ collapsed = false, layout = "stack", showDetail = true }) {
@@ -84,16 +83,6 @@ export default function OperatorMenu({ collapsed = false, layout = "stack", show
               <PlugsConnected size={16} />
               Connections
             </Link>
-            <form action={signOutOperator}>
-              <button
-                type="submit"
-                role="menuitem"
-                className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-rl_text hover:bg-rl_surfaceHover"
-              >
-                <SignOut size={16} />
-                Sign out
-              </button>
-            </form>
           </div>
         ) : null}
       </div>
@@ -148,16 +137,6 @@ export default function OperatorMenu({ collapsed = false, layout = "stack", show
             <PlugsConnected size={16} />
             Connections
           </Link>
-          <form action={signOutOperator}>
-            <button
-              type="submit"
-              role="menuitem"
-              className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-rl_text hover:bg-rl_surfaceHover"
-            >
-              <SignOut size={16} />
-              Sign out
-            </button>
-          </form>
         </div>
       ) : null}
     </div>

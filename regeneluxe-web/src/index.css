@@ -126,7 +126,47 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
   }
+}
+
+/* Desktop sidebar: panel width and brand letters share one ease. */
+.sidebar-motion {
+  transition-property: width, min-width;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  transition-duration: 360ms;
+}
+
+.sidebar-motion[data-sidebar-state="compact"] {
+  transition-duration: 280ms;
+}
+
+.brand-spell {
+  display: inline-flex;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.brand-spell-letter {
+  display: inline-block;
+  opacity: 0;
+}
+
+.sidebar-motion .brand-spell-letter {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  transition-duration: 180ms;
+}
+
+.brand-spell[data-brand-spell="open"] .brand-spell-letter {
+  opacity: 1;
+  transition-delay: calc(var(--spell-index) * 22ms);
+}
+
+.brand-spell[data-brand-spell="closed"] .brand-spell-letter {
+  transition-duration: 140ms;
+  transition-delay: calc((var(--spell-count) - var(--spell-index) - 1) * 12ms);
 }
 
 body {

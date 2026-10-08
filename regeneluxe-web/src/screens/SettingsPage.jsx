@@ -18,6 +18,7 @@ import { downloadBackupFile, importBackup, validateBackup } from "../data/backup
 import { getRuntimeStatus, getRuntimeHealth, saveRuntimeSecret } from "../data/runtimeClient.js";
 import { fetchDbHealth, getLastDbHealth } from "../data/durableBootstrap.js";
 import { useProfileSession } from "../components/app/ProfileSession.jsx";
+import { signOutOperator } from "../../app/actions/auth";
 import { displayConnectionState, displayProfileConnection, formatHandle } from "../data/connectionStatus.js";
 import { displayAccountEmail } from "../data/googleIdentity.js";
 import { formatDataSyncDisplay, formatSyncLine, formatWorkspaceSummary, mergeHealthWithSyncStatus } from "../data/syncHealth.js";
@@ -221,6 +222,13 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
           <li>Description · {activeProfile?.shortDescription || "—"}</li>
           <li>Main platforms · {(activeProfile?.platforms || []).join(", ") || "—"}</li>
         </ul>
+        {operator ? (
+          <form action={signOutOperator} className="border-t border-rl_border pt-3">
+            <button type="submit" className="rl-btn-ghost px-3 py-1.5 text-xs">
+              Sign out
+            </button>
+          </form>
+        ) : null}
       </section>
 
       <section id="connections" className="rl-panel space-y-4 p-5">

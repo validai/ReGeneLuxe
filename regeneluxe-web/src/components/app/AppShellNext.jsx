@@ -7,9 +7,11 @@ import BrandMark from "../BrandMark.jsx";
 import { NavIcon } from "./Icon.jsx";
 import { useAppData } from "../../hooks/useAppData.js";
 import { getSidebarCollapsed, setSidebarCollapsed } from "../../data/uiPrefs.js";
+import { displayAccountEmail } from "../../data/googleIdentity.js";
 import ProfileSwitcher from "./ProfileSwitcher.jsx";
 import OperatorMenu from "./OperatorMenu.jsx";
 import SocialAccountPicker from "./SocialAccountPicker.jsx";
+import { useProfileSession } from "./ProfileSession.jsx";
 
 /**
  * Native App Router shell.
@@ -18,6 +20,11 @@ import SocialAccountPicker from "./SocialAccountPicker.jsx";
  */
 
 const SIDEBAR_EVENT = "regeneluxe-sidebar";
+const SPELL_REST = "eGeneLuxe";
+const SIDEBAR_EXPAND_MS = 360;
+const SIDEBAR_COLLAPSE_MS = 280;
+/** Phone drawer only. sm (640px) and up keep the permanent rail. */
+const SIDEBAR_RAIL_BREAKPOINT = "640px";
 
 function subscribeSidebar(onStoreChange) {
   window.addEventListener(SIDEBAR_EVENT, onStoreChange);
@@ -58,6 +65,27 @@ function desktopItemClass(isActive) {
   ].join(" ");
 }
 
+function BrandSpell({ open }) {
+  const letters = SPELL_REST.split("");
+  return (
+    <span
+      data-brand-spell={open ? "open" : "closed"}
+      aria-hidden="true"
+      className="brand-spell font-display text-lg font-semibold leading-none tracking-tight text-rl_text"
+    >
+      {letters.map((letter, index) => (
+        <span
+          key={`${letter}-${index}`}
+          className="brand-spell-letter"
+          style={{ "--spell-index": index, "--spell-count": letters.length }}
+        >
+          {letter}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function AppBrand({ compact, onNavigate }) {
   return (
     <Link
@@ -88,9 +116,9 @@ function SeamChevron({ collapsed, onClick }) {
       aria-label={label}
       title={label}
       data-sidebar-chevron={collapsed ? "right" : "left"}
-      className="absolute left-[4.5rem] top-[3.25rem] z-50 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-rl_border bg-rl_surface text-rl_text shadow-[0_0_0_3px_rgb(var(--bg-surface))] hover:border-rl_accent hover:text-[rgb(var(--accent-secondary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--focus-ring)/0.55)]"
+      className="absolute left-full top-14 z-50 flex h-[22px] w-[22px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md border border-rl_border bg-rl_surface text-rl_textSecondary shadow-[0_0_0_2px_rgb(var(--bg-surface))] hover:border-rl_borderStrong hover:text-rl_text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--focus-ring)/0.55)]"
     >
-      <NavIcon name={collapsed ? "expand" : "collapse"} size={14} />
+      <NavIcon name={collapsed ? "expand" : "collapse"} size={12} />
     </button>
   );
 }
@@ -205,12 +233,20 @@ export default function AppShellNext({ children, onOpenCommand }) {
   const { accounts, workingAccountId } = useAppData();
   const collapsed = useSyncExternalStore(subscribeSidebar, getSidebarCollapsed, () => false);
   const chromeReady = useSyncExternalStore(() => () => {}, () => true, () => false);
+  const { operator } = useProfileSession();
+  const accountEmail = displayAccountEmail(operator);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [motionOn, setMotionOn] = useState(false);
 
   const toggleCollapsed = () => {
     setSidebarCollapsed(!collapsed);
     window.dispatchEvent(new Event(SIDEBAR_EVENT));
   };
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMotionOn(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   useEffect(() => {
     if (!mobileOpen) return undefined;
@@ -222,7 +258,7 @@ export default function AppShellNext({ children, onOpenCommand }) {
   }, [mobileOpen]);
 
   return (
-    <div className="min-h-screen bg-rl_bg text-rl_text lg:flex">
+    <div className="min-h-screen bg-rl_bg text-rl_text sm:flex">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-rl_accent focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
@@ -234,9 +270,13 @@ export default function AppShellNext({ children, onOpenCommand }) {
         data-sidebar-state={collapsed ? "compact" : "expanded"}
         data-sidebar-rail="permanent"
         data-sidebar-panel={collapsed ? "hidden" : "open"}
-        className={`sticky top-0 z-40 hidden h-screen shrink-0 overflow-visible lg:flex ${
-          collapsed ? "w-sidebar-collapsed min-w-[4.5rem]" : "w-sidebar min-w-[15rem]"
-        }`}
+        data-sidebar-motion={motionOn ? "on" : "off"}
+        data-sidebar-expand={`${SIDEBAR_EXPAND_MS}ms`}
+        data-sidebar-collapse={`${SIDEBAR_COLLAPSE_MS}ms`}
+        data-sidebar-breakpoint={SIDEBAR_RAIL_BREAKPOINT}
+        className={`sticky top-0 z-40 hidden h-screen shrink-0 overflow-visible sm:flex ${
+          motionOn ? "sidebar-motion" : ""
+        } ${collapsed ? "w-sidebar-collapsed min-w-[4.5rem]" : "w-sidebar min-w-[15rem]"}`}
       >
         <SeamChevron collapsed={collapsed} onClick={toggleCollapsed} />
         <div className="relative flex h-full w-full flex-col overflow-x-hidden overflow-y-hidden border-r border-rl_border bg-rl_surface pb-16">
@@ -244,16 +284,20 @@ export default function AppShellNext({ children, onOpenCommand }) {
             href="/"
             title="ReGeneLuxe"
             aria-label="ReGeneLuxe"
-            className="flex items-center pt-4"
+            className="relative flex h-14 items-center"
           >
-            <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">
-              <BrandMark size={32} />
-            </span>
-            {!collapsed ? (
-              <span className="min-w-0 flex-1 truncate pl-2 pr-3 font-display text-base font-semibold tracking-tight text-rl_text">
-                ReGeneLuxe
+            <span className="relative flex h-14 w-[4.5rem] shrink-0 items-center">
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                <span className="relative inline-flex items-baseline font-display text-lg font-semibold leading-none tracking-tight text-rl_text">
+                  <span data-brand="regeneluxe" data-brand-anchor="R">
+                    R
+                  </span>
+                  <span className="pointer-events-none absolute left-full top-0">
+                    <BrandSpell open={!collapsed} />
+                  </span>
+                </span>
               </span>
-            ) : null}
+            </span>
           </Link>
 
           <button
@@ -268,22 +312,20 @@ export default function AppShellNext({ children, onOpenCommand }) {
                 <NavIcon name="create" size={20} />
               </span>
             </span>
-            {!collapsed ? (
-              <span className="mr-3 flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-rl_accent text-sm font-semibold text-white">
-                Create
-              </span>
-            ) : null}
+            <span data-sidebar-label className="mr-3 flex h-10 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-lg bg-rl_accent text-sm font-semibold text-white">
+              Create
+            </span>
           </button>
 
           <div className="mt-3">
-            <ProfileSwitcher layout="split" showDetail={!collapsed} />
+            <ProfileSwitcher layout="split" showDetail />
           </div>
           <div className="mx-3 my-2 h-px shrink-0 bg-rl_border" role="separator" />
           <SocialAccountPicker
             accounts={chromeReady ? accounts : []}
             workingAccountId={workingAccountId}
             layout="split"
-            showDetail={!collapsed}
+            showDetail
           />
 
           <nav className="mt-1 min-h-0 flex-1 space-y-0.5 overflow-y-auto pb-2" aria-label="Main">
@@ -301,13 +343,19 @@ export default function AppShellNext({ children, onOpenCommand }) {
                   <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">
                     <NavIcon name={link.icon} size={20} className={isActive ? "text-[rgb(var(--accent-secondary))]" : "text-current"} />
                   </span>
-                  {!collapsed ? <span className="min-w-0 flex-1 truncate pr-3">{link.label}</span> : null}
+                  <span data-sidebar-label className="min-w-0 flex-1 truncate pr-3">{link.label}</span>
                 </Link>
               );
             })}
           </nav>
 
-          <div className="mt-auto shrink-0 space-y-0.5 border-t border-rl_border py-2">
+          {accountEmail ? (
+            <div data-sidebar-detail="account" className="min-w-0 overflow-hidden pl-[4.5rem] pr-3 pb-2">
+              <p className="truncate text-[11px] text-rl_muted">{accountEmail}</p>
+            </div>
+          ) : null}
+
+          <div data-sidebar-utility className="mt-auto shrink-0 space-y-0.5 border-t border-rl_border py-2">
             <Link
               href="/queue"
               title="Queue"
@@ -318,7 +366,7 @@ export default function AppShellNext({ children, onOpenCommand }) {
               <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">
                 <NavIcon name="queue" size={20} />
               </span>
-              {!collapsed ? <span className="min-w-0 flex-1 truncate pr-3">Queue</span> : null}
+              <span data-sidebar-label className="min-w-0 flex-1 truncate pr-3">Queue</span>
             </Link>
             <button
               type="button"
@@ -330,7 +378,7 @@ export default function AppShellNext({ children, onOpenCommand }) {
               <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">
                 <NavIcon name="search" size={20} />
               </span>
-              {!collapsed ? <span className="min-w-0 flex-1 truncate pr-3">Search</span> : null}
+              <span data-sidebar-label className="min-w-0 flex-1 truncate pr-3">Search</span>
             </button>
             <Link
               href="/settings"
@@ -342,14 +390,13 @@ export default function AppShellNext({ children, onOpenCommand }) {
               <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">
                 <NavIcon name="settings" size={20} />
               </span>
-              {!collapsed ? <span className="min-w-0 flex-1 truncate pr-3">Settings</span> : null}
+              <span data-sidebar-label className="min-w-0 flex-1 truncate pr-3">Settings</span>
             </Link>
-            <OperatorMenu layout="split" showDetail={!collapsed} />
           </div>
         </div>
       </aside>
 
-      <div className="sticky top-0 z-40 border-b border-rl_border bg-rl_surface/95 backdrop-blur lg:hidden">
+      <div data-sidebar-menu="phone" className="sticky top-0 z-40 border-b border-rl_border bg-rl_surface/95 backdrop-blur sm:hidden">
         <div className="flex items-center justify-between gap-2 px-3 py-3">
           <div className="flex min-w-0 items-center gap-2">
             <button
@@ -378,9 +425,10 @@ export default function AppShellNext({ children, onOpenCommand }) {
       </div>
 
       {mobileOpen ? (
-        <div className="fixed inset-0 z-50 lg:hidden" data-sidebar-state="drawer">
+        <div className="fixed inset-0 z-50 sm:hidden" data-sidebar-state="drawer">
           <button
             type="button"
+            data-sidebar-backdrop="overlay"
             className="absolute inset-0 bg-black/45"
             aria-label="Close navigation"
             onClick={() => setMobileOpen(false)}
