@@ -12,12 +12,13 @@ import {
   getProfileConnectionByKind,
   upsertProfileConnection,
 } from "../db/managedProfileRepository.js";
-import { list } from "../db/index.js";
+import { list, JOB_TYPES } from "../db/index.js";
 import { COLLECTIONS } from "../db/collections.js";
 import { PROFILE_CONNECTION_KINDS, PROFILE_CONNECTION_STATES, publicProfileConnection } from "../../src/data/profileModels.js";
 import { nowIso } from "../../src/data/ids.js";
-import { countGmailMessagesForProfile, gmailBrainSignals, syncGmailMessages } from "./gmailSync.js";
+import { countGmailMessagesForProfile, displayGmailJobStatus, enqueueGmailSync, gmailBrainSignals, latestGmailSyncJob, verifyGmailAccess } from "./gmailSync.js";
 import { assertMatchesSignedInGoogleAccount } from "../../src/data/googleIdentity.js";
+import { processJobQueue } from "../jobs/worker.js";
 
 function absolutePath(path) {
   if (!path) return `${getCanonicalOrigin()}/settings`;
@@ -51,6 +52,8 @@ function disconnectedFields() {
     lastErrorCode: "",
     lastErrorSummary: "",
     indexedCount: 0,
+    jobStatus: "Idle",
+    syncState: "Idle",
     pendingChannels: [],
     updatedAt: nowIso(),
   };
@@ -192,8 +195,6 @@ export async function completeGmailAuth({
     await upsertProfileConnection({
       ...connection,
       ...disconnectedFields(),
-      status: PROFILE_CONNECTION_STATES.ERROR,
-      connectionState: PROFILE_CONNECTION_STATES.ERROR,
       lastErrorCode: "GOOGLE_ACCOUNT_MISMATCH",
       lastErrorSummary: identity.error,
       notes: identity.error,
@@ -206,7 +207,6 @@ export async function completeGmailAuth({
     };
   }
 
-  const attemptedAt = nowIso();
   const saved = await upsertProfileConnection({
     ...connection,
     provider: "gmail",
@@ -221,32 +221,14 @@ export async function completeGmailAuth({
     grantedScopes: result.profile.grantedScopes || [],
     mailbox: result.profile.mailbox || null,
     connectedAt: nowIso(),
-    lastAttemptedSyncAt: attemptedAt,
+    lastAttemptedSyncAt: nowIso(),
     lastErrorCode: "",
     lastErrorSummary: "",
+    jobStatus: "Idle",
     notes: "",
     updatedAt: nowIso(),
   });
-  const synced = await syncGmailMessages({ connection: saved }).catch((error) => ({
-    ok: false,
-    error: error instanceof Error ? error.message : String(error),
-    lastAttemptedSyncAt: attemptedAt,
-  }));
-  const next = await upsertProfileConnection({
-    ...saved,
-    indexedCount: synced.indexedCount || 0,
-    lastAttemptedSyncAt: synced.lastAttemptedSyncAt || attemptedAt,
-    lastSuccessfulSyncAt: synced.ok ? (synced.lastSuccessfulSyncAt || nowIso()) : saved.lastSuccessfulSyncAt,
-    lastSyncAt: synced.ok ? (synced.lastSuccessfulSyncAt || nowIso()) : saved.lastSyncAt,
-    lastErrorCode: synced.ok ? "" : (synced.code || "ERROR"),
-    lastErrorSummary: synced.ok ? "" : (synced.error || ""),
-    status: synced.connectionState === "SETUP_REQUIRED"
-      ? PROFILE_CONNECTION_STATES.SETUP_REQUIRED
-      : PROFILE_CONNECTION_STATES.CONNECTED,
-    connectionState: synced.connectionState === "SETUP_REQUIRED"
-      ? PROFILE_CONNECTION_STATES.SETUP_REQUIRED
-      : PROFILE_CONNECTION_STATES.CONNECTED,
-  });
+  const next = await runGmailSyncAndWait(saved);
 
   return {
     ok: true,
@@ -255,6 +237,27 @@ export async function completeGmailAuth({
     indexedCount: next.indexedCount,
     redirectTo: settingsRedirect({ gmail: "connected" }),
   };
+}
+
+async function runGmailSyncAndWait(connection) {
+  await upsertProfileConnection({
+    ...connection,
+    status: PROFILE_CONNECTION_STATES.SYNCING,
+    connectionState: PROFILE_CONNECTION_STATES.SYNCING,
+    jobStatus: "Syncing",
+    syncState: "Syncing",
+    lastAttemptedSyncAt: nowIso(),
+    lastErrorCode: "",
+    lastErrorSummary: "",
+    updatedAt: nowIso(),
+  });
+  await enqueueGmailSync(connection);
+  await processJobQueue({
+    types: [JOB_TYPES.SYNC_GMAIL],
+    limit: 5,
+    authz: { activeProfile: { id: connection.managedProfileId } },
+  });
+  return getProfileConnectionByKind(connection.managedProfileId, PROFILE_CONNECTION_KINDS.GMAIL);
 }
 
 async function loadOwnedGmailConnection(operator, activeProfile) {
@@ -292,25 +295,17 @@ export async function refreshGmailConnection({ operator, activeProfile } = {}) {
     };
   }
 
-  const expired = tokens.expiresAt && new Date(tokens.expiresAt).getTime() < Date.now() + 60_000;
-  const account = { id: connection.id };
-  let verified;
-  if (!tokens.accessToken || expired) {
-    verified = await gmailConnector._refreshAuth(account, tokens);
-  } else {
-    verified = await gmailConnector.getProfile(account);
-    if (!verified.ok && tokens.refreshToken) {
-      verified = await gmailConnector._refreshAuth(account, tokens);
-    }
-  }
-
+  const verified = await verifyGmailAccess({ connection, operator });
   if (!verified.ok) {
     const status = verified.connectionState || PROFILE_CONNECTION_STATES.RECONNECT_REQUIRED;
     const next = await upsertProfileConnection({
       ...connection,
       status,
       connectionState: status,
+      lastErrorCode: verified.code || status,
+      lastErrorSummary: verified.error || "Gmail needs to be reconnected.",
       notes: verified.error || "Gmail needs to be reconnected.",
+      jobStatus: verified.retryable ? "Retry" : "Error",
       updatedAt: nowIso(),
     });
     return {
@@ -321,31 +316,23 @@ export async function refreshGmailConnection({ operator, activeProfile } = {}) {
     };
   }
 
-  const next = await upsertProfileConnection({
+  const ready = await upsertProfileConnection({
     ...connection,
     status: PROFILE_CONNECTION_STATES.CONNECTED,
     connectionState: PROFILE_CONNECTION_STATES.CONNECTED,
     email: verified.profile.email || connection.email,
     googleAccountSub: verified.profile.googleAccountSub || connection.googleAccountSub,
     mailbox: verified.profile.mailbox || connection.mailbox,
-    lastSyncAt: nowIso(),
     notes: "",
     updatedAt: nowIso(),
   });
-  const attemptedAt = nowIso();
-  const synced = await syncGmailMessages({ connection: next });
-  const withSync = await upsertProfileConnection({
-    ...next,
-    lastAttemptedSyncAt: attemptedAt,
-    lastSuccessfulSyncAt: synced.ok ? (synced.lastSuccessfulSyncAt || nowIso()) : next.lastSuccessfulSyncAt,
-    lastSyncAt: synced.ok ? (synced.lastSuccessfulSyncAt || nowIso()) : next.lastSyncAt,
-    indexedCount: synced.ok ? synced.indexedCount : next.indexedCount,
-    lastErrorCode: synced.ok ? "" : (synced.code || ""),
-    lastErrorSummary: synced.ok ? "" : (synced.error || ""),
-  });
+  const withSync = await runGmailSyncAndWait(ready);
+  const usable = withSync.status === PROFILE_CONNECTION_STATES.CONNECTED
+    || withSync.status === PROFILE_CONNECTION_STATES.SYNCING;
   return {
-    ok: true,
-    connectionState: "CONNECTED",
+    ok: usable,
+    connectionState: withSync.status,
+    error: usable ? undefined : withSync.lastErrorSummary,
     connection: publicProfileConnection(withSync),
     indexedCount: withSync.indexedCount,
   };
@@ -365,11 +352,13 @@ export async function disconnectGmailConnection({ operator, activeProfile } = {}
   });
 
   const profileStillThere = await getManagedProfile(activeProfile.id);
+  const preservedCount = await countGmailMessagesForProfile(activeProfile.id);
   return {
     ok: true,
     connectionState: "NOT_CONNECTED",
     connection: publicProfileConnection(next),
     profilePreserved: Boolean(profileStillThere),
+    recordsPreserved: preservedCount,
     profileId: activeProfile.id,
   };
 }
@@ -386,8 +375,18 @@ export async function publicGmailForProfile(managedProfileId) {
     permission: "readonly",
   });
   if (publicRow && managedProfileId) {
-    publicRow.indexedCount = publicRow.indexedCount || await countGmailMessagesForProfile(managedProfileId);
-    publicRow.brain = gmailBrainSignals(publicRow, publicRow.indexedCount);
+    const counted = await countGmailMessagesForProfile(managedProfileId);
+    publicRow.indexedCount = Math.max(Number(publicRow.indexedCount) || 0, counted);
+    const job = await latestGmailSyncJob(publicRow.id);
+    if (publicRow.status === PROFILE_CONNECTION_STATES.SYNCING) {
+      publicRow.jobStatus = "Syncing";
+    } else if (job) {
+      const fromJob = displayGmailJobStatus(job);
+      publicRow.jobStatus = fromJob === "Idle" ? (publicRow.jobStatus || "Idle") : fromJob;
+    } else {
+      publicRow.jobStatus = publicRow.jobStatus || "Idle";
+    }
+    publicRow.brain = gmailBrainSignals(publicRow);
   }
   return publicRow;
 }

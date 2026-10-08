@@ -83,6 +83,10 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
   const resetPhraseExpected = `RESET ${String(activeProfile?.displayName || "WORKSPACE").toUpperCase()}`;
   const resetPhraseMatches = resetPhrase.trim() === resetPhraseExpected;
   const themeKnown = isTestHarness() || dataAuthority === "sqlite";
+  const gmailActive = gmailView.code === "CONNECTED" || gmailView.code === "SYNCING";
+  const gmailJobLabel = gmailView.code === "SYNCING"
+    ? "Syncing"
+    : (gmailConnection.jobStatus || "Idle");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -242,29 +246,33 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-rl_text">Gmail</p>
                 <p className="truncate text-xs text-rl_muted">
-                  {gmailView.code === "CONNECTED"
-                    ? `Authorized account: ${gmailConnection.email || gmailConnection.externalEmail || "Connected"}`
+                  {gmailActive
+                    ? `Account: ${gmailConnection.email || gmailConnection.externalEmail || "Connected"}`
                     : gmailView.hint}
                 </p>
               </div>
               <StatusBadge value={gmailView.code} label={gmailView.label} />
             </div>
-            {gmailView.code === "CONNECTED" ? (
+            {gmailView.code === "SYNCING" ? (
+              <p className="mt-2 text-xs text-rl_muted">Syncing Gmail…</p>
+            ) : null}
+            {gmailActive ? (
               <ul className="mt-2 space-y-1 text-xs text-rl_muted">
-                <li>Permission: Read only</li>
+                <li>Access: Read only</li>
                 <li>Last sync: {formatWhen(gmailConnection.lastSuccessfulSyncAt || gmailConnection.lastSyncAt)}</li>
-                <li>Messages indexed: {gmailConnection.indexedCount ?? 0}</li>
+                <li>Messages synced: {gmailConnection.indexedCount ?? 0}</li>
               </ul>
             ) : null}
             {gmailConnection.lastErrorSummary && gmailView.code !== "CONNECTED" ? (
               <p className="mt-2 text-xs text-rl_warning">{gmailConnection.lastErrorSummary}</p>
             ) : null}
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              {gmailView.code === "CONNECTED" ? (
+              {gmailActive ? (
                 <>
                   <button
                     type="button"
                     className="rl-btn-ghost px-3 py-1.5 text-xs"
+                    disabled={gmailView.code === "SYNCING"}
                     onClick={async () => {
                       const result = await fetch("/api/connections/google", {
                         method: "POST",
@@ -614,10 +622,14 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
             <li>Application schema version {SCHEMA_VERSION}</li>
             <li>Signed-in Google account · {operatorEmail || "Not signed in"}</li>
             <li>
-              Gmail ·{" "}
-              {gmailView.code === "CONNECTED"
-                ? `Connected · last sync ${formatWhen(gmailConnection.lastSuccessfulSyncAt || gmailConnection.lastSyncAt)}`
-                : gmailView.label}
+              Gmail · {gmailActive ? (gmailView.code === "SYNCING" ? "Syncing" : "Connected") : gmailView.label}
+              {gmailActive ? (
+                <>
+                  {" · "}Last sync {formatWhen(gmailConnection.lastSuccessfulSyncAt || gmailConnection.lastSyncAt)}
+                  {" · "}Messages {gmailConnection.indexedCount ?? 0}
+                  {" · "}Job: {gmailJobLabel}
+                </>
+              ) : null}
             </li>
             <li>
               YouTube ·{" "}

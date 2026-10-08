@@ -2,7 +2,7 @@
 
 export function googleApiDisabledMessage(service) {
   if (service === "gmail") {
-    return "Gmail API is not enabled for this Google Cloud project.";
+    return "Gmail API needs to be enabled for the ReGeneLuxe Google Cloud project.";
   }
   if (service === "youtube-analytics") {
     return "YouTube Analytics API must be enabled before analytics can sync.";
@@ -11,6 +11,9 @@ export function googleApiDisabledMessage(service) {
 }
 
 export function googleRevokedMessage(service = "this account") {
+  if (service === "Gmail" || service === "gmail") {
+    return "Gmail access was revoked. Reconnect Gmail to continue syncing.";
+  }
   return `Google authorization was revoked. Reconnect the ${service} account.`;
 }
 
@@ -23,6 +26,26 @@ export function friendlyGoogleApiError(json, status, service = "google") {
   );
   const reason = String(json?.error?.errors?.[0]?.reason || json?.error?.status || "");
   const blob = `${message} ${reason}`.toLowerCase();
+  if (status === 429 || /rate.?limit|ratelimit|quota|userRateLimit/i.test(blob)) {
+    return {
+      code: "RATE_LIMITED",
+      connectionState: "ERROR",
+      retryable: true,
+      error: service === "gmail"
+        ? "Gmail is temporarily unavailable. ReGeneLuxe will retry."
+        : "YouTube is temporarily unavailable. ReGeneLuxe will retry.",
+    };
+  }
+  if (status >= 500) {
+    return {
+      code: "UNAVAILABLE",
+      connectionState: "ERROR",
+      retryable: true,
+      error: service === "gmail"
+        ? "Gmail is temporarily unavailable. ReGeneLuxe will retry."
+        : "YouTube is temporarily unavailable. ReGeneLuxe will retry.",
+    };
+  }
   if (status === 401 || /invalid.?credentials|authError|unauthorized/i.test(blob)) {
     return {
       code: "REVOKED",

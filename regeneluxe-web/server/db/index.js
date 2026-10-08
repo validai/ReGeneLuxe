@@ -81,6 +81,7 @@ export const reconcileWithRemote = sync.reconcileWithRemote;
 
 export const enqueueJob = jobs.enqueueJob;
 export const claimNextJob = jobs.claimNextJob;
+export const releaseJob = jobs.releaseJob;
 export const completeJob = jobs.completeJob;
 export const failJob = jobs.failJob;
 export const listJobs = jobs.listJobs;

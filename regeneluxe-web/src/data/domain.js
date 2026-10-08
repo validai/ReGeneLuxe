@@ -23,6 +23,7 @@ export const CONNECTION_LABELS = {
   ERROR: "Reconnect required",
   UNSUPPORTED: "Unsupported",
   SETUP_REQUIRED: "Setup required",
+  SYNCING: "Syncing",
   PROVIDER_REVIEW_REQUIRED: "Provider review required",
 };
 

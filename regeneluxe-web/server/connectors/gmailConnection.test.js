@@ -71,11 +71,13 @@ function mockGoogleApis({
         threadId: "t1",
         snippet: "hello from the coast",
         internalDate: "1710000000000",
+        historyId: "888",
         labelIds: ["INBOX"],
         payload: {
           headers: [
             { name: "From", value: "fan@example.com" },
             { name: "To", value: MAILBOX },
+            { name: "Cc", value: "bookings@example.com" },
             { name: "Subject", value: "Show tonight" },
             { name: "Date", value: "Wed, 10 Apr 2024 12:00:00 -0400" },
           ],
@@ -83,9 +85,13 @@ function mockGoogleApis({
         ...messageDetail,
       });
     }
+    if (href.includes("/gmail/v1/users/me/history")) {
+      return jsonResponse(200, { history: [], historyId: "888" });
+    }
     if (href.includes("/gmail/v1/users/me/messages")) {
       expect(decodeURIComponent(href)).toContain("newer_than:30d");
-      expect(href).toContain("maxResults=80");
+      expect(href).toMatch(/maxResults=\d+/);
+      expect(Number(new URL(href).searchParams.get("maxResults"))).toBeLessThanOrEqual(100);
       return jsonResponse(messagesStatus, {
         messages,
         error: messagesStatus >= 400 ? { message: "Gmail API has not been used in project 1 before or it is disabled.", errors: [{ reason: "accessNotConfigured" }] } : undefined,
@@ -329,6 +335,20 @@ describe("gmail connection v1", () => {
     expect(refreshed.connectionState).toBe("RECONNECT_REQUIRED");
   });
 
+  it("requires gmail.readonly on an existing connection", async () => {
+    vi.stubGlobal("fetch", mockGoogleApis());
+    const started = await startGmailAuth({ operator, activeProfile: profile });
+    await completeGmailAuth({ code: "auth-code", state: started.state, operator });
+    setAccountTokens("gmail", started.connectionId, {
+      ...getAccountTokens("gmail", started.connectionId),
+      scopes: ["openid", "email", "profile"],
+    });
+    const refreshed = await refreshGmailConnection({ operator, activeProfile: profile });
+    expect(refreshed.ok).toBe(false);
+    expect(refreshed.connectionState).toBe("RECONNECT_REQUIRED");
+    expect(refreshed.error).toMatch(/gmail.readonly/i);
+  });
+
   it("verifies the mailbox again on a successful refresh", async () => {
     vi.stubGlobal("fetch", mockGoogleApis());
     const started = await startGmailAuth({ operator, activeProfile: profile });
@@ -352,11 +372,15 @@ describe("gmail connection v1", () => {
     expect(disconnected.ok).toBe(true);
     expect(disconnected.connectionState).toBe("NOT_CONNECTED");
     expect(disconnected.profilePreserved).toBe(true);
+    expect(disconnected.recordsPreserved).toBeGreaterThan(0);
     expect(getAccountTokens("gmail", started.connectionId)?.accessToken).toBeFalsy();
     const campaigns = await listCampaignsForProfile(profile.id);
     expect(campaigns.map((row) => row.id)).toContain("camp_keep");
     const still = await list(COLLECTIONS.managed_profiles);
     expect(still.find((row) => row.id === profile.id)?.displayName).toBe("DJ Coast");
+    const keptMail = await list(COLLECTIONS.gmail_messages);
+    expect(keptMail).toHaveLength(1);
+    expect(keptMail[0].managedProfileId).toBe(profile.id);
   });
 
   it("strips Gmail tokens from backups, public rows, and Campaign Brain context", () => {
@@ -373,11 +397,26 @@ describe("gmail connection v1", () => {
     expect(publicRow.refreshToken).toBeUndefined();
     expect(stripSecretFields({ accessToken: "x", email: MAILBOX }).accessToken).toBeUndefined();
     const brain = sanitizeAiContext({
-      gmail: { accessToken: "tok", refreshToken: "ref", email: MAILBOX },
+      gmail: {
+        accessToken: "tok",
+        refreshToken: "ref",
+        email: MAILBOX,
+        subject: "private subject",
+        from: "fan@example.com",
+        snippet: "secret snippet",
+        status: "CONNECTED",
+        lastSuccessfulSyncAt: "2024-04-01T00:00:00.000Z",
+      },
     });
     expect(brain.gmail.accessToken).toBeUndefined();
     expect(brain.gmail.refreshToken).toBeUndefined();
-    expect(brain.gmail.email).toBe(MAILBOX);
+    expect(brain.gmail.email).toBeUndefined();
+    expect(brain.gmail.subject).toBeUndefined();
+    expect(brain.gmail.from).toBeUndefined();
+    expect(brain.gmail.snippet).toBeUndefined();
+    expect(brain.gmail.gmailConnected).toBe(true);
+    expect(brain.gmail.gmailLastSyncAt).toBe("2024-04-01T00:00:00.000Z");
+    expect(brain.gmail.gmailFreshness).toBe("2024-04-01T00:00:00.000Z");
   });
 
   it("indexes a bounded metadata-only Gmail window after connect", async () => {
@@ -391,8 +430,54 @@ describe("gmail connection v1", () => {
     expect(rows[0].managedProfileId).toBe(profile.id);
     expect(rows[0].providerMessageId).toBe("m1");
     expect(rows[0].subject).toBe("Show tonight");
+    expect(rows[0].cc).toBe("bookings@example.com");
+    expect(rows[0].provider).toBe("gmail");
     expect(rows[0].body).toBeUndefined();
     expect(JSON.stringify(rows[0])).not.toContain("gmail-access");
+  });
+
+  it("does not duplicate Gmail records on a second sync", async () => {
+    vi.stubGlobal("fetch", mockGoogleApis());
+    const started = await startGmailAuth({ operator, activeProfile: profile });
+    await completeGmailAuth({ code: "auth-code", state: started.state, operator });
+    const first = await list(COLLECTIONS.gmail_messages);
+    expect(first).toHaveLength(1);
+    const refreshed = await refreshGmailConnection({ operator, activeProfile: profile });
+    expect(refreshed.ok).toBe(true);
+    const second = await list(COLLECTIONS.gmail_messages);
+    expect(second).toHaveLength(1);
+    expect(second[0].id).toBe(first[0].id);
+    expect(second[0].providerMessageId).toBe("m1");
+  });
+
+  it("refreshes an expired access token before users.getProfile", async () => {
+    vi.stubGlobal("fetch", mockGoogleApis());
+    const started = await startGmailAuth({ operator, activeProfile: profile });
+    await completeGmailAuth({ code: "auth-code", state: started.state, operator });
+    setAccountTokens("gmail", started.connectionId, {
+      ...getAccountTokens("gmail", started.connectionId),
+      accessToken: "expired-access",
+      expiresAt: new Date(Date.now() - 60_000).toISOString(),
+    });
+    const refreshed = await refreshGmailConnection({ operator, activeProfile: profile });
+    expect(refreshed.ok).toBe(true);
+    expect(getAccountTokens("gmail", started.connectionId).accessToken).toBe("new-access");
+    expect(refreshed.connectionState).toBe("CONNECTED");
+  });
+
+  it("rejects a mailbox that does not match the signed-in Google account on refresh", async () => {
+    vi.stubGlobal("fetch", mockGoogleApis());
+    const started = await startGmailAuth({ operator, activeProfile: profile });
+    await completeGmailAuth({ code: "auth-code", state: started.state, operator });
+    vi.stubGlobal("fetch", mockGoogleApis({
+      userinfo: { sub: "other-sub", email: "other@gmail.com" },
+      profile: { emailAddress: "other@gmail.com" },
+    }));
+    const refreshed = await refreshGmailConnection({ operator, activeProfile: profile });
+    expect(refreshed.ok).toBe(false);
+    expect(refreshed.error).toMatch(/does not match/i);
+    const rows = await list(COLLECTIONS.gmail_messages);
+    expect(rows).toHaveLength(1);
   });
 
   it("surfaces SETUP REQUIRED when Gmail API is disabled", async () => {
@@ -401,7 +486,7 @@ describe("gmail connection v1", () => {
     const result = await completeGmailAuth({ code: "auth-code", state: started.state, operator });
     expect(result.ok).toBe(true);
     expect(result.connectionState).toBe("SETUP_REQUIRED");
-    expect(result.connection.lastErrorSummary).toMatch(/Gmail API is not enabled/i);
+    expect(result.connection.lastErrorSummary).toMatch(/Gmail API needs to be enabled for the ReGeneLuxe Google Cloud project/i);
   });
 
   it("keeps Gmail isolated to the authorizing account workspace", async () => {

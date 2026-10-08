@@ -4,15 +4,18 @@ import {
   completeJob,
   failJob,
   enqueueJob,
+  releaseJob,
   JOB_TYPES,
   list,
   upsert,
+  get,
   COLLECTIONS,
 } from "../db/index.js";
 import { getConnector, normalizeProviderId } from "../connectors/registry.js";
 import { buildMetricSnapshotRecord } from "../connectors/normalizeMetrics.js";
 import { pushOutboxToRemote, reconcileWithRemote } from "../db/sync.js";
 import { publicationIdempotencyKey } from "../../src/data/idempotency.js";
+import { recordBelongsToWorkspace, workspaceIdOf } from "../auth/tenantScope.js";
 
 const WORKER_ID = `worker_${process.pid}`;
 
@@ -246,6 +249,11 @@ async function handleCampaignBrain(payload = {}) {
   };
 }
 
+async function handleSyncGmail(payload = {}) {
+  const { runGmailSyncJob } = await import("../connectors/gmailSync.js");
+  return runGmailSyncJob(payload);
+}
+
 async function dispatch(job) {
   switch (job.type) {
     case JOB_TYPES.SYNC_REMOTE:
@@ -262,16 +270,35 @@ async function dispatch(job) {
       return handleCampaignBrain(job.payload);
     case JOB_TYPES.EVALUATE_EXPERIMENT:
       return { ok: true, note: "Experiment evaluation deferred to Campaign Brain outcome learning." };
+    case JOB_TYPES.SYNC_GMAIL:
+      return handleSyncGmail(job.payload);
     default:
       throw new Error(`Unknown job type: ${job.type}`);
   }
 }
 
+async function jobAllowedForWorkspace(job, authz) {
+  if (!authz) return true;
+  const workspaceId = workspaceIdOf(authz);
+  if (!workspaceId) return false;
+  const payload = job.payload || {};
+  if (job.type === JOB_TYPES.SYNC_REMOTE) return true;
+  if (payload.managedProfileId && payload.managedProfileId !== workspaceId) return false;
+  if (payload.workspaceId && payload.workspaceId !== workspaceId) return false;
+  if (payload.profileId && payload.profileId !== workspaceId) return false;
+  if (payload.accountId) {
+    const account = await loadAccount(payload.accountId);
+    if (account && !recordBelongsToWorkspace(account, authz)) return false;
+  }
+  if (payload.contentId) {
+    const content = await get(COLLECTIONS.content, payload.contentId);
+    if (content && !recordBelongsToWorkspace(content, authz)) return false;
+  }
+  return true;
+}
+
 /**
  * Claim and process up to `limit` jobs. Safe to call from /api/jobs/tick.
- * @param {{ limit?: number, types?: string[] | null }} [options]
- */
-/**
  * @param {{
  *   limit?: number,
  *   types?: string[] | null,
@@ -282,9 +309,15 @@ export async function processJobQueue(options = {}) {
   const limit = options.limit ?? 5;
   const types = options.types ?? null;
   const results = [];
+  const excludeIds = [];
   for (let i = 0; i < limit; i += 1) {
-    const job = await claimNextJob(WORKER_ID, types);
+    const job = await claimNextJob(WORKER_ID, types, null, { excludeIds });
     if (!job) break;
+    if (!(await jobAllowedForWorkspace(job, options.authz))) {
+      excludeIds.push(job.id);
+      await releaseJob(job.id);
+      continue;
+    }
     try {
       const result = await dispatch(job);
       await completeJob(job.id);

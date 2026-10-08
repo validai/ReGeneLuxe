@@ -275,7 +275,7 @@ gmailConnector._refreshAuth = async (account, tokens) => {
     return {
       ok: false,
       connectionState: "RECONNECT_REQUIRED",
-      error: friendlyOAuthError("invalid_grant", "Gmail"),
+      error: "Gmail access was revoked. Reconnect Gmail to continue syncing.",
       detail: tokenJson.error_description || tokenJson.error || "Token refresh failed",
     };
   }

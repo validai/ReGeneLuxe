@@ -9,6 +9,7 @@ export const JOB_TYPES = {
   RUN_CAMPAIGN_BRAIN: "RUN_CAMPAIGN_BRAIN",
   EVALUATE_EXPERIMENT: "EVALUATE_EXPERIMENT",
   REFRESH_CONNECTION: "REFRESH_CONNECTION",
+  SYNC_GMAIL: "SYNC_GMAIL",
 };
 
 export const JOB_STATES = {
@@ -91,7 +92,7 @@ export async function enqueueJob(
   return rowToJob(result.rows[0]);
 }
 
-export async function claimNextJob(owner, types = null, client = null) {
+export async function claimNextJob(owner, types = null, client = null, { excludeIds = [] } = {}) {
   const db = clientOr(client);
   const now = nowIso();
   const nowMs = Date.now();
@@ -106,6 +107,11 @@ export async function claimNextJob(owner, types = null, client = null) {
   if (Array.isArray(types) && types.length) {
     sql += ` AND type IN (${types.map(() => "?").join(",")})`;
     args.push(...types);
+  }
+  const skipped = Array.isArray(excludeIds) ? excludeIds.filter(Boolean) : [];
+  if (skipped.length) {
+    sql += ` AND id NOT IN (${skipped.map(() => "?").join(",")})`;
+    args.push(...skipped);
   }
 
   sql += " ORDER BY scheduled_at ASC LIMIT 1";
@@ -126,6 +132,15 @@ export async function claimNextJob(owner, types = null, client = null) {
     args: [row.id],
   });
   return rowToJob(updated.rows[0]);
+}
+
+export async function releaseJob(id, client = null) {
+  const db = clientOr(client);
+  await db.execute({
+    sql: `UPDATE jobs SET state = ?, lease_owner = NULL, lease_until = NULL,
+      attempt_count = MAX(attempt_count - 1, 0) WHERE id = ? AND state = ?`,
+    args: [JOB_STATES.PENDING, id, JOB_STATES.RUNNING],
+  });
 }
 
 export async function completeJob(id, client = null) {

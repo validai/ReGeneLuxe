@@ -1,4 +1,5 @@
 import { AI_EXCLUDED_FIELDS } from "../secretFields.js";
+import { GMAIL_BRAIN_KEYS, GMAIL_PRIVATE_FIELDS, gmailBrainSignals, looksLikeGmailRecord } from "../gmailSignals.js";
 
 export function validateCampaignPlan(plan) {
   if (!plan || typeof plan !== "object") {
@@ -48,6 +49,33 @@ export function validateBrainOutput(payload) {
   };
 }
 
+function redactGmail(object, key = "") {
+  if (!object || typeof object !== "object") return;
+  if (Array.isArray(object)) {
+    for (let i = object.length - 1; i >= 0; i -= 1) {
+      if (looksLikeGmailRecord(object[i])) object.splice(i, 1);
+      else redactGmail(object[i]);
+    }
+    return;
+  }
+  delete object.gmail_messages;
+  delete object.gmailMessages;
+  if (key === "gmail" || looksLikeGmailRecord(object)) {
+    const signals = gmailBrainSignals(object);
+    Object.keys(object).forEach((field) => {
+      if (!GMAIL_BRAIN_KEYS.includes(field)) delete object[field];
+    });
+    Object.assign(object, signals);
+    GMAIL_PRIVATE_FIELDS.forEach((field) => {
+      delete object[field];
+    });
+    return;
+  }
+  Object.entries(object).forEach(([childKey, value]) => {
+    if (value && typeof value === "object") redactGmail(value, childKey);
+  });
+}
+
 export function sanitizeAiContext(context) {
   const clone = JSON.parse(JSON.stringify(context || {}));
   const strip = (object) => {
@@ -60,5 +88,6 @@ export function sanitizeAiContext(context) {
     });
   };
   strip(clone);
+  redactGmail(clone);
   return clone;
 }

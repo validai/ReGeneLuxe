@@ -11,6 +11,7 @@ export const CONNECTION_HINTS = {
   UNSUPPORTED: "Not connected",
   MANUAL_UNSUPPORTED: "Manual account available. No authenticated connector yet.",
   CONNECTING: "Authorization in progress.",
+  SYNCING: "Syncing Gmail…",
   ERROR: "Provider auth expired or was revoked.",
 };
 
@@ -95,6 +96,13 @@ export function displayProfileConnection(connection) {
       code: "CONNECTED",
       label: CONNECTION_LABELS.CONNECTED,
       hint: CONNECTION_HINTS.CONNECTED,
+    };
+  }
+  if (status === "SYNCING") {
+    return {
+      code: "SYNCING",
+      label: CONNECTION_LABELS.SYNCING,
+      hint: errorHint || CONNECTION_HINTS.SYNCING,
     };
   }
   if (status === "SETUP_REQUIRED") {

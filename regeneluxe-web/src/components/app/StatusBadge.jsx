@@ -29,6 +29,7 @@ const TONES = {
   FAILED: "bg-rl_danger/15 text-rl_danger",
   SKIPPED: "bg-rl_surfaceSoft text-rl_muted",
   CONNECTED: "bg-rl_ok/15 text-rl_ok",
+  SYNCING: "bg-rl_info/15 text-rl_info",
   MANUAL_ONLY: "bg-rl_surfaceSoft text-rl_muted",
   UNCONNECTED: "bg-rl_warning/15 text-rl_warning",
   NOT_CONNECTED: "bg-rl_warning/15 text-rl_warning",

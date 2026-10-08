@@ -377,10 +377,11 @@ describe("settings Gmail connection chrome", () => {
       </MemoryRouter>,
     );
     expect(screen.getAllByText(/djcoast239@gmail.com/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Authorized account: djcoast239@gmail.com/i)).toBeInTheDocument();
-    expect(screen.getByText(/Permission: Read only/i)).toBeInTheDocument();
-    expect(screen.getByText(/Messages indexed: 12/i)).toBeInTheDocument();
-    expect(screen.getByText("Connected")).toBeInTheDocument();
+    expect(screen.getByText(/Account: djcoast239@gmail.com/i)).toBeInTheDocument();
+    expect(screen.getByText(/Access: Read only/i)).toBeInTheDocument();
+    expect(screen.getByText(/Messages synced: 12/i)).toBeInTheDocument();
+    expect(screen.getByText(/Job: Idle/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Connected").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: /sync now/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /reconnect/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /disconnect/i })).toBeInTheDocument();
@@ -404,6 +405,36 @@ describe("settings Gmail connection chrome", () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole("link", { name: /reconnect gmail/i })).toHaveAttribute("href", "/api/oauth/gmail/start");
+  });
+
+  it("shows Syncing Gmail without a fake percent", () => {
+    render(
+      <MemoryRouter>
+        <ProfileSessionProvider
+          operator={{ id: "opr_1", name: "Coast Ent", email: "djcoast239@gmail.com" }}
+          profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
+          activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
+          connections={{
+            gmail: {
+              kind: "GMAIL",
+              status: "SYNCING",
+              email: "djcoast239@gmail.com",
+              permission: "readonly",
+              indexedCount: 12,
+              jobStatus: "Syncing",
+            },
+            youtube: { kind: "YOUTUBE", status: "NOT_CONNECTED" },
+          }}
+        >
+          <SettingsPage />
+        </ProfileSessionProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/Syncing Gmail/i)).toBeInTheDocument();
+    expect(screen.getByText(/Job: Syncing/i)).toBeInTheDocument();
+    expect(screen.queryByText(/\d+%/)).not.toBeInTheDocument();
+    const gmailSync = screen.getAllByRole("button", { name: /sync now/i })[0];
+    expect(gmailSync).toBeDisabled();
   });
 
   it("lets the operator pick Coast Entertainment from discovered channels", () => {

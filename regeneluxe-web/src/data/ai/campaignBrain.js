@@ -26,6 +26,7 @@ import {
   evaluateDecisionOutcome,
 } from "../decisionJournal.js";
 import { getSettings } from "../settingsRepository.js";
+import { gmailBrainSignals } from "../gmailSignals.js";
 
 export { analyzeCampaignChannels } from "./channelIntelligence.js";
 export { coordinateCampaign, buildIterationCycle } from "./coordination.js";
@@ -271,6 +272,7 @@ export function buildBrainInput(campaign, accounts = [], options = {}) {
     priorDecisions: listDecisions().filter((item) => item.campaignId === campaign.id).slice(0, 20),
     rejectedAdvice: rejectedRecommendations(campaign.id),
     userOverrides: listDecisions().filter((item) => item.campaignId === campaign.id && item.userResponse),
+    gmail: gmailBrainSignals(options.gmail || options.connections?.gmail || {}),
   });
 }
 
