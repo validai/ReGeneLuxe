@@ -11,7 +11,9 @@ import { applyTheme } from "../../data/settingsRepository.js";
 import { normalizeThemePreference } from "../../data/theme.js";
 import {
   bootstrapDurableStore,
+  fetchDbHealth,
   getLastSyncStatus,
+  reconcileCloud,
 } from "../../data/durableBootstrap.js";
 import { ProfileSessionProvider } from "./ProfileSession.jsx";
 import { setActiveProfileId } from "../../data/profileScope.js";
@@ -37,6 +39,7 @@ export default function WorkspaceProviders({
   const { settings, dataAuthority } = useAppData();
   const [commandOpen, setCommandOpen] = useState(false);
   const [syncBanner, setSyncBanner] = useState(null);
+  const [bannerSyncing, setBannerSyncing] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -56,9 +59,11 @@ export default function WorkspaceProviders({
 
   useEffect(() => {
     let cancelled = false;
-    bootstrapDurableStore().then((result) => {
+    bootstrapDurableStore().then(async (result) => {
       if (cancelled) return;
-      const sync = result?.sync || getLastSyncStatus();
+      if (result?.reconcile) await result.reconcile.catch(() => {});
+      if (cancelled) return;
+      const sync = getLastSyncStatus() || result?.sync;
       if (sync && sync.cloudConfigured && (sync.state === "PENDING" || sync.pendingOutbox > 0)) {
         setSyncBanner("Cloud sync pending");
       } else if (sync && sync.cloudConfigured && (sync.state === "ERROR" || sync.state === "Offline")) {
@@ -174,20 +179,24 @@ export default function WorkspaceProviders({
               {syncBanner.toLowerCase().includes("pending") ? (
                 <button
                   type="button"
-                  className="rounded-full border border-rl_border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-rl_text hover:border-rl_accent"
+                  disabled={bannerSyncing}
+                  aria-busy={bannerSyncing}
+                  className="rounded-full border border-rl_border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-rl_text hover:border-rl_accent disabled:opacity-60"
                   onClick={async () => {
-                    await fetch("/api/sync", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ pull: true, push: true }),
-                    }).catch(() => {});
-                    const health = await fetch("/api/db/health").then((res) => res.json()).catch(() => ({}));
-                    const sync = health?.sync;
-                    if (sync?.state === "SYNCED" || !(sync?.pendingOutbox > 0)) setSyncBanner(null);
-                    else setSyncBanner("Cloud sync pending");
+                    if (bannerSyncing) return;
+                    setBannerSyncing(true);
+                    try {
+                      await reconcileCloud({ pull: true, push: true });
+                      const health = await fetchDbHealth();
+                      const sync = health?.sync;
+                      if (sync?.state === "SYNCED" || !(sync?.pendingOutbox > 0)) setSyncBanner(null);
+                      else setSyncBanner("Cloud sync pending");
+                    } finally {
+                      setBannerSyncing(false);
+                    }
                   }}
                 >
-                  Sync now
+                  {bannerSyncing ? "Syncing…" : "Sync now"}
                 </button>
               ) : null}
               <a href="/settings#data" className="underline-offset-2 hover:underline">Details</a>

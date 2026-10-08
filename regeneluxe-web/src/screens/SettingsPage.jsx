@@ -16,7 +16,7 @@ import { updateSettings } from "../data/settingsRepository.js";
 import { normalizeThemePreference, THEME_OPTIONS } from "../data/theme.js";
 import { downloadBackupFile, importBackup, validateBackup } from "../data/backupService.js";
 import { getRuntimeStatus, getRuntimeHealth, saveRuntimeSecret } from "../data/runtimeClient.js";
-import { fetchDbHealth, getLastDbHealth } from "../data/durableBootstrap.js";
+import { fetchDbHealth, getLastDbHealth, reconcileCloud } from "../data/durableBootstrap.js";
 import { useProfileSession } from "../components/app/ProfileSession.jsx";
 import { signOutOperator } from "../../app/actions/auth";
 import { displayConnectionState, displayProfileConnection, formatHandle } from "../data/connectionStatus.js";
@@ -649,13 +649,7 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
             setSyncing(true);
             let postStatus = null;
             try {
-              const response = await fetch("/api/sync", {
-                method: "POST",
-                credentials: "same-origin",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ pull: true, push: true }),
-              }).catch(() => null);
-              const body = await response?.json?.().catch(() => null);
+              const body = await reconcileCloud({ pull: true, push: true });
               postStatus = body?.status || null;
               if (postStatus) {
                 setDbHealth((current) => mergeHealthWithSyncStatus(current, postStatus));

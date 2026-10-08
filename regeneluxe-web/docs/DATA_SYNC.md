@@ -58,6 +58,25 @@ Restart keeps the tombstone because it is a row in local SQLite. A later pull of
 
 Tombstones are not garbage-collected. Compaction can wait until a remote tombstone is known to be ahead of every replica.
 
+## Bootstrap
+
+`WorkspaceProviders` owns application boot through `bootstrapDurableStore()`. React Strict Mode may run that effect twice. Both calls share one in-flight boot.
+
+One boot does four different things:
+
+| Concern | Cadence |
+| --- | --- |
+| Local migration | One `POST /api/migrate/local-storage` per boot. The server decides whether work remains. Later mounts do not call it. |
+| Operational snapshot | One `GET /api/data/snapshot` to hydrate memory. A successful Turso reconcile takes one follow-up snapshot. Route changes do not. |
+| Database health | One `GET /api/db/health` during boot. Settings may read health again. Concurrent callers share the in-flight request. A health response that started before a newer read cannot overwrite it. |
+| Cloud reconcile | One `POST /api/sync` with `{ pull: true, push: true }` after the local snapshot. It does not block the shell. A failed reconcile leaves the local app usable and does not retry in a loop. |
+
+`GET /api/sync` reads `getSyncStatus()`. It probes Turso when configured and does not push, pull, or write `last_sync_at`. Boot does not call it.
+
+`POST /api/sync` is the mutation. `{ pull: true, push: true }` runs `reconcileWithRemote()`, which updates `last_sync_at`. Sync now uses this POST. A second click while that POST is in flight waits on the same request. A click after it finishes runs again.
+
+Navigation inside the workspace layout does not remount `WorkspaceProviders`, so it does not repeat migration, the boot snapshot, or boot reconcile. Opening Settings reads health again.
+
 ## Offline
 
 App opens from local SQLite without Turso. A local delete still hides the entity and keeps the tombstone while the outbox stays `PENDING`. Edits enqueue outbox (`PENDING`). Reconnect runs pull then push (`reconcileWithRemote`). Cloud outage does not undelete.
