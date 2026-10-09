@@ -103,7 +103,7 @@ export function formatDataSyncDisplay(dbHealth, { inFlight = false } = {}) {
     cloud: line(displayCloudDatabaseStatus(sync)),
     sync: line(displayCloudSyncStatus(sync, { inFlight })),
     lastSync: sync.lastSyncAt
-      ? line(new Date(sync.lastSyncAt).toLocaleString())
+      ? line(new Date(sync.lastSyncAt).toLocaleString("en-US"))
       : line("—", "No completed sync recorded"),
     pending: pendingKnown ? line(String(sync.pendingOutbox)) : line("—", "Pending count is unknown"),
   };

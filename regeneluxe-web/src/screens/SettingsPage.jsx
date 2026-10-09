@@ -16,7 +16,7 @@ import { updateSettings } from "../data/settingsRepository.js";
 import { normalizeThemePreference, THEME_OPTIONS } from "../data/theme.js";
 import { downloadBackupFile, importBackup, validateBackup } from "../data/backupService.js";
 import { getRuntimeStatus, getRuntimeHealth, saveRuntimeSecret } from "../data/runtimeClient.js";
-import { fetchDbHealth, getLastDbHealth, reconcileCloud } from "../data/durableBootstrap.js";
+import { fetchDbHealth, reconcileCloud } from "../data/durableBootstrap.js";
 import { useProfileSession } from "../components/app/ProfileSession.jsx";
 import { signOutOperator } from "../../app/actions/auth";
 import { displayConnectionState, displayProfileConnection, formatHandle } from "../data/connectionStatus.js";
@@ -28,7 +28,7 @@ import { PlatformIcon } from "../components/app/Icon.jsx";
 function formatWhen(value) {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("en-US");
 }
 
 function explainRuntime(runtime) {
@@ -56,19 +56,9 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
   const [apiKey, setApiKey] = useState("");
   const [runtimeNote, setRuntimeNote] = useState("");
 
-  const [dbHealth, setDbHealth] = useState(() => initialDbHealth || getLastDbHealth());
-  const [connectionNote, setConnectionNote] = useState(() => {
-    if (typeof window === "undefined") return "";
-    const params = new URLSearchParams(window.location.search);
-    const gmail = params.get("gmail");
-    const youtube = params.get("youtube");
-    if (gmail === "connected") return "Gmail connected for this account.";
-    if (gmail === "error") return params.get("message") || "Gmail connection failed.";
-    if (youtube === "connected") return "YouTube connected for this account.";
-    if (youtube === "pick") return "Choose a YouTube channel for this account.";
-    if (youtube === "error") return params.get("message") || "YouTube connection failed.";
-    return "";
-  });
+  const [hydrated, setHydrated] = useState(false);
+  const [dbHealth, setDbHealth] = useState(initialDbHealth);
+  const [connectionNote, setConnectionNote] = useState("");
   const gmailConnection = connections?.gmail || { status: "NOT_CONNECTED" };
   const youtubeConnection = connections?.youtube || { status: "NOT_CONNECTED" };
   const gmailView = displayProfileConnection(gmailConnection);
@@ -77,8 +67,8 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
   const dataSync = formatDataSyncDisplay(dbHealth, { inFlight: syncing });
   const workspaceSummary = formatWorkspaceSummary({
     brandName: activeProfile?.displayName || "Workspace",
-    campaignCount: campaigns.length,
-    socialAccountCount: accounts.length,
+    campaignCount: hydrated ? campaigns.length : 0,
+    socialAccountCount: hydrated ? accounts.length : 0,
   });
   const resetPhraseExpected = `RESET ${String(activeProfile?.displayName || "WORKSPACE").toUpperCase()}`;
   const resetPhraseMatches = resetPhrase.trim() === resetPhraseExpected;
@@ -89,10 +79,15 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
     : (gmailConnection.jobStatus || "Idle");
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    setHydrated(true);
     const params = new URLSearchParams(window.location.search);
     const gmail = params.get("gmail");
     const youtube = params.get("youtube");
+    if (gmail === "connected") setConnectionNote("Gmail connected for this account.");
+    else if (gmail === "error") setConnectionNote(params.get("message") || "Gmail connection failed.");
+    else if (youtube === "connected") setConnectionNote("YouTube connected for this account.");
+    else if (youtube === "pick") setConnectionNote("Choose a YouTube channel for this account.");
+    else if (youtube === "error") setConnectionNote(params.get("message") || "YouTube connection failed.");
     if (gmail === "connected" || youtube === "connected" || youtube === "pick") refresh?.();
     const hash = window.location.hash;
     if (hash || gmail || youtube) {
@@ -474,7 +469,7 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
             </div>
           </div>
           {SOCIAL_CONNECTION_PLATFORMS.map((platform) => {
-            const account = accounts.find((item) => item.platform === platform);
+            const account = hydrated ? accounts.find((item) => item.platform === platform) : undefined;
             const provider = providers.find((item) => (
               item.displayName === platform || item.provider === platform.toLowerCase()
             ));
@@ -611,7 +606,7 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
           <li>Local database · {formatSyncLine(dataSync.local)}</li>
           <li>Cloud database · {formatSyncLine(dataSync.cloud)}</li>
           <li>Cloud sync · {formatSyncLine(dataSync.sync)}</li>
-          <li>Last sync · {formatSyncLine(dataSync.lastSync)}</li>
+          <li>Last sync · {hydrated ? formatSyncLine(dataSync.lastSync) : "—"}</li>
           <li>Pending operations · {formatSyncLine(dataSync.pending)}</li>
         </ul>
         <details className="rounded-xl border border-rl_border px-4 py-3">
