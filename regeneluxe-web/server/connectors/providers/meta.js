@@ -21,6 +21,8 @@ import {
  * Requires META_APP_ID, META_APP_SECRET, and META_LOGIN_CONFIG_ID.
  * Optional: META_GRAPH_VERSION / META_REDIRECT_URI.
  * Authorization uses the Facebook Login for Business configuration. It does not send scope.
+ * response_type=code requires override_default_response_type=true.
+ * auth_type=rerequest asks Meta to prompt again for the configuration's permissions.
  * A grant is not CONNECTED until the operator selects a discovered destination.
  */
 export function createMetaConnector({ surface = "instagram" } = {}) {
@@ -67,6 +69,8 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
     url.searchParams.set("state", state);
     url.searchParams.set("config_id", configId);
     url.searchParams.set("response_type", "code");
+    url.searchParams.set("override_default_response_type", "true");
+    url.searchParams.set("auth_type", "rerequest");
     return { ok: true, authUrl: url.toString(), state };
   };
 

@@ -56,11 +56,21 @@ describe("Facebook Login for Business", () => {
     });
     expect(started.ok).toBe(true);
     const url = new URL(started.authUrl);
-    expect([...url.searchParams.keys()].sort()).toEqual(["client_id", "config_id", "redirect_uri", "response_type", "state"]);
+    expect([...url.searchParams.keys()].sort()).toEqual([
+      "auth_type",
+      "client_id",
+      "config_id",
+      "override_default_response_type",
+      "redirect_uri",
+      "response_type",
+      "state",
+    ]);
     expect(url.searchParams.get("client_id")).toBe("meta-app-id");
     expect(url.searchParams.get("config_id")).toBe("config-under-test");
     expect(url.searchParams.get("redirect_uri")).toBe("http://localhost:5174/api/oauth/instagram/callback");
     expect(url.searchParams.get("response_type")).toBe("code");
+    expect(url.searchParams.get("override_default_response_type")).toBe("true");
+    expect(url.searchParams.get("auth_type")).toBe("rerequest");
     expect(url.searchParams.has("scope")).toBe(false);
     expect(started.authUrl).not.toMatch(/pages_manage_posts|pages_messaging|ads_|instagram_manage_comments|instagram_manage_insights|meta-app-secret/i);
     expect(META_BUSINESS_LOGIN_PERMISSIONS).toEqual([
@@ -95,6 +105,8 @@ describe("Facebook Login for Business", () => {
     expect(JSON.stringify(started.session)).not.toMatch(/config-under-test|meta-app-secret|config_id|access_token/);
     const url = new URL(started.authUrl);
     expect(url.searchParams.get("config_id")).toBe("config-under-test");
+    expect(url.searchParams.get("override_default_response_type")).toBe("true");
+    expect(url.searchParams.get("auth_type")).toBe("rerequest");
     expect(url.searchParams.has("scope")).toBe(false);
   });
 });
