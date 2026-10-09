@@ -38,8 +38,7 @@ export function classifyCanonicalPort({ listener, health, cwd } = {}) {
     };
   }
 
-  const sameRepo = cwdLooksLikeRegeneluxeWeb(cwd)
-    && /next/i.test(String(listener.command || ""));
+  const sameRepo = cwdLooksLikeRegeneluxeWeb(cwd);
   if (sameRepo) {
     return {
       kind: "stale-or-unhealthy",

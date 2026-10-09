@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { publicStatus } from "../../../server/secrets.js";
-import { SERVICE_NAME, APP_NAME } from "../../../server/config.js";
+import { SERVICE_NAME, APP_NAME, uiPort } from "../../../server/config.js";
 import { getCanonicalOrigin } from "../../../server/auth/origin.js";
 import { getDbHealth, initDb } from "../../../server/db/index.js";
 
@@ -32,6 +32,7 @@ export async function GET() {
     app: APP_NAME,
     service: SERVICE_NAME,
     framework: "next",
+    uiPort: uiPort(),
     canonicalUiUrl: getCanonicalOrigin(),
     state: status.aiConfigured ? "RUNNING" : "AI_NOT_CONFIGURED",
     running: true,

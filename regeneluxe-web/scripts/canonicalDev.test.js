@@ -46,6 +46,16 @@ describe("canonical dev port classifier", () => {
     expect(result.reuse).toBe(false);
   });
 
+  it("does not call a same-repo node process unrelated when health is incomplete", () => {
+    const result = classifyCanonicalPort({
+      listener: { pid: 15930, command: "node" },
+      health: { ok: true, app: "ReGeneLuxe", framework: "next" },
+      cwd: "/Users/eric/Desktop/ReGeneLuxe/regeneluxe-web",
+    });
+    expect(result.kind).toBe("stale-or-unhealthy");
+    expect(result.kind).not.toBe("unrelated");
+  });
+
   it("flags a same-repo Next process that is not healthy", () => {
     expect(cwdLooksLikeRegeneluxeWeb("/Users/eric/Desktop/ReGeneLuxe/regeneluxe-web")).toBe(true);
     const result = classifyCanonicalPort({
