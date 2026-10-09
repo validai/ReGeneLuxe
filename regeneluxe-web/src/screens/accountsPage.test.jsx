@@ -2,34 +2,70 @@ import { MemoryRouter } from "@/nav";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import AccountsPage from "./AccountsPage.jsx";
+import WorkspaceProviders from "../components/app/WorkspaceProviders.jsx";
 import { ProfileSessionProvider } from "../components/app/ProfileSession.jsx";
-import { createAccount } from "../data/accountRepository.js";
+import { createAccount, listAccounts } from "../data/accountRepository.js";
+
+const routerPush = vi.hoisted(() => vi.fn());
 
 vi.mock("../../app/actions/auth", () => ({
   signInWithGoogle: () => {},
   signOutOperator: () => {},
 }));
 
+vi.mock("../data/durableBootstrap.js", () => ({
+  bootstrapDurableStore: vi.fn(async () => ({})),
+  fetchDbHealth: vi.fn(async () => ({})),
+  getLastSyncStatus: vi.fn(() => null),
+  reconcileCloud: vi.fn(),
+}));
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn(), push: routerPush }),
+  usePathname: () => "/accounts",
 }));
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }) => <a href={href} {...rest}>{children}</a>,
 }));
 
+const session = {
+  operator: { id: "opr_1", name: "Coast Ent", email: "djcoast239@gmail.com" },
+  profiles: [{ id: "prf_1", displayName: "DJ Coast" }],
+  activeProfile: { id: "prf_1", displayName: "DJ Coast" },
+};
+
 function renderAccounts() {
   return render(
     <MemoryRouter>
-      <ProfileSessionProvider
-        operator={{ id: "opr_1", name: "Coast Ent", email: "djcoast239@gmail.com" }}
-        profiles={[{ id: "prf_1", displayName: "DJ Coast" }]}
-        activeProfile={{ id: "prf_1", displayName: "DJ Coast" }}
-      >
+      <ProfileSessionProvider {...session}>
         <AccountsPage />
       </ProfileSessionProvider>
     </MemoryRouter>,
   );
+}
+
+function renderAccountsInWorkspace() {
+  return render(
+    <MemoryRouter>
+      <WorkspaceProviders {...session}>
+        <AccountsPage />
+      </WorkspaceProviders>
+    </MemoryRouter>,
+  );
+}
+
+function typeHandle(input, text) {
+  let value = "";
+  for (const char of text) {
+    value += char;
+    fireEvent.keyDown(input, { key: char, bubbles: true });
+    fireEvent.change(input, { target: { value } });
+    expect(screen.getByRole("dialog", { name: /add social account/i })).toBeInTheDocument();
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue(value);
+  }
+  return value;
 }
 
 describe("Social Accounts page", () => {
@@ -118,5 +154,107 @@ describe("Social Accounts page", () => {
     expect(screen.getAllByText("Unknown").length).toBeGreaterThan(0);
     expect(screen.queryByText("Connected")).not.toBeInTheDocument();
     expect(screen.queryByText("Setup required")).not.toBeInTheDocument();
+  });
+
+  it("keeps the add-account modal stable while an Instagram identity is typed", () => {
+    routerPush.mockClear();
+    renderAccountsInWorkspace();
+    const before = listAccounts().length;
+    fireEvent.click(screen.getAllByRole("button", { name: /\+ add social account/i })[0]);
+    fireEvent.change(screen.getByLabelText(/^platform$/i), { target: { value: "Instagram" } });
+
+    const input = screen.getByLabelText(/instagram profile url or @handle/i);
+    const submit = screen.getAllByRole("button", { name: "Add social account" }).find((button) => button.getAttribute("type") === "submit");
+    expect(submit).toHaveAttribute("type", "submit");
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveAttribute("type", "button");
+    expect(screen.getByRole("button", { name: "Close" })).toHaveAttribute("type", "button");
+    input.focus();
+
+    typeHandle(input, "@");
+    typeHandle(input, "@djcoast");
+    expect(listAccounts()).toHaveLength(before);
+    expect(routerPush).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: /add social account/i })).toBeInTheDocument();
+    expect(fireEvent.keyDown(input, { key: "Enter" })).toBe(false);
+    expect(listAccounts()).toHaveLength(before);
+
+    const name = screen.getByLabelText(/^display name$/i);
+    expect(name).toHaveValue("@djcoast");
+    fireEvent.change(name, { target: { value: "DJ Coast IG" } });
+    typeHandle(input, "@djcoast");
+    expect(name).toHaveValue("DJ Coast IG");
+    expect(input).toHaveFocus();
+
+    fireEvent.keyDown(input, { key: "Tab" });
+    expect(screen.getByRole("dialog", { name: /add social account/i })).toBeInTheDocument();
+    name.focus();
+    expect(input).toHaveValue("@djcoast");
+    expect(listAccounts()).toHaveLength(before);
+
+    fireEvent.change(screen.getByLabelText(/^platform$/i), { target: { value: "YouTube" } });
+    expect(screen.getByRole("dialog", { name: /add social account/i })).toBeInTheDocument();
+    expect(listAccounts()).toHaveLength(before);
+    fireEvent.change(screen.getByLabelText(/^platform$/i), { target: { value: "Instagram" } });
+
+    fireEvent.click(submit);
+    const created = listAccounts().find((account) => account.displayName === "DJ Coast IG");
+    expect(created?.handle).toBe("@djcoast");
+    expect(created?.connectionState).not.toBe("CONNECTED");
+    expect(screen.queryByRole("dialog", { name: /add social account/i })).not.toBeInTheDocument();
+    expect(routerPush).not.toHaveBeenCalled();
+  });
+
+  it("accepts a full Instagram URL without creating an account or closing", () => {
+    routerPush.mockClear();
+    renderAccountsInWorkspace();
+    const before = listAccounts().length;
+    fireEvent.click(screen.getAllByRole("button", { name: /\+ add social account/i })[0]);
+    const input = screen.getByLabelText(/instagram profile url or @handle/i);
+    input.focus();
+    const url = "https://www.instagram.com/djcoast/";
+    typeHandle(input, url);
+    expect(screen.getByText(/detected: instagram/i)).toBeInTheDocument();
+    expect(screen.getByText(/not connected/i)).toBeInTheDocument();
+    expect(listAccounts()).toHaveLength(before);
+    expect(routerPush).not.toHaveBeenCalled();
+
+    const shortened = url.slice(0, -1);
+    fireEvent.change(input, { target: { value: shortened } });
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue(shortened);
+    expect(screen.getByRole("dialog", { name: /add social account/i })).toBeInTheDocument();
+    expect(listAccounts()).toHaveLength(before);
+  });
+
+  it("closes the composer from Cancel or X without creating an account", () => {
+    renderAccountsInWorkspace();
+    const before = listAccounts().length;
+
+    fireEvent.click(screen.getAllByRole("button", { name: /\+ add social account/i })[0]);
+    const input = screen.getByLabelText(/instagram profile url or @handle/i);
+    input.focus();
+    typeHandle(input, "@dj");
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog", { name: /add social account/i })).not.toBeInTheDocument();
+    expect(listAccounts()).toHaveLength(before);
+
+    fireEvent.click(screen.getAllByRole("button", { name: /\+ add social account/i })[0]);
+    const again = screen.getByLabelText(/instagram profile url or @handle/i);
+    again.focus();
+    typeHandle(again, "@dj");
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog", { name: /add social account/i })).not.toBeInTheDocument();
+    expect(listAccounts()).toHaveLength(before);
+  });
+
+  it("does not navigate when a letter is pressed on the sheet close button", () => {
+    routerPush.mockClear();
+    renderAccountsInWorkspace();
+    fireEvent.click(screen.getAllByRole("button", { name: /\+ add social account/i })[0]);
+    const close = screen.getByRole("button", { name: "Close" });
+    close.focus();
+    fireEvent.keyDown(close, { key: "c" });
+    expect(routerPush).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: /add social account/i })).toBeInTheDocument();
   });
 });

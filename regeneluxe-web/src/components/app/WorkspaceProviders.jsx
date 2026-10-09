@@ -99,6 +99,7 @@ export default function WorkspaceProviders({
         || target.tagName === "SELECT"
         || target.isContentEditable
       );
+      const dialogOpen = Boolean(document.querySelector("[role='dialog'][aria-modal='true']"));
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -106,7 +107,7 @@ export default function WorkspaceProviders({
         return;
       }
 
-      if (typing) return;
+      if (typing || dialogOpen) return;
 
       if (goPending) {
         const key = event.key.toLowerCase();

@@ -11,30 +11,32 @@ export default function SideSheet({
   width = "md",
 }) {
   const panelRef = useRef(null);
-  const previousFocus = useRef(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) return undefined;
-    previousFocus.current = document.activeElement;
+    const previouslyFocused = document.activeElement;
     const panel = panelRef.current;
     const focusable = () =>
-      panel?.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      ) || [];
+      [...(panel?.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      ) || [])];
 
-    const nodes = focusable();
-    const first = nodes[0];
-    if (first instanceof HTMLElement) first.focus();
-    else panel?.focus();
+    const field = focusable().find((node) => node.matches("input, select, textarea"));
+    if (field instanceof HTMLElement) field.focus();
 
     const onKey = (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose?.();
+        onCloseRef.current?.();
         return;
       }
       if (event.key !== "Tab") return;
-      const list = [...focusable()];
+      const list = focusable();
       if (list.length === 0) return;
       const firstEl = list[0];
       const lastEl = list[list.length - 1];
@@ -50,9 +52,11 @@ export default function SideSheet({
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
-      if (previousFocus.current instanceof HTMLElement) previousFocus.current.focus();
+      if (previouslyFocused instanceof HTMLElement && document.contains(previouslyFocused)) {
+        previouslyFocused.focus();
+      }
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

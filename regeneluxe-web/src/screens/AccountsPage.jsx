@@ -69,6 +69,7 @@ export default function AccountsPage() {
   const [setupMessage, setSetupMessage] = useState("");
   const [identityInput, setIdentityInput] = useState("");
   const [detection, setDetection] = useState(null);
+  const [displayNameEdited, setDisplayNameEdited] = useState(false);
   const [providers, setProviders] = useState([]);
 
   const selected = accounts.find((account) => account.id === selectedId) || null;
@@ -94,7 +95,7 @@ export default function AccountsPage() {
       platform: preferPlatform ? platform : (parsed.platform || current.platform),
       handle: parsed.handle ? `@${String(parsed.handle).replace(/^@/, "")}` : current.handle,
       profileUrl: parsed.profileUrl || current.profileUrl,
-      displayName: current.displayName || parsed.displayName || parsed.handle || "",
+      displayName: displayNameEdited ? current.displayName : (parsed.displayName || ""),
       connectionState: current.connectionState || "MANUAL_ONLY",
       connectionMethod: current.connectionMethod || "MANUAL",
     }));
@@ -224,6 +225,7 @@ export default function AccountsPage() {
     setDraft(blank());
     setIdentityInput("");
     setDetection(null);
+    setDisplayNameEdited(false);
     setErrors({});
   };
 
@@ -250,6 +252,7 @@ export default function AccountsPage() {
     setDraft(blank());
     setIdentityInput("");
     setDetection(null);
+    setDisplayNameEdited(false);
     setErrors({});
     setSelectedId(null);
     setComposerOpen(true);
@@ -259,6 +262,7 @@ export default function AccountsPage() {
     setEditingId(account.id);
     setDraft({ ...account });
     setIdentityInput(account.profileUrl || account.handle || "");
+    setDisplayNameEdited(Boolean(account.displayName));
     setDetection(parseSocialIdentity(account.profileUrl || account.handle || "", { platform: account.platform }));
     setErrors({});
     setSelectedId(null);
@@ -365,7 +369,17 @@ export default function AccountsPage() {
           </div>
         )}
       >
-        <form id="social-account-composer" onSubmit={handleSubmit} className="space-y-4">
+        <form
+          id="social-account-composer"
+          onSubmit={handleSubmit}
+          onKeyDown={(event) => {
+            const tag = event.target?.tagName;
+            if (event.key === "Enter" && (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA")) {
+              event.preventDefault();
+            }
+          }}
+          className="space-y-4"
+        >
           <FormField id="acc-platform" label="Platform" error={errors.platform}>
             <select
               id="acc-platform"
@@ -404,7 +418,15 @@ export default function AccountsPage() {
           ) : null}
           {composerFields.displayName ? (
             <FormField id="acc-name" label="Display name" error={errors.displayName}>
-              <input id="acc-name" className={fieldClass} value={draft.displayName} onChange={(e) => setDraft({ ...draft, displayName: e.target.value })} />
+              <input
+                id="acc-name"
+                className={fieldClass}
+                value={draft.displayName}
+                onChange={(e) => {
+                  setDisplayNameEdited(true);
+                  setDraft((current) => ({ ...current, displayName: e.target.value }));
+                }}
+              />
             </FormField>
           ) : null}
           {composerFields.handle ? (
