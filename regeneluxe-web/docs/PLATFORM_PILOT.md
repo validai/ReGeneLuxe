@@ -20,17 +20,18 @@ Use Facebook Login so one grant can discover managed Pages and the professional 
 | API version | `META_GRAPH_VERSION`, default `v23.0` |
 | App id | `META_APP_ID` |
 | App secret | `META_APP_SECRET` |
+| Login configuration | `META_LOGIN_CONFIG_ID` (`config_id` on the authorization request; scope is not sent) |
 | Redirect override | `META_REDIRECT_URI` |
 | Instagram redirect | `http://localhost:5174/api/oauth/instagram/callback` |
 | Facebook redirect | `http://localhost:5174/api/oauth/facebook/callback` |
 
-Scopes requested:
+The Facebook Login for Business configuration is the permission set. The authorization URL does not send `scope`.
 
-- `pages_show_list`
-- `pages_read_engagement`
-- `pages_manage_posts`
+- `business_management`
 - `instagram_basic`
 - `instagram_content_publish`
+- `pages_read_engagement`
+- `pages_show_list`
 
 The user token is exchanged for a long-lived token (about 60 days). Page tokens from `GET /me/accounts` stay in the vault. They are not written on the account row, into jobs, or into publication attempts.
 

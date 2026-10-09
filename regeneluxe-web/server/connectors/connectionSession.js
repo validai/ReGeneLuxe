@@ -3,7 +3,18 @@ import { readSecrets, writeSecrets } from "../secrets.js";
 import { CONNECTION_SESSION_PREFIX, isConnectionSessionId } from "../../src/data/connectionFlow.js";
 
 const SESSION_TTL_MS = 15 * 60 * 1000;
-const SECRET_KEYS = ["accessToken", "refreshToken", "token", "clientSecret", "pageAccessToken", "pages", "pagesCipher"];
+const SECRET_KEYS = [
+  "accessToken",
+  "refreshToken",
+  "token",
+  "clientSecret",
+  "pageAccessToken",
+  "pages",
+  "pagesCipher",
+  "loginConfigId",
+  "configId",
+  "config_id",
+];
 
 function bucket() {
   const secrets = readSecrets();
@@ -18,7 +29,7 @@ function assertPublic(record) {
       throw new Error("Connection session cannot store provider credentials.");
     }
   }
-  if (/access_token|refresh_token|client_secret/i.test(serialized)) {
+  if (/access_token|refresh_token|client_secret|config_id|loginConfigId|META_LOGIN_CONFIG_ID/i.test(serialized)) {
     throw new Error("Connection session cannot store provider credentials.");
   }
   return record;

@@ -5,13 +5,21 @@ import { assertPublicProviderMedia } from "../../../src/data/mediaReadiness.js";
  * Tokens stay in the vault. These functions return public identity only.
  */
 
-export const META_PILOT_SCOPES = Object.freeze([
-  "pages_show_list",
-  "pages_read_engagement",
-  "pages_manage_posts",
+/**
+ * Permissions represented by the Facebook Login for Business configuration.
+ * The authorization request sends config_id and does not send scope.
+ * Meta treats the configuration as authoritative; a parallel scope list can
+ * reintroduce permissions the configuration does not include.
+ */
+export const META_BUSINESS_LOGIN_PERMISSIONS = Object.freeze([
+  "business_management",
   "instagram_basic",
   "instagram_content_publish",
+  "pages_read_engagement",
+  "pages_show_list",
 ]);
+
+export const META_PILOT_SCOPES = META_BUSINESS_LOGIN_PERMISSIONS;
 
 export function metaGraphVersion() {
   const raw = String(process.env.META_GRAPH_VERSION || "v23.0").trim();

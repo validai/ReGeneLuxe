@@ -83,6 +83,7 @@ describe("connector registry", () => {
     const previousGoogleSecret = process.env.AUTH_GOOGLE_SECRET;
     delete process.env.META_APP_ID;
     delete process.env.META_APP_SECRET;
+    delete process.env.META_LOGIN_CONFIG_ID;
     delete process.env.GOOGLE_CLIENT_ID;
     delete process.env.GOOGLE_CLIENT_SECRET;
     delete process.env.AUTH_GOOGLE_ID;

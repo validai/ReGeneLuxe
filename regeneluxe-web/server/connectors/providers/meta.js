@@ -1,12 +1,12 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
 import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
 import { assertPublicProviderMedia } from "../../../src/data/mediaReadiness.js";
-import { baseConnector, defaultRedirect, unavailable } from "../base.js";
+import { baseConnector, defaultRedirect, setupRequired, unavailable } from "../base.js";
 import { canonicalOAuthRedirect } from "../../auth/origin.js";
 import { createOAuthState, friendlyOAuthError } from "../oauth/state.js";
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
 import {
-  META_PILOT_SCOPES,
+  META_BUSINESS_LOGIN_PERMISSIONS,
   destinationsForSurface,
   metaDialogUrl,
   metaGraphUrl,
@@ -18,7 +18,9 @@ import {
 
 /**
  * Meta Facebook Login for Instagram professional accounts and Facebook Pages.
- * Requires META_APP_ID, META_APP_SECRET, and optional META_GRAPH_VERSION / META_REDIRECT_URI.
+ * Requires META_APP_ID, META_APP_SECRET, and META_LOGIN_CONFIG_ID.
+ * Optional: META_GRAPH_VERSION / META_REDIRECT_URI.
+ * Authorization uses the Facebook Login for Business configuration. It does not send scope.
  * A grant is not CONNECTED until the operator selects a discovered destination.
  */
 export function createMetaConnector({ surface = "instagram" } = {}) {
@@ -32,7 +34,7 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
     setupInstructions: [
       "1. Create a Meta app at developers.facebook.com and add Facebook Login.",
       "2. Add the Instagram product if you will publish to a professional Instagram account.",
-      "3. Set META_APP_ID and META_APP_SECRET on the server. Optional: META_REDIRECT_URI and META_GRAPH_VERSION.",
+      "3. Set META_APP_ID, META_APP_SECRET, and META_LOGIN_CONFIG_ID. Optional: META_REDIRECT_URI and META_GRAPH_VERSION.",
       `4. Add this redirect URI in the Meta app: ${canonicalOAuthRedirect(process.env.META_REDIRECT_URI) || defaultRedirect(provider)}`,
       "5. Use a Facebook user who manages a Page. Instagram must be a professional account linked to that Page.",
     ].join("\n"),
@@ -40,6 +42,7 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
       clientId: "META_APP_ID",
       clientSecret: "META_APP_SECRET",
       redirectUri: "META_REDIRECT_URI",
+      loginConfigId: "META_LOGIN_CONFIG_ID",
     },
     capabilities: [
       CAPABILITY.READ_PROFILE,
@@ -53,12 +56,16 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
 
   connector._beginAuth = async ({ accountId, returnTo, operatorId = null, managedProfileId = null }) => {
     const creds = connector.getAppCredentials();
+    const configId = String(process.env.META_LOGIN_CONFIG_ID || "").trim();
+    if (!creds.clientId || !creds.clientSecret || !configId) {
+      return setupRequired(displayName, connector.setupInstructions);
+    }
     const state = createOAuthState({ provider, accountId, returnTo, operatorId, managedProfileId });
     const url = new URL(metaDialogUrl());
     url.searchParams.set("client_id", creds.clientId);
     url.searchParams.set("redirect_uri", creds.redirectUri);
     url.searchParams.set("state", state);
-    url.searchParams.set("scope", META_PILOT_SCOPES.join(","));
+    url.searchParams.set("config_id", configId);
     url.searchParams.set("response_type", "code");
     return { ok: true, authUrl: url.toString(), state };
   };
@@ -118,7 +125,7 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
       accessToken,
       refreshToken: null,
       expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000).toISOString() : null,
-      scopes: [...META_PILOT_SCOPES],
+      scopes: [...META_BUSINESS_LOGIN_PERMISSIONS],
       providerAccountId: null,
       pages: pagesJson.data || [],
     });

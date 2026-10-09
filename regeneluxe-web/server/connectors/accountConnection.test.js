@@ -10,6 +10,7 @@ delete process.env.TURSO_DATABASE_URL;
 delete process.env.TURSO_AUTH_TOKEN;
 delete process.env.META_APP_ID;
 delete process.env.META_APP_SECRET;
+delete process.env.META_LOGIN_CONFIG_ID;
 delete process.env.THREADS_APP_ID;
 delete process.env.THREADS_APP_SECRET;
 
