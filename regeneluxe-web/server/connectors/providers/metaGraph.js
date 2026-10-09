@@ -57,12 +57,38 @@ export function safeProviderError(message) {
     .slice(0, 300);
 }
 
+export function classifyMetaPublishFailure(json, fallbackCode) {
+  const error = json?.error || {};
+  const graphCode = Number(error.code || 0);
+  const message = safeProviderError(error.message || "");
+  if (graphCode === 190 || /invalid oauth|session has expired|error validating access token/i.test(message)) {
+    return { code: "RECONNECT_REQUIRED", error: "The Meta authorization needs to be renewed." };
+  }
+  if ([10, 200, 299].includes(graphCode)) {
+    return { code: "PERMISSION_MISSING", error: message || "Missing permission." };
+  }
+  if ([4, 17, 32, 613].includes(graphCode) || /rate limit/i.test(message)) {
+    return { code: "RATE_LIMITED", error: "Meta rate limited this request." };
+  }
+  if (/could not download|media download|unable to fetch/i.test(message)) {
+    return { code: "MEDIA_NOT_PUBLIC", error: message || "Meta could not fetch the media." };
+  }
+  if (/only photo or video|unsupported image|invalid parameter/i.test(message) && /image|media|url/i.test(message)) {
+    return { code: "MEDIA_INVALID", error: message || "The media was rejected." };
+  }
+  if (graphCode === 1 || graphCode === 2) {
+    return { code: "PROVIDER_UNAVAILABLE", error: message || "Meta is unavailable." };
+  }
+  return { code: fallbackCode, error: message || "Provider request failed." };
+}
+
 export async function publishInstagramMedia({
   fetchImpl = fetch,
   igUserId,
   accessToken,
   imageUrl = "",
   videoUrl = "",
+  caption = "",
   sleep = () => Promise.resolve(),
   maxPolls = 5,
 } = {}) {
@@ -77,10 +103,13 @@ export async function publishInstagramMedia({
   } else {
     body.set("image_url", imageUrl);
   }
+  const captionText = String(caption || "").trim();
+  if (captionText) body.set("caption", captionText);
   const createRes = await fetchImpl(metaGraphUrl(`/${igUserId}/media`), { method: "POST", body });
   const created = await createRes.json().catch(() => ({}));
   if (!createRes.ok || !created.id) {
-    return { ok: false, error: safeProviderError(created.error?.message || "Instagram container was not created."), code: "CONTAINER_FAILED" };
+    const failure = classifyMetaPublishFailure(created, "CONTAINER_FAILED");
+    return { ok: false, error: failure.error, code: failure.code };
   }
   const containerId = created.id;
   let finished = false;
@@ -102,7 +131,7 @@ export async function publishInstagramMedia({
     await sleep(attempt === 0 ? 0 : 250);
   }
   if (!finished) {
-    return { ok: false, error: "Instagram media is not finished processing.", code: "CONTAINER_NOT_FINISHED", providerStatus: lastStatus, containerId };
+    return { ok: false, error: "Instagram media is not finished processing.", code: "CONTAINER_TIMEOUT", providerStatus: lastStatus, containerId };
   }
   const publishBody = new URLSearchParams({
     creation_id: containerId,
@@ -111,7 +140,8 @@ export async function publishInstagramMedia({
   const publishRes = await fetchImpl(metaGraphUrl(`/${igUserId}/media_publish`), { method: "POST", body: publishBody });
   const published = await publishRes.json().catch(() => ({}));
   if (!publishRes.ok || !published.id) {
-    return { ok: false, error: safeProviderError(published.error?.message || "Instagram publish failed."), code: "PUBLISH_FAILED" };
+    const failure = classifyMetaPublishFailure(published, "PUBLISH_FAILED");
+    return { ok: false, error: failure.error, code: failure.code, containerId };
   }
   if (published.id === containerId) {
     return { ok: false, error: "Provider returned the container id instead of a media id.", code: "CONTAINER_ID_NOT_MEDIA_ID" };
@@ -147,7 +177,8 @@ export async function publishFacebookPagePost({
   const res = await fetchImpl(metaGraphUrl(`/${pageId}/feed`), { method: "POST", body });
   const json = await res.json().catch(() => ({}));
   if (!res.ok || !json.id) {
-    return { ok: false, error: safeProviderError(json.error?.message || "Facebook Page publish failed."), code: "PUBLISH_FAILED" };
+    const failure = classifyMetaPublishFailure(json, "PUBLISH_FAILED");
+    return { ok: false, error: failure.error || "Facebook Page publish failed.", code: failure.code };
   }
   return {
     ok: true,

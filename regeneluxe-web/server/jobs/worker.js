@@ -171,12 +171,18 @@ async function handlePublishContent(payload = {}) {
     });
 
   const attempts = await list(COLLECTIONS.publication_attempts).catch(() => []);
-  const priorSuccess = attempts.find((attempt) => (
-    attempt.idempotencyKey === idempotencyKey
-    && ["PUBLISHED", "CONFIRMED"].includes(attempt.state)
-  ));
+  const sameAttempt = attempts.filter((attempt) => attempt.idempotencyKey === idempotencyKey);
+  const priorSuccess = sameAttempt.find((attempt) => ["PUBLISHED", "CONFIRMED"].includes(attempt.state));
   if (priorSuccess) {
-    return { ok: true, deduped: true, attempt: priorSuccess };
+    return { ok: true, deduped: true, code: "DUPLICATE_SUPPRESSED", attempt: priorSuccess };
+  }
+  const ambiguous = sameAttempt.find((attempt) => {
+    if (attempt.state === "ATTEMPTED") return true;
+    const result = attempt.providerResult || {};
+    return Boolean(attempt.providerPostId || result.providerPostId || result.containerId);
+  });
+  if (ambiguous) {
+    return { ok: true, deduped: true, code: "DUPLICATE_SUPPRESSED", attempt: ambiguous };
   }
 
   const variant = variantForAccount(content, account);

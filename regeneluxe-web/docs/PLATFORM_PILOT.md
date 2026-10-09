@@ -88,6 +88,21 @@ Job payloads carry ids only.
 - Instagram, Facebook, and Threads: `PUBLISHED`, `FAILED`, or `NOT_ATTEMPTED`
 - YouTube: `PRIVATE_UPLOAD_CONFIRMED`, `FAILED`, or `NOT_ATTEMPTED`
 
+## Live Meta connection
+
+Verified for the DJ Coast workspace after a completed Facebook Login for Business grant:
+
+| Item | State |
+| --- | --- |
+| Meta authorization | WORKING |
+| Facebook Page connection | WORKING. DJ Coast is `CONNECTED` with approval required. |
+| Instagram professional discovery | WORKING. The Page resolves to `@_djcoast`. |
+| Instagram connected account | WORKING. The earlier manual `@_djcoast` row was linked. It was not duplicated. |
+| Real Instagram publishing | BLOCKED. The image path creates a container, sends the caption, polls, then calls `media_publish`, but Meta must fetch a public `https://` media URL. Local and localhost assets stop at `MEDIA_PUBLIC_URL_REQUIRED`. |
+| Real Facebook publishing | NOT YET PILOTED. The implemented path is a Page text post. Do not treat it as tested live. |
+
+A public media URL needs a temporary signed route on a host Meta can reach: unguessable, expiring, limited to the approved asset, with the right MIME type and no directory listing. This app does not add a tunnel or a third-party media host.
+
 ## Live test
 
 Do not publish from a script. After credentials exist, connect in the app, confirm the discovered Page, Instagram account, Threads user, or YouTube channel, then approve that exact post in ReGeneLuxe. Automated tests mock HTTP and do not post.

@@ -35,12 +35,11 @@ const DEFINITIONS = {
       "READ_MESSAGES",
       "CREATE_POST",
       "PUBLISH_POST",
-      "PUBLISH_IMAGE",
-      "PUBLISH_VIDEO",
+      "PUBLISH_TEXT",
       "SCHEDULE_POST",
       "SCHEDULE",
     ],
-    notes: "Requires Meta app credentials for Facebook Pages.",
+    notes: "Facebook Page publishing in this pilot is a text feed post.",
   },
   YouTube: {
     capabilities: [
@@ -155,16 +154,13 @@ export function hasCapability(account, capability) {
   if (caps.includes(capability)) return true;
   // Alias tolerance
   const aliases = {
-    PUBLISH_POST: ["PUBLISH_TEXT", "PUBLISH_IMAGE", "PUBLISH_VIDEO"],
+    PUBLISH_POST: ["PUBLISH_IMAGE", "PUBLISH_TEXT"],
     SCHEDULE_POST: ["SCHEDULE"],
     READ_POSTS: ["READ_CONTENT"],
     READ_POST_METRICS: ["READ_CONTENT_METRICS"],
   };
   if (aliases[capability]?.some((a) => caps.includes(a))) return true;
-  // reverse: asking for PUBLISH_IMAGE when only PUBLISH_POST declared
-  if (["PUBLISH_TEXT", "PUBLISH_IMAGE", "PUBLISH_VIDEO"].includes(capability) && caps.includes("PUBLISH_POST")) {
-    return true;
-  }
+  if (capability === "PUBLISH_IMAGE" && caps.includes("PUBLISH_POST")) return true;
   return false;
 }
 
@@ -180,9 +176,9 @@ export function connectionLabel(account) {
 export function publishMediaSupport(platform) {
   const caps = declaredCapabilities(platform);
   return {
-    text: caps.includes("PUBLISH_TEXT") || caps.includes("PUBLISH_POST"),
-    image: caps.includes("PUBLISH_IMAGE") || caps.includes("PUBLISH_POST"),
-    video: caps.includes("PUBLISH_VIDEO") || (platform === "YouTube" || platform === "TikTok"),
+    text: caps.includes("PUBLISH_TEXT"),
+    image: caps.includes("PUBLISH_IMAGE"),
+    video: caps.includes("PUBLISH_VIDEO") || platform === "YouTube" || platform === "TikTok",
     schedule: caps.includes("SCHEDULE") || caps.includes("SCHEDULE_POST"),
   };
 }

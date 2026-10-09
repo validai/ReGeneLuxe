@@ -46,14 +46,20 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
       redirectUri: "META_REDIRECT_URI",
       loginConfigId: "META_LOGIN_CONFIG_ID",
     },
-    capabilities: [
-      CAPABILITY.READ_PROFILE,
-      CAPABILITY.READ_CONTENT,
-      CAPABILITY.READ_ACCOUNT_METRICS,
-      CAPABILITY.PUBLISH_IMAGE,
-      CAPABILITY.PUBLISH_VIDEO,
-      CAPABILITY.PUBLISH_TEXT,
-    ],
+    capabilities: surface === "facebook"
+      ? [
+        CAPABILITY.READ_PROFILE,
+        CAPABILITY.READ_CONTENT,
+        CAPABILITY.READ_ACCOUNT_METRICS,
+        CAPABILITY.PUBLISH_TEXT,
+      ]
+      : [
+        CAPABILITY.READ_PROFILE,
+        CAPABILITY.READ_CONTENT,
+        CAPABILITY.READ_ACCOUNT_METRICS,
+        CAPABILITY.PUBLISH_IMAGE,
+        CAPABILITY.PUBLISH_VIDEO,
+      ],
   });
 
   connector._beginAuth = async ({ accountId, returnTo, operatorId = null, managedProfileId = null }) => {
@@ -201,6 +207,7 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
       accessToken: page?.access_token || tokens.accessToken,
       imageUrl: videoUrl ? "" : mediaUrl,
       videoUrl,
+      caption: payload?.caption || payload?.text || "",
     });
   };
 

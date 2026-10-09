@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { availableCapabilities, declaredCapabilities, hasCapability } from "./connectors/registry.js";
+import { availableCapabilities, declaredCapabilities, hasCapability, publishMediaSupport } from "./connectors/registry.js";
 import { emptyAccount } from "./models.js";
 import { emptyContentItem, emptyDecision } from "./domain.js";
 import { validateCampaignPlan, sanitizeAiContext } from "./ai/validator.js";
@@ -32,6 +32,13 @@ describe("connectors", () => {
   it("only exposes capabilities when truly connected", () => {
     const account = emptyAccount({ platform: "YouTube", connectionState: "CONNECTED" });
     expect(hasCapability(account, "READ_PROFILE")).toBe(true);
+  });
+
+  it("advertises only the publish shapes each Meta connector implements", () => {
+    expect(publishMediaSupport("Instagram")).toMatchObject({ text: false, image: true, video: true });
+    expect(publishMediaSupport("Facebook")).toMatchObject({ text: true, image: false, video: false });
+    expect(hasCapability(emptyAccount({ platform: "Instagram", connectionState: "CONNECTED" }), "PUBLISH_TEXT")).toBe(false);
+    expect(hasCapability(emptyAccount({ platform: "Facebook", connectionState: "CONNECTED" }), "PUBLISH_TEXT")).toBe(true);
   });
 
   it("does not declare publish capabilities for Snapchat, Twitch, or Kick", () => {

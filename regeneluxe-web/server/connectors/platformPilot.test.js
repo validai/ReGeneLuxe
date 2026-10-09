@@ -13,6 +13,7 @@ import { campaignPlatformResults } from "../../src/data/campaignPublishStatus.js
 import {
   destinationsForSurface,
   publicDestinationsFromPages,
+  classifyMetaPublishFailure,
   publishFacebookPagePost,
   publishInstagramMedia,
   selectionFromVault,
@@ -123,12 +124,18 @@ describe("meta discovery and instagram publish", () => {
       igUserId: "ig_1",
       accessToken: "secret",
       imageUrl: "https://cdn.example.com/pilot.jpg",
+      caption: "Hello coast",
     });
     expect(result.ok).toBe(true);
+    expect(String(fetchImpl.mock.calls[0][1].body)).toContain("caption=Hello+coast");
     expect(result.providerPostId).toBe("media_9");
     expect(result.providerPostId).not.toBe("container_1");
     expect(result.permalink).toMatch(/instagram.com/);
     expect(JSON.stringify(result)).not.toContain("secret");
+    expect(classifyMetaPublishFailure({ error: { code: 190, message: "Error validating access token" } }, "PUBLISH_FAILED").code).toBe("RECONNECT_REQUIRED");
+    expect(classifyMetaPublishFailure({ error: { code: 10, message: "permission" } }, "CONTAINER_FAILED").code).toBe("PERMISSION_MISSING");
+    expect(classifyMetaPublishFailure({ error: { code: 4, message: "Application request limit reached" } }, "PUBLISH_FAILED").code).toBe("RATE_LIMITED");
+    expect(classifyMetaPublishFailure({ error: { message: "Could not download media" } }, "CONTAINER_FAILED").code).toBe("MEDIA_NOT_PUBLIC");
   });
 
   it("publishes a facebook page post with the page token kept out of the result", async () => {
@@ -311,6 +318,38 @@ describe("worker does not call the provider without approval", () => {
     expect(JSON.stringify(attempts)).not.toContain("secret");
     expect(campaignPlatformResults(attempts, { campaignId: "cmp_1" }).instagram).toBe("PUBLISHED");
     expect(readFileSync(process.env.RL_SECRETS_PATH, "utf8")).not.toContain("page-token-secret");
+  });
+
+  it("does not call Meta again when an earlier attempt may already have created a container", async () => {
+    const account = connectedAccount();
+    const content = imageContent({ id: "cnt_retry" });
+    await upsert(COLLECTIONS.accounts, account);
+    await upsert(COLLECTIONS.content, content);
+    await upsert(COLLECTIONS.publication_attempts, {
+      id: "pub_open",
+      provider: "instagram",
+      accountId: account.id,
+      contentId: content.id,
+      idempotencyKey: "publish:cnt_retry:acc_ig:pilot",
+      state: "ATTEMPTED",
+      providerPostId: "",
+      providerResult: { containerId: "container_open" },
+      createdAt: "2026-10-09T22:00:00.000Z",
+      updatedAt: "2026-10-09T22:00:00.000Z",
+    });
+    setAccountTokens("instagram", account.id, { accessToken: "secret", pages: PAGES, providerAccountId: "ig_1" });
+    const payload = {
+      contentId: content.id,
+      accountId: account.id,
+      managedProfileId: "prf_1",
+      operatorId: "opr_1",
+      idempotencyKey: "publish:cnt_retry:acc_ig:pilot",
+    };
+    await enqueueJob({ type: JOB_TYPES.PUBLISH_CONTENT, payload });
+    const processed = await processJobQueue({ limit: 1, types: [JOB_TYPES.PUBLISH_CONTENT] });
+    expect(processed.results[0].ok).toBe(true);
+    expect(processed.results[0].result.code).toBe("DUPLICATE_SUPPRESSED");
+    expect(fetch).not.toHaveBeenCalled();
   });
 });
 
