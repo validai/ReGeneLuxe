@@ -20,12 +20,12 @@ Use Facebook Login so one grant can discover managed Pages and the professional 
 | API version | `META_GRAPH_VERSION`, default `v23.0` |
 | App id | `META_APP_ID` |
 | App secret | `META_APP_SECRET` |
-| Login configuration | `META_LOGIN_CONFIG_ID` (`config_id` on the authorization request; scope is not sent) |
+| Login configuration | `META_LOGIN_CONFIG_ID` (`config_id`, `response_type=code`, `override_default_response_type=true`, `auth_type=rerequest`; scope is not sent) |
 | Redirect override | `META_REDIRECT_URI` |
 | Instagram redirect | `http://localhost:5174/api/oauth/instagram/callback` |
 | Facebook redirect | `http://localhost:5174/api/oauth/facebook/callback` |
 
-The Facebook Login for Business configuration is the permission set. The authorization URL does not send `scope`.
+The Facebook Login for Business configuration is the permission set. The authorization URL does not send `scope`. `override_default_response_type=true` keeps the request on the code flow, and `auth_type=rerequest` asks Meta to prompt again for that configuration.
 
 - `business_management`
 - `instagram_basic`
