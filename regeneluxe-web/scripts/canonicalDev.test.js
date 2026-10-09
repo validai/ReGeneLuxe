@@ -20,7 +20,7 @@ const healthy = {
 describe("canonical dev port classifier", () => {
   it("treats an empty port as free", () => {
     expect(classifyCanonicalPort({}).kind).toBe("free");
-    expect(CANONICAL_ORIGIN).toBe("http://127.0.0.1:5174");
+    expect(CANONICAL_ORIGIN).toBe("http://localhost:5174");
     expect(CANONICAL_PORT).toBe(5174);
   });
 

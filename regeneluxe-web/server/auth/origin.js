@@ -1,12 +1,16 @@
 /**
- * Canonical local origin for Auth.js.
+ * Canonical origin for Auth.js and provider callbacks.
  *
- * Next.js can report `localhost` even when the operator opened `127.0.0.1`.
- * Google requires the token-exchange redirect_uri to match the authorization
- * redirect_uri exactly, so Auth.js must use one host for the whole flow.
+ * Development browser identity is http://localhost:<port>. Numeric loopback
+ * (127.0.0.1, ::1) is folded onto localhost so Google, Meta, and the session
+ * cookie share one host. Production uses AUTH_URL exactly and is never
+ * rewritten to localhost.
+ *
+ * 127.0.0.1 is not HTTP-redirected. A redirect would change redirect_uri and
+ * drop the host-only Auth.js cookie. Operators should open localhost.
  */
 
-export const DEFAULT_CANONICAL_ORIGIN = "http://127.0.0.1:5174";
+export const DEFAULT_CANONICAL_ORIGIN = "http://localhost:5174";
 
 export function hostnameFromHostHeader(hostHeader) {
   return String(hostHeader || "")
@@ -20,26 +24,66 @@ export function isLoopbackHostname(hostname) {
   return host === "localhost" || host === "127.0.0.1" || host === "::1";
 }
 
-export function shouldRedirectLocalhostAlias(hostHeader) {
-  const hostname = hostnameFromHostHeader(hostHeader);
-  return hostname === "localhost" || hostname === "::1";
+export function isProductionOriginMode(nodeEnv = process.env.NODE_ENV) {
+  return nodeEnv === "production";
 }
 
-export function getCanonicalOrigin() {
-  const raw = process.env.AUTH_URL || process.env.NEXTAUTH_URL || "";
-  try {
-    if (raw) {
-      const url = new URL(raw);
-      if (url.hostname === "localhost" || url.hostname === "::1") {
-        url.hostname = "127.0.0.1";
-      }
-      return url.origin;
-    }
-  } catch {
-    // fall through to default
+/**
+ * Always false. Development does not redirect between localhost and 127.0.0.1.
+ */
+export function shouldRedirectLocalhostAlias() {
+  return false;
+}
+
+function devPort() {
+  return process.env.REGENELUXE_UI_PORT || process.env.RL_UI_PORT || "5174";
+}
+
+export function canonicalizeOrigin(raw, nodeEnv = process.env.NODE_ENV) {
+  const url = new URL(raw);
+  if (!isProductionOriginMode(nodeEnv) && isLoopbackHostname(url.hostname)) {
+    url.hostname = "localhost";
   }
-  const port = process.env.REGENELUXE_UI_PORT || process.env.RL_UI_PORT || "5174";
-  return `http://127.0.0.1:${port}`;
+  return url.origin;
+}
+
+export function canonicalOAuthRedirect(value, nodeEnv = process.env.NODE_ENV) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw);
+    if (!isProductionOriginMode(nodeEnv) && isLoopbackHostname(url.hostname)) {
+      url.hostname = "localhost";
+    }
+    return url.toString();
+  } catch {
+    return raw;
+  }
+}
+
+export function getCanonicalOrigin(nodeEnv = process.env.NODE_ENV) {
+  const raw = process.env.AUTH_URL || process.env.NEXTAUTH_URL || "";
+  if (raw) {
+    try {
+      return canonicalizeOrigin(raw, nodeEnv);
+    } catch {
+      // fall through to the environment default
+    }
+  }
+  if (isProductionOriginMode(nodeEnv)) return `http://127.0.0.1:${devPort()}`;
+  return `http://localhost:${devPort()}`;
+}
+
+export function publicAppOrigin(nodeEnv = process.env.NODE_ENV) {
+  const raw = process.env.RL_PUBLIC_ORIGIN || "";
+  if (raw) {
+    try {
+      return canonicalizeOrigin(raw, nodeEnv);
+    } catch {
+      // fall through
+    }
+  }
+  return getCanonicalOrigin(nodeEnv);
 }
 
 export function canonicalRequestUrl(requestUrl) {
@@ -70,7 +114,7 @@ export function mergeAuthCookieHeader(headerCookie, jarCookie) {
 
 /**
  * Rebuild the Auth.js request on the canonical origin without dropping PKCE/state cookies.
- * Next.js can report `localhost` even when the browser is on `127.0.0.1`.
+ * Development keeps that origin on localhost so the Google redirect_uri matches AUTH_URL.
  */
 export function toCanonicalAuthRequest(req, extraCookieHeader = "") {
   const url = canonicalRequestUrl(req.url);

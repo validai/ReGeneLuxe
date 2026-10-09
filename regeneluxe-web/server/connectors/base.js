@@ -1,5 +1,6 @@
 import { CAPABILITY, PROVIDER_READINESS, expandCapabilities } from "./capabilities.js";
 import { getProviderAppCredentials, getAccountTokens, hasAccountTokens } from "../secrets/providers.js";
+import { canonicalOAuthRedirect, publicAppOrigin } from "../auth/origin.js";
 
 /**
  * @typedef {object} SocialConnector
@@ -50,7 +51,7 @@ export function envCredentials(provider, envKeys) {
       complete: Boolean(stored.clientId && stored.clientSecret),
       clientId: stored.clientId,
       clientSecret: stored.clientSecret,
-      redirectUri: stored.redirectUri || fromEnv.redirectUri || defaultRedirect(provider),
+      redirectUri: canonicalOAuthRedirect(stored.redirectUri || fromEnv.redirectUri) || defaultRedirect(provider),
       source: "secrets",
     };
   }
@@ -58,14 +59,13 @@ export function envCredentials(provider, envKeys) {
     complete,
     clientId: fromEnv.clientId || "",
     clientSecret: fromEnv.clientSecret || "",
-    redirectUri: fromEnv.redirectUri || defaultRedirect(provider),
+    redirectUri: canonicalOAuthRedirect(fromEnv.redirectUri) || defaultRedirect(provider),
     source: complete ? "env" : "missing",
   };
 }
 
 export function defaultRedirect(provider) {
-  const base = process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174";
-  return `${base}/api/oauth/${String(provider).toLowerCase()}/callback`;
+  return `${publicAppOrigin()}/api/oauth/${String(provider).toLowerCase()}/callback`;
 }
 
 export function baseConnector({

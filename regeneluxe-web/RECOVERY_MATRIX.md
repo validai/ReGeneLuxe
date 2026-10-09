@@ -4,7 +4,7 @@
 ## Stack B — Modern Rails cutover + native App Router peel: COMPLETE
 ## Data Rails 105–120: COMPLETE
 
-Canonical: `http://127.0.0.1:5174/` (`framework: next`)
+Canonical: `http://localhost:5174/` (`framework: next`)
 
 | Area | Status |
 |------|--------|

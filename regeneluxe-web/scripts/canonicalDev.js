@@ -1,10 +1,10 @@
 /**
- * One ReGeneLuxe dev server. One canonical port: 127.0.0.1:5174.
+ * One ReGeneLuxe dev server. One canonical browser origin: localhost:5174.
  * Never fall back to 5175. Never kill unrelated processes.
  */
 
 export const CANONICAL_PORT = 5174;
-export const CANONICAL_ORIGIN = "http://127.0.0.1:5174";
+export const CANONICAL_ORIGIN = "http://localhost:5174";
 export const CANONICAL_HEALTH_URL = `${CANONICAL_ORIGIN}/api/health`;
 export const REPO_WEB_DIR_SUFFIX = "/regeneluxe-web";
 

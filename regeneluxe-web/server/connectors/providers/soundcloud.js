@@ -1,6 +1,6 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
 import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
-import { baseConnector, unavailable } from "../base.js";
+import { baseConnector, defaultRedirect, unavailable } from "../base.js";
 import { createOAuthState, friendlyOAuthError } from "../oauth/state.js";
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
 
@@ -11,7 +11,7 @@ export const soundcloudConnector = baseConnector({
   setupInstructions: [
     "1. Register a SoundCloud app",
     "2. Set SOUNDCLOUD_CLIENT_ID and SOUNDCLOUD_CLIENT_SECRET",
-    `3. Add redirect URI: ${process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174"}/api/oauth/soundcloud/callback`,
+    `3. Add redirect URI: ${defaultRedirect("soundcloud")}`,
   ].join("\n"),
   envKeys: {
     clientId: "SOUNDCLOUD_CLIENT_ID",

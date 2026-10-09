@@ -1,6 +1,7 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
 import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
-import { baseConnector, unavailable } from "../base.js";
+import { baseConnector, defaultRedirect, unavailable } from "../base.js";
+import { canonicalOAuthRedirect } from "../../auth/origin.js";
 import { createOAuthState, friendlyOAuthError } from "../oauth/state.js";
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
 
@@ -11,7 +12,7 @@ export const threadsConnector = baseConnector({
   setupInstructions: [
     "1. Create a Meta app with Threads API product",
     "2. Set THREADS_APP_ID and THREADS_APP_SECRET (or META_APP_ID / META_APP_SECRET fallback)",
-    `3. Add redirect URI: ${process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174"}/api/oauth/threads/callback`,
+    `3. Add redirect URI: ${defaultRedirect("threads")}`,
   ].join("\n"),
   envKeys: {
     clientId: "THREADS_APP_ID",
@@ -37,8 +38,7 @@ threadsConnector.getAppCredentials = () => {
       complete: true,
       clientId: metaId,
       clientSecret: metaSecret,
-      redirectUri: process.env.THREADS_REDIRECT_URI
-        || `${process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174"}/api/oauth/threads/callback`,
+      redirectUri: canonicalOAuthRedirect(process.env.THREADS_REDIRECT_URI) || defaultRedirect("threads"),
       source: "meta-env-fallback",
     };
   }

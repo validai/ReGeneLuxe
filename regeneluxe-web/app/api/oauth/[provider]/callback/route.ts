@@ -10,12 +10,13 @@ import { requireOperator } from "../../../../../server/auth/workspaceSession.js"
 import { completeGmailAuth, gmailSettingsRedirect } from "../../../../../server/connectors/gmailConnection.js";
 import { completeYoutubeAuth } from "../../../../../server/connectors/youtubeConnection.js";
 import { safeReturnTo } from "../../../../../server/auth/apiGuard.js";
+import { publicAppOrigin } from "../../../../../server/auth/origin.js";
 import { recordBelongsToWorkspace } from "../../../../../server/auth/tenantScope.js";
 
 export const dynamic = "force-dynamic";
 
 function redirectTo(path: string, params: Record<string, string> = {}) {
-  const origin = process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174";
+  const origin = publicAppOrigin();
   const url = new URL(safeReturnTo(path, "/accounts"), origin);
   Object.entries(params).forEach(([key, value]) => {
     if (value) url.searchParams.set(key, value);
@@ -58,7 +59,7 @@ export async function GET(
       errorDescription,
       operator: authz.ok ? authz.operator : null,
     });
-    return NextResponse.redirect(result.redirectTo || `${process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174"}/settings?youtube=error`);
+    return NextResponse.redirect(result.redirectTo || `${publicAppOrigin()}/settings?youtube=error`);
     }
   }
 

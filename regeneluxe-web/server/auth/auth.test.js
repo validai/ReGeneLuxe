@@ -66,7 +66,7 @@ describe("auth error copy", () => {
   it("uses operator-friendly messages", () => {
     expect(authErrorMessage("AccessDenied")).toMatch(/cancelled or denied/i);
     expect(authErrorMessage("OAuthCallback")).toMatch(/invalid callback/i);
-    expect(authErrorMessage("Configuration")).toMatch(/127\.0\.0\.1:5174/);
+    expect(authErrorMessage("Configuration")).toMatch(/localhost:5174/);
     expect(authErrorMessage("database")).toMatch(/local database/i);
     expect(authErrorMessage("identity")).toMatch(/already linked/i);
     expect(authErrorMessage("expired")).toMatch(/session expired/i);

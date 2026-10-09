@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Canonical ReGeneLuxe dev entry.
- *   npm run dev         → reuse http://127.0.0.1:5174 if healthy, else start one Next server
+ *   npm run dev         → reuse http://localhost:5174 if healthy, else start one Next server
  *   npm run dev:status  → report who owns 5174
  */
 import { execFileSync, spawn } from "node:child_process";
@@ -108,7 +108,7 @@ async function main() {
   }
 
   const nextBin = join(ROOT, "node_modules", ".bin", "next");
-  const child = spawn(nextBin, ["dev", "-H", "127.0.0.1", "-p", String(CANONICAL_PORT)], {
+  const child = spawn(nextBin, ["dev", "-H", "localhost", "-p", String(CANONICAL_PORT)], {
     cwd: ROOT,
     stdio: "inherit",
     env: process.env,

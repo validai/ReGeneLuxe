@@ -1,6 +1,6 @@
 # Modern Rails + Data Rails
 
-**Canonical:** Next.js on `http://127.0.0.1:5174/`  
+**Canonical:** Next.js on `http://localhost:5174/`  
 **Health:** `framework: "next"` + `database` block  
 **SPA bridge:** removed  
 **Durable store:** local SQLite (`.regeneluxe/local.db`) + optional Turso Cloud  
@@ -10,9 +10,9 @@ See `DATA_ARCHITECTURE.md` and `DATA_MIGRATION_PLAN.md`.
 
 | Script | Purpose |
 |--------|---------|
-| `npm run dev` | Next UI + API on `127.0.0.1:5174` |
+| `npm run dev` | Next UI + API on `localhost:5174` |
 | `npm run build` | `next build` |
-| `npm start` | production Next on `127.0.0.1:5174` |
+| `npm start` | production Next; origin comes from `AUTH_URL` |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | eslint |
 | `npm test` | vitest |

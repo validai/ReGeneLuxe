@@ -37,7 +37,7 @@ describe("local runtime", () => {
     expect(health.body.service).toBe("regeneluxe");
     expect(health.body.app).toBe("ReGeneLuxe");
     expect(health.body.framework).toBe("next");
-    expect(health.body.canonicalUiUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+/);
+    expect(health.body.canonicalUiUrl).toMatch(/^http:\/\/localhost:\d+/);
     expect(health.body.startedAt).toBeTruthy();
     expect(["RUNNING", "AI_NOT_CONFIGURED"]).toContain(health.body.state);
 

@@ -1,7 +1,8 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
 import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
 import { assertPublicProviderMedia } from "../../../src/data/mediaReadiness.js";
-import { baseConnector, unavailable } from "../base.js";
+import { baseConnector, defaultRedirect, unavailable } from "../base.js";
+import { canonicalOAuthRedirect } from "../../auth/origin.js";
 import { createOAuthState, friendlyOAuthError } from "../oauth/state.js";
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
 import {
@@ -32,7 +33,7 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
       "1. Create a Meta app at developers.facebook.com and add Facebook Login.",
       "2. Add the Instagram product if you will publish to a professional Instagram account.",
       "3. Set META_APP_ID and META_APP_SECRET on the server. Optional: META_REDIRECT_URI and META_GRAPH_VERSION.",
-      `4. Add this redirect URI in the Meta app: ${process.env.META_REDIRECT_URI || process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174"}${process.env.META_REDIRECT_URI ? "" : `/api/oauth/${provider}/callback`}`,
+      `4. Add this redirect URI in the Meta app: ${canonicalOAuthRedirect(process.env.META_REDIRECT_URI) || defaultRedirect(provider)}`,
       "5. Use a Facebook user who manages a Page. Instagram must be a professional account linked to that Page.",
     ].join("\n"),
     envKeys: {

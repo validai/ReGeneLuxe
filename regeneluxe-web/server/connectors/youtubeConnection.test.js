@@ -151,7 +151,7 @@ describe("youtube profile connection", () => {
     expect(url.searchParams.get("scope")).toContain("youtube.readonly");
     expect(url.searchParams.get("scope")).toContain("yt-analytics.readonly");
     expect(url.searchParams.get("scope")).not.toContain("youtube.upload");
-    expect(url.searchParams.get("redirect_uri")).toBe("http://127.0.0.1:5174/api/oauth/youtube/callback");
+    expect(url.searchParams.get("redirect_uri")).toBe("http://localhost:5174/api/oauth/youtube/callback");
     expect(OPERATOR_GOOGLE_SCOPES).not.toContain("youtube");
     const state = consumeOAuthState(started.state);
     expect(state.managedProfileId).toBe(profile.id);

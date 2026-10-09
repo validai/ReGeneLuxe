@@ -16,7 +16,7 @@ export function authErrorMessage(code) {
     case "identity":
       return "This profile is already linked to a Google account. Sign in with that Google account to continue.";
     case "Configuration":
-      return "Google sign-in did not complete. Open ReGeneLuxe at http://127.0.0.1:5174 and try again.";
+      return "Google sign-in did not complete. Open ReGeneLuxe at http://localhost:5174 and try again.";
     case "database":
       return "ReGeneLuxe could not open the local database. Your data was not deleted.";
     case "sync":

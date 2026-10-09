@@ -32,9 +32,8 @@ function toCanonicalWebRequest(req: Request, extraCookieHeader = "") {
 }
 
 /**
- * Next.js NextURL rewrites 127.0.0.1 → localhost on NextRequest.
- * Auth.js then sends Google a different redirect_uri than AUTH_URL.
- * Canonicalize the URL while keeping PKCE cookies visible to Auth.js.
+ * Rebuild the request on the canonical localhost origin so Google's
+ * redirect_uri matches AUTH_URL, and keep PKCE cookies visible to Auth.js.
  */
 async function handle(req: Request): Promise<Response> {
   let jarCookie = "";

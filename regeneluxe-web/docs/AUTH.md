@@ -28,13 +28,15 @@ Durable persistence still uses the `operators` collection for the account row so
 | `AUTH_SECRET` | Signs session JWTs |
 | `AUTH_GOOGLE_ID` | Google OAuth client ID |
 | `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
-| `AUTH_URL` | Canonical origin. Use `http://127.0.0.1:5174` (not `localhost`). Auth.js uses this for Google `redirect_uri`. |
-| `AUTH_TRUST_HOST` | Required for `127.0.0.1` |
+| `AUTH_URL` | Canonical origin. Local development uses `http://localhost:5174`. Auth.js uses this for Google `redirect_uri`. |
+| `AUTH_TRUST_HOST` | Required for local HTTP |
 | `APP_ALLOWED_GOOGLE_EMAILS` | Runtime account allowlist. Comma-separated. Fail closed if empty. Pilot: `djcoast239@gmail.com`. |
 
-`localhost` requests are redirected to `127.0.0.1` so Google authorization and token exchange use the same callback URI:
+Local Google authorization and token exchange use one callback URI:
 
-`http://127.0.0.1:5174/api/auth/callback/google`
+`http://localhost:5174/api/auth/callback/google`
+
+`127.0.0.1` is not the browser or OAuth host. Do not open the app there.
 
 Do not prefix these with `NEXT_PUBLIC_`. They must not appear in the client bundle, React props, HTML, localStorage, ordinary profile rows, Campaign Brain input, or Turso user/profile exports.
 
@@ -42,8 +44,8 @@ Do not prefix these with `NEXT_PUBLIC_`. They must not appear in the client bund
 
 OAuth client (Web application) for project **ReGeneLuxe** (infrastructure owner: Valids Studio):
 
-- Authorized JavaScript origin: `http://127.0.0.1:5174`
-- Authorized redirect URI: `http://127.0.0.1:5174/api/auth/callback/google`
+- Authorized JavaScript origin: `http://localhost:5174`
+- Authorized redirect URI: `http://localhost:5174/api/auth/callback/google`
 
 Login scopes: `openid profile email` only. Gmail and YouTube are incremental, explicit, and requested later for the **same** Google `sub`.
 

@@ -3,13 +3,14 @@ import { getConnector, normalizeProviderId, listProviderDefinitions } from "../.
 import { initDb, get, COLLECTIONS } from "../../../../../server/db/index.js";
 import { requireWorkspaceApi, deniedJson, jsonPrivate, rateLimit, clientKey, safeReturnTo } from "../../../../../server/auth/apiGuard.js";
 import { recordBelongsToWorkspace } from "../../../../../server/auth/tenantScope.js";
+import { publicAppOrigin } from "../../../../../server/auth/origin.js";
 import { startGmailAuth } from "../../../../../server/connectors/gmailConnection.js";
 import { startYoutubeAuth } from "../../../../../server/connectors/youtubeConnection.js";
 
 export const dynamic = "force-dynamic";
 
 function redirectTo(path: string) {
-  const origin = process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174";
+  const origin = publicAppOrigin();
   return NextResponse.redirect(new URL(safeReturnTo(path, "/settings"), origin));
 }
 

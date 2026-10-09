@@ -1,6 +1,6 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
 import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
-import { baseConnector, unavailable } from "../base.js";
+import { baseConnector, defaultRedirect, unavailable } from "../base.js";
 import { createOAuthState, friendlyOAuthError, pkcePair } from "../oauth/state.js";
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
 import { readSecrets, writeSecrets } from "../../secrets.js";
@@ -12,7 +12,7 @@ export const xConnector = baseConnector({
   setupInstructions: [
     "1. Create an X developer app with OAuth 2.0",
     "2. Set X_CLIENT_ID and X_CLIENT_SECRET",
-    `3. Add redirect URI: ${process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174"}/api/oauth/x/callback`,
+    `3. Add redirect URI: ${defaultRedirect("x")}`,
   ].join("\n"),
   envKeys: {
     clientId: "X_CLIENT_ID",

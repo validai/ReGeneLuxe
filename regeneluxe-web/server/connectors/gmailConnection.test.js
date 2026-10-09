@@ -109,7 +109,7 @@ function mockGoogleApis({
         });
       }
       expect(params.get("grant_type")).toBe("authorization_code");
-      expect(params.get("redirect_uri")).toBe("http://127.0.0.1:5174/api/oauth/gmail/callback");
+      expect(params.get("redirect_uri")).toBe("http://localhost:5174/api/oauth/gmail/callback");
       expect(params.get("redirect_uri")).not.toContain("/api/auth/callback/google");
       return jsonResponse(tokenStatus, {
         access_token: "gmail-access",
@@ -183,7 +183,7 @@ describe("gmail connection v1", () => {
     expect(url.searchParams.get("prompt")).toBe("consent");
     expect(url.searchParams.get("login_hint")).toBe(MAILBOX);
     expect(url.searchParams.get("scope")).not.toMatch(/gmail\.send|gmail\.modify|gmail\.compose/);
-    expect(url.searchParams.get("redirect_uri")).toBe("http://127.0.0.1:5174/api/oauth/gmail/callback");
+    expect(url.searchParams.get("redirect_uri")).toBe("http://localhost:5174/api/oauth/gmail/callback");
     expect(url.searchParams.get("redirect_uri")).not.toContain("/api/auth/callback/google");
     expect(OPERATOR_GOOGLE_SCOPES).not.toContain("gmail");
     const state = consumeOAuthState(started.state);

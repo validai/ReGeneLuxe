@@ -3,7 +3,7 @@
  *
  * Canonical (cutover complete):
  *   One Next.js process. One port. Never 5175.
- *   npm run dev → reuse or start Next.js UI + API at http://127.0.0.1:5174/
+ *   npm run dev → reuse or start Next.js UI + API at http://localhost:5174/
  *   npm run dev:status → report who owns 5174
  *   /api is served by Next Route Handlers on the same origin.
  *
@@ -43,7 +43,8 @@ export function apiBaseUrl(port = apiPort()) {
 }
 
 export function uiBaseUrl(port = uiPort()) {
-  return `http://127.0.0.1:${port}`;
+  const host = process.env.NODE_ENV === "production" ? "127.0.0.1" : "localhost";
+  return `http://${host}:${port}`;
 }
 
 function readPackageVersion() {

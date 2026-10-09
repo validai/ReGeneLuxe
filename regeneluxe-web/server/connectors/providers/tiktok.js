@@ -1,6 +1,6 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
 import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
-import { baseConnector, unavailable } from "../base.js";
+import { baseConnector, defaultRedirect, unavailable } from "../base.js";
 import { createOAuthState, friendlyOAuthError } from "../oauth/state.js";
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
 
@@ -16,7 +16,7 @@ export const tiktokConnector = baseConnector({
     "1. Create a TikTok developer app at developers.tiktok.com",
     "2. Request Login Kit + Content Posting / Analytics scopes as needed",
     "3. Set TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET",
-    `4. Add redirect URI: ${process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174"}/api/oauth/tiktok/callback`,
+    `4. Add redirect URI: ${defaultRedirect("tiktok")}`,
   ].join("\n"),
   reviewNotes: "Available after provider approval for Content Posting / Analytics products.",
   envKeys: {

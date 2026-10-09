@@ -21,8 +21,8 @@ Use Facebook Login so one grant can discover managed Pages and the professional 
 | App id | `META_APP_ID` |
 | App secret | `META_APP_SECRET` |
 | Redirect override | `META_REDIRECT_URI` |
-| Instagram redirect | `http://127.0.0.1:5174/api/oauth/instagram/callback` |
-| Facebook redirect | `http://127.0.0.1:5174/api/oauth/facebook/callback` |
+| Instagram redirect | `http://localhost:5174/api/oauth/instagram/callback` |
+| Facebook redirect | `http://localhost:5174/api/oauth/facebook/callback` |
 
 Scopes requested:
 
@@ -53,7 +53,7 @@ Threads uses its own authorization host, `https://threads.net/oauth/authorize`, 
 | Item | Value |
 | --- | --- |
 | Env | `THREADS_APP_ID` and `THREADS_APP_SECRET`, or the Meta app pair as fallback |
-| Redirect | `http://127.0.0.1:5174/api/oauth/threads/callback` |
+| Redirect | `http://localhost:5174/api/oauth/threads/callback` |
 | Scopes | `threads_basic`, `threads_content_publish` |
 
 The account becomes `CONNECTED` only after `GET /me?fields=id,username,name` succeeds. The short-lived token is exchanged for a long-lived token when Threads accepts `th_exchange_token`. The first publish path is text only: create a text container, then publish that creation id. ReGeneLuxe does not use a provider auto-publish flag.
@@ -68,7 +68,7 @@ A social YouTube account connect from Accounts requests the pilot scopes:
 - `https://www.googleapis.com/auth/youtube.readonly`
 - `https://www.googleapis.com/auth/youtube.upload`
 
-Redirect: `http://127.0.0.1:5174/api/oauth/youtube/callback`
+Redirect: `http://localhost:5174/api/oauth/youtube/callback`
 
 The publish destination is that verified channel id. One channel can become `CONNECTED`. More than one channel leaves the social account at `SETUP_REQUIRED` with the discovered channel list; the first channel is not chosen automatically. The Settings connection still uses its existing picker. The upload is a server-side resumable session to YouTube Data API v3. `privacyStatus` is always `private`. A public or unlisted upload is rejected before the upload starts. The Google Cloud project is not assumed to be approved for public uploads.
 
