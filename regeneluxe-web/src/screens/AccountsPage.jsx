@@ -458,6 +458,16 @@ export default function AccountsPage() {
                       <dt className="text-rl_muted">Capabilities</dt>
                       <dd className="text-right text-rl_text">{caps.length ? caps.join(" · ") : "—"}</dd>
                     </div>
+                    {account.platform === "Instagram" && account.connectionState === "CONNECTED" ? (
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-rl_muted">Public media</dt>
+                        <dd className="text-right text-rl_text">
+                          {providers.find((item) => item.provider === "instagram")?.mediaDelivery === "READY"
+                            ? "Ready"
+                            : "Not configured"}
+                        </dd>
+                      </div>
+                    ) : null}
                     <div className="flex justify-between gap-3">
                       <dt className="text-rl_muted">Campaigns</dt>
                       <dd className="text-right text-rl_text">{usedBy}</dd>

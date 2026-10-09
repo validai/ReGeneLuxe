@@ -27,7 +27,7 @@ export function classifyMediaUrl(value) {
     return "LOCAL_ONLY_MEDIA";
   }
   if (url.protocol !== "https:") return "LOCAL_ONLY_MEDIA";
-  if (PRIVATE_HOST.test(url.hostname) || isPrivateIpv4(url.hostname)) return "LOCAL_ONLY_MEDIA";
+  if (url.hostname === "::1" || PRIVATE_HOST.test(url.hostname) || isPrivateIpv4(url.hostname)) return "LOCAL_ONLY_MEDIA";
   return "PUBLIC_PROVIDER_MEDIA";
 }
 

@@ -98,10 +98,12 @@ Verified for the DJ Coast workspace after a completed Facebook Login for Busines
 | Facebook Page connection | WORKING. DJ Coast is `CONNECTED` with approval required. |
 | Instagram professional discovery | WORKING. The Page resolves to `@_djcoast`. |
 | Instagram connected account | WORKING. The earlier manual `@_djcoast` row was linked. It was not duplicated. |
-| Real Instagram publishing | BLOCKED. The image path creates a container, sends the caption, polls, then calls `media_publish`, but Meta must fetch a public `https://` media URL. Local and localhost assets stop at `MEDIA_PUBLIC_URL_REQUIRED`. |
-| Real Facebook publishing | NOT YET PILOTED. The implemented path is a Page text post. Do not treat it as tested live. |
+| Instagram image publishing foundation | WORKING. One JPEG or PNG plus a caption. Container, polling, `media_publish`, media id, and permalink are implemented. |
+| Public media delivery | OPERATOR SETUP REQUIRED until `PUBLIC_MEDIA_PROVIDER=vercel_blob` and `BLOB_READ_WRITE_TOKEN` are set. Connected is not the same as ready to publish. |
+| Real Instagram publish | NOT YET EXECUTED. |
+| Real Facebook publishing | NOT YET EXECUTED. The implemented path is a Page text post. |
 
-A public media URL needs a temporary signed route on a host Meta can reach: unguessable, expiring, limited to the approved asset, with the right MIME type and no directory listing. This app does not add a tunnel or a third-party media host.
+Local images stay in `.regeneluxe/media`. A publish uploads one unguessable object to Vercel Blob, which returns an HTTPS URL Meta can fetch. The object stays up through container creation, polling, and `media_publish`. After success it is removed 24 hours later. After a failed attempt it is removed 2 hours later. ReGeneLuxe itself is not exposed, and the public URL is not the canonical media id.
 
 ## Live test
 

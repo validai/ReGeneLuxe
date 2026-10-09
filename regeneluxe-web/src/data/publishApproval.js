@@ -16,10 +16,11 @@ export function isPilotProvider(provider) {
   return PILOT_PROVIDERS.includes(String(provider || "").toLowerCase());
 }
 
-export function publishFingerprint({ caption = "", title = "", mediaRef = "" } = {}) {
+export function publishFingerprint({ caption = "", title = "", mediaRef = "", mediaId = "" } = {}) {
   const raw = JSON.stringify({
     caption: String(caption || ""),
     title: String(title || ""),
+    mediaId: String(mediaId || ""),
     mediaRef: String(mediaRef || ""),
   });
   let hash = 0;
@@ -39,11 +40,13 @@ export function variantForAccount(content = {}, account = {}) {
     || content.imageUrl
     || content.videoPath
     || "";
+  const mediaId = match?.mediaId || content.mediaId || content.mediaRefs?.[0]?.mediaId || "";
   return {
     provider: String(account.platform || match?.platform || "").toLowerCase(),
     accountId: account.id || "",
     caption: match?.caption ?? content.caption ?? "",
     title: match?.title ?? content.title ?? "",
+    mediaId: String(mediaId || ""),
     mediaRef: typeof mediaRef === "string" ? mediaRef : (mediaRef?.url || ""),
     privacy: "private",
   };
@@ -60,7 +63,9 @@ export function buildPublishApproval(input, now = Date.now()) {
     provider: String(input.provider || "").toLowerCase(),
     accountId: input.accountId,
     externalDestinationId: input.externalDestinationId || "",
+    mediaId: input.mediaId || "",
     mediaRef: input.mediaRef || "",
+    idempotencyKey: input.idempotencyKey || "",
     approvedAt,
     expiresAt: new Date(now + APPROVAL_TTL_MS).toISOString(),
     consumedAt: null,
@@ -80,6 +85,10 @@ export function explainApprovalRejection(approval, expected, now = Date.now()) {
   if ((approval.externalDestinationId || "") !== (expected.externalDestinationId || "")) {
     return "APPROVAL_DESTINATION_MISMATCH";
   }
+  if ((approval.mediaId || "") !== (expected.mediaId || "")) return "APPROVAL_MEDIA_MISMATCH";
   if ((approval.mediaRef || "") !== (expected.mediaRef || "")) return "APPROVAL_MEDIA_MISMATCH";
+  if (expected.idempotencyKey && approval.idempotencyKey && approval.idempotencyKey !== expected.idempotencyKey) {
+    return "APPROVAL_ATTEMPT_MISMATCH";
+  }
   return "";
 }

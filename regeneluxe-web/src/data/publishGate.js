@@ -19,6 +19,7 @@ export function evaluatePublishGate({
   approval = null,
   workspaceId = "",
   operatorId = "",
+  idempotencyKey = "",
   now = Date.now(),
 } = {}) {
   if (!account) return block("ACCOUNT_MISSING");
@@ -50,7 +51,7 @@ export function evaluatePublishGate({
     return block("TEXT_REQUIRED");
   }
 
-  if (PUBLIC_URL_PROVIDERS.has(provider) && classifyMediaUrl(variant.mediaRef) !== "PUBLIC_PROVIDER_MEDIA") {
+  if (PUBLIC_URL_PROVIDERS.has(provider) && !variant.mediaId && classifyMediaUrl(variant.mediaRef) !== "PUBLIC_PROVIDER_MEDIA") {
     return block("MEDIA_PUBLIC_URL_REQUIRED");
   }
 
@@ -63,7 +64,9 @@ export function evaluatePublishGate({
       accountId: account.id,
       provider,
       externalDestinationId: destinationId,
+      mediaId: variant.mediaId || "",
       mediaRef: variant.mediaRef || "",
+      idempotencyKey,
     }, now);
     if (reason) return block(reason);
   }

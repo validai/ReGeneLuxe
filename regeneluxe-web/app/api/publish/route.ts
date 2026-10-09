@@ -1,7 +1,7 @@
 import { initDb, get, upsert, COLLECTIONS } from "../../../server/db/index.js";
 import { enqueuePublish, processJobQueue } from "../../../server/jobs/worker.js";
 import { JOB_TYPES } from "../../../server/db/jobs.js";
-import { buildPublishJobPayload } from "../../../src/data/idempotency.js";
+import { buildPublishJobPayload, publicationIdempotencyKey } from "../../../src/data/idempotency.js";
 import { requireWorkspaceApi, deniedJson, jsonPrivate } from "../../../server/auth/apiGuard.js";
 import { recordBelongsToWorkspace, workspaceIdOf } from "../../../server/auth/tenantScope.js";
 import { normalizeProviderId } from "../../../server/connectors/registry.js";
@@ -105,7 +105,13 @@ export async function PUT(request: Request) {
       provider,
       accountId: account.id,
       externalDestinationId: account.providerAccountId,
+      mediaId: variant.mediaId,
       mediaRef: variant.mediaRef,
+      idempotencyKey: publicationIdempotencyKey({
+        contentId: content.id,
+        accountId: account.id,
+        scheduledAt: body.scheduledAt || content.scheduledAt,
+      }),
     });
     await upsert(COLLECTIONS.approvals, approval);
     return jsonPrivate({

@@ -7,6 +7,7 @@ import { soundcloudConnector } from "./providers/soundcloud.js";
 import { createMockConnector } from "./providers/mock.js";
 import { expandCapabilities, hasCapabilityIn, PROVIDER_READINESS } from "./capabilities.js";
 import { hasAccountTokens } from "../secrets/providers.js";
+import { publicMediaReadiness } from "../media/publicProvider.js";
 
 const PLATFORM_ALIASES = {
   Instagram: "instagram",
@@ -127,6 +128,7 @@ export function listProviderDefinitions() {
     reviewNotes: connector.reviewNotes || "",
     analyticsNormalization: true,
     publishingSupport: (connector.capabilities || []).some((c) => String(c).startsWith("PUBLISH") || c === "SCHEDULE"),
+    ...(connector.provider === "instagram" ? { mediaDelivery: publicMediaReadiness().status } : {}),
   }));
   if (allowMock()) {
     const mock = createMockConnector();

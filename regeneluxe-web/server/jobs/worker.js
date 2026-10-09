@@ -20,6 +20,8 @@ import { publicationIdempotencyKey } from "../../src/data/idempotency.js";
 import { evaluatePublishGate } from "../../src/data/publishGate.js";
 import { isPilotProvider, variantForAccount } from "../../src/data/publishApproval.js";
 import { stripSecretFields } from "../../src/data/secretFields.js";
+import { classifyMediaUrl } from "../../src/data/mediaReadiness.js";
+import { preparePublicationMedia, markPublicationDeliveryEligible } from "../media/publicationDelivery.js";
 import { recordBelongsToWorkspace, workspaceIdOf } from "../auth/tenantScope.js";
 
 const WORKER_ID = `worker_${process.pid}`;
@@ -195,6 +197,7 @@ async function handlePublishContent(payload = {}) {
       approval,
       workspaceId: payload.managedProfileId || account.managedProfileId || "",
       operatorId: payload.operatorId || approval?.operatorId || "",
+      idempotencyKey,
     });
     if (!gate.ok) {
       await upsert(COLLECTIONS.publication_attempts, blockedAttempt({
@@ -202,8 +205,6 @@ async function handlePublishContent(payload = {}) {
       }));
       throw new Error(gate.error);
     }
-    const consumed = await consumeApproval(approval.id);
-    if (!consumed) throw new Error("APPROVAL_CONSUMED");
   } else {
     if (account.publishPermission === "ANALYZE_ONLY" || account.publishPermission === "DRAFT_ONLY") {
       throw new Error(`Publishing blocked by permission ${account.publishPermission}.`);
@@ -213,12 +214,38 @@ async function handlePublishContent(payload = {}) {
     }
   }
 
+  let imageUrl = variant.mediaRef;
+  let delivery = null;
+  if (provider === "instagram" && variant.mediaId) {
+    delivery = await preparePublicationMedia({
+      workspaceId: payload.managedProfileId || account.managedProfileId || "",
+      accountId: account.id,
+      contentId: content.id,
+      mediaId: variant.mediaId,
+      purpose: "instagram_image",
+      idempotencyKey,
+    });
+    if (!delivery.ok || classifyMediaUrl(delivery.publicUrl) !== "PUBLIC_PROVIDER_MEDIA") {
+      await upsert(COLLECTIONS.publication_attempts, blockedAttempt({
+        content, account, provider, idempotencyKey, approvalId: approval?.id || "", error: "MEDIA_NOT_PUBLIC",
+      }));
+      throw new Error("MEDIA_NOT_PUBLIC");
+    }
+    imageUrl = delivery.publicUrl;
+  }
+
+  if (approval) {
+    const consumed = await consumeApproval(approval.id);
+    if (!consumed) throw new Error("APPROVAL_CONSUMED");
+  }
+
   const attempt = {
     ...blockedAttempt({
       content, account, provider, idempotencyKey, approvalId: approval?.id || "", error: "",
     }),
     state: "ATTEMPTED",
     error: null,
+    deliveryId: delivery?.deliveryId || "",
   };
   await upsert(COLLECTIONS.publication_attempts, attempt);
 
@@ -227,9 +254,9 @@ async function handlePublishContent(payload = {}) {
     text: variant.caption || variant.title,
     caption: variant.caption,
     title: variant.title,
-    mediaUrl: variant.mediaRef,
-    imageUrl: variant.mediaRef,
-    videoPath: content.videoPath || variant.mediaRef,
+    mediaUrl: imageUrl,
+    imageUrl,
+    videoPath: provider === "instagram" ? "" : (content.videoPath || variant.mediaRef),
     privacyStatus: "private",
   });
   const safeResult = stripSecretFields(result || {});
@@ -246,6 +273,20 @@ async function handlePublishContent(payload = {}) {
       updatedAt: nowIso(),
     };
     await upsert(COLLECTIONS.publication_attempts, failed);
+    if (delivery?.deliveryId) {
+      const eligible = await markPublicationDeliveryEligible(delivery.deliveryId, { outcome: "failed" });
+      if (eligible?.cleanupEligibleAt) {
+        await enqueueJob({
+          type: JOB_TYPES.CLEANUP_PUBLIC_MEDIA,
+          payload: {
+            deliveryId: delivery.deliveryId,
+            workspaceId: payload.managedProfileId || account.managedProfileId || "",
+          },
+          scheduledAt: eligible.cleanupEligibleAt,
+          idempotencyKey: `cleanup_public_media:${delivery.deliveryId}:failed`,
+        });
+      }
+    }
     await upsert(COLLECTIONS.content, {
       ...content,
       status: "FAILED",
@@ -266,6 +307,20 @@ async function handlePublishContent(payload = {}) {
     updatedAt: nowIso(),
   };
   await upsert(COLLECTIONS.publication_attempts, published);
+  if (delivery?.deliveryId) {
+    const eligible = await markPublicationDeliveryEligible(delivery.deliveryId, { outcome: "published" });
+    if (eligible?.cleanupEligibleAt) {
+      await enqueueJob({
+        type: JOB_TYPES.CLEANUP_PUBLIC_MEDIA,
+        payload: {
+          deliveryId: delivery.deliveryId,
+          workspaceId: payload.managedProfileId || account.managedProfileId || "",
+        },
+        scheduledAt: eligible.cleanupEligibleAt,
+        idempotencyKey: `cleanup_public_media:${delivery.deliveryId}`,
+      });
+    }
+  }
   await upsert(COLLECTIONS.content, {
     ...content,
     status: "PUBLISHED",
@@ -335,6 +390,10 @@ async function dispatch(job) {
       return handleRefreshConnection(job.payload);
     case JOB_TYPES.PUBLISH_CONTENT:
       return handlePublishContent(job.payload);
+    case JOB_TYPES.CLEANUP_PUBLIC_MEDIA: {
+      const { cleanupDuePublicationMedia } = await import("../media/publicationDelivery.js");
+      return cleanupDuePublicationMedia({ workspaceId: job.payload?.workspaceId || "" });
+    }
     case JOB_TYPES.RUN_CAMPAIGN_MONITOR:
       return handleCampaignMonitor(job.payload);
     case JOB_TYPES.RUN_CAMPAIGN_BRAIN:
