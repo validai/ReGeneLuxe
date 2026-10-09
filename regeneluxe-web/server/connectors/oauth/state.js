@@ -40,6 +40,17 @@ export function createOAuthState({
   return state;
 }
 
+export function peekOAuthState(state) {
+  if (!state) return { ok: false, error: "Missing OAuth state." };
+  const secrets = store();
+  const row = secrets.oauthStates?.[state];
+  if (!row) return { ok: false, error: "OAuth session expired. Start connect again." };
+  if (Date.now() - row.createdAt > STATE_TTL_MS) {
+    return { ok: false, error: "OAuth session expired. Start connect again." };
+  }
+  return { ok: true, ...row, returnTo: safeReturnTo(row.returnTo, "/accounts") };
+}
+
 export function consumeOAuthState(state) {
   if (!state) return { ok: false, error: "Missing OAuth state." };
   const secrets = store();

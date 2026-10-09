@@ -10,6 +10,7 @@ import { emptyContentItem, emptyVariant } from "../data/domain.js";
 import { saveContent, getContent } from "../data/collectionRepository.js";
 import { scheduleContent, requestPublish, markPublished } from "../data/publishing.js";
 import { publishMediaSupport, declaredCapabilities } from "../data/connectors/registry.js";
+import PublishDestinations from "../components/app/PublishDestinations.jsx";
 import { ASSET_TYPES } from "../data/models.js";
 import { recordEvent } from "../data/events.js";
 
@@ -386,33 +387,11 @@ export default function ComposerPage() {
           <div className="space-y-10 min-w-0">
             <section className="space-y-4">
               <h2 className="rl-label">Accounts</h2>
-              {accounts.length === 0 ? (
-                <p className="text-sm text-rl_muted">
-                  Add an account first. <Link to="/accounts" className="underline underline-offset-4">Open accounts</Link>
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {accounts.map((account) => {
-                    const active = form.accountIds.includes(account.id);
-                    return (
-                      <button
-                        key={account.id}
-                        type="button"
-                        onClick={() => toggleAccount(account.id)}
-                        aria-pressed={active}
-                        className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
-                          active
-                            ? "border-rl_accent bg-rl_accent/10 text-rl_text"
-                            : "border-rl_border text-rl_muted hover:border-rl_borderStrong hover:text-rl_text"
-                        }`}
-                      >
-                        {account.platform}
-                        <span className="ml-1.5 text-rl_muted">{account.handle || account.displayName}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <PublishDestinations
+                accounts={accounts}
+                selectedIds={form.accountIds}
+                onToggle={toggleAccount}
+              />
             </section>
 
             <section className="space-y-4">

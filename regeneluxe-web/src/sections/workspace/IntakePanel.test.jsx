@@ -8,7 +8,14 @@ import { emptyCampaign } from "../../data/models.js";
 describe("structured intake", () => {
   it("autosaves checkbox selections through the repository", async () => {
     vi.useFakeTimers();
-    const account = createAccount({ displayName: "DJ Coast", handle: "@djcoast", platform: "Instagram" });
+    const account = createAccount({
+      displayName: "DJ Coast",
+      handle: "@djcoast",
+      platform: "Instagram",
+      connectionState: "CONNECTED",
+      connectionMethod: "OAUTH",
+      providerAccountId: "ig_djcoast",
+    });
     const campaign = createCampaign({ name: "Untitled campaign", accountIds: [] });
     render(<IntakePanel campaign={getCampaign(campaign.id)} accounts={[account]} />);
 

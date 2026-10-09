@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "@/nav";
+import { Link, useAppSearchParams } from "@/nav";
 import PageShell from "../components/app/PageShell.jsx";
 import PageHeader from "../components/app/PageHeader.jsx";
 import FormField, { fieldClass } from "../components/app/FormField.jsx";
@@ -8,7 +8,7 @@ import EmptyState from "../components/app/EmptyState.jsx";
 import ConfirmDialog from "../components/app/ConfirmDialog.jsx";
 import SideSheet from "../components/app/SideSheet.jsx";
 import { useAppData } from "../hooks/useAppData.js";
-import { createAccount, deleteAccount, updateAccount } from "../data/accountRepository.js";
+import { createAccount, deleteAccount, getAccount, updateAccount } from "../data/accountRepository.js";
 import { PLATFORMS, emptyAccount } from "../data/models.js";
 import {
   publishMediaSupport,
@@ -22,7 +22,14 @@ import { parseSocialIdentity } from "../data/socialAccountUrl.js";
 import { displayConnectionState, formatHandle } from "../data/connectionStatus.js";
 import { fieldsForPlatform, identityHintForPlatform } from "../data/socialAccountFields.js";
 import { PlatformIcon } from "../components/app/Icon.jsx";
+import ConnectAccountSheet from "../components/app/ConnectAccountSheet.jsx";
 import { useProfileSession } from "../components/app/ProfileSession.jsx";
+import {
+  PREVIEW_CONNECTED_ACCOUNT,
+  PREVIEW_DESTINATIONS,
+  manualConnectionResult,
+} from "../data/connectionFlow.js";
+import { accountPreviewMode } from "../data/accountPreview.js";
 
 const blank = () => emptyAccount({
   platform: "Instagram",
@@ -71,6 +78,15 @@ export default function AccountsPage() {
   const [detection, setDetection] = useState(null);
   const [displayNameEdited, setDisplayNameEdited] = useState(false);
   const [providers, setProviders] = useState([]);
+  const [searchParams] = useAppSearchParams();
+  const preview = accountPreviewMode(searchParams.get("preview"));
+  const [connectOpen, setConnectOpen] = useState(false);
+  const [connectStep, setConnectStep] = useState("picker");
+  const [connectProviderId, setConnectProviderId] = useState("");
+  const [connectFailure, setConnectFailure] = useState("");
+  const [sessionDestinations, setSessionDestinations] = useState([]);
+  const [sessionNeedsChoice, setSessionNeedsChoice] = useState([]);
+  const [activeSessionId, setActiveSessionId] = useState("");
 
   const selected = accounts.find((account) => account.id === selectedId) || null;
   const brandName = activeProfile?.displayName || "this workspace";
@@ -96,8 +112,8 @@ export default function AccountsPage() {
       handle: parsed.handle ? `@${String(parsed.handle).replace(/^@/, "")}` : current.handle,
       profileUrl: parsed.profileUrl || current.profileUrl,
       displayName: displayNameEdited ? current.displayName : (parsed.displayName || ""),
-      connectionState: current.connectionState || "MANUAL_ONLY",
-      connectionMethod: current.connectionMethod || "MANUAL",
+      connectionState: current.connectionState || manualConnectionResult().connectionState,
+      connectionMethod: current.connectionMethod || manualConnectionResult().connectionMethod,
     }));
   };
 
@@ -106,7 +122,7 @@ export default function AccountsPage() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const connect = params.get("connect");
-    if (!connect) return;
+    if (!connect || connect === "select" || connect === "failed") return;
     const message = params.get("message") || "";
     const accountId = params.get("accountId");
     if (connect === "success" && accountId) {
@@ -143,6 +159,40 @@ export default function AccountsPage() {
       })
       .catch(() => {});
   }, []);
+
+  const connectQuery = searchParams.get("connect") || "";
+  const sessionQuery = searchParams.get("session") || "";
+  const failureQuery = searchParams.get("message") || "";
+
+  useEffect(() => {
+    if (connectQuery === "failed") {
+      setConnectFailure(failureQuery || "unavailable");
+      setConnectStep("failure");
+      setConnectOpen(true);
+      return;
+    }
+    if (connectQuery !== "select" || !sessionQuery || preview === "destinations") return;
+    setActiveSessionId(sessionQuery);
+    fetch(`/api/connections/session?id=${encodeURIComponent(sessionQuery)}`)
+      .then((res) => res.json())
+      .then((body) => {
+        if (Array.isArray(body?.session?.destinations) && body.session.destinations.length) {
+          setSessionDestinations(body.session.destinations);
+          setConnectProviderId(body.session.provider || "");
+          setConnectStep("destinations");
+          setConnectOpen(true);
+          return;
+        }
+        setConnectFailure(body?.failure || body?.session?.failure || "expired");
+        setConnectStep("failure");
+        setConnectOpen(true);
+      })
+      .catch(() => {
+        setConnectFailure("unavailable");
+        setConnectStep("failure");
+        setConnectOpen(true);
+      });
+  }, [connectQuery, failureQuery, preview, sessionQuery]);
 
   const runConnect = async (account) => {
     setBusyId(account.id);
@@ -231,6 +281,7 @@ export default function AccountsPage() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    if (preview) return;
     const nextErrors = validate(draft);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
@@ -238,13 +289,71 @@ export default function AccountsPage() {
     if (editingId) {
       updateAccount(editingId, safeIdentityPatch(draft));
     } else {
+      const manual = manualConnectionResult();
       createAccount({
         ...safeIdentityPatch(draft),
-        connectionState: "MANUAL_ONLY",
-        connectionMethod: "MANUAL",
+        connectionState: manual.connectionState,
+        connectionMethod: manual.connectionMethod,
       });
     }
     closeComposer();
+  };
+
+  const openConnect = () => {
+    setConnectStep("picker");
+    setConnectProviderId("");
+    setConnectFailure("");
+    setSessionNeedsChoice([]);
+    setConnectOpen(true);
+  };
+
+  const startProviderAuthorization = async (provider) => {
+    if (preview) return { ok: false };
+    const response = await fetch("/api/connections/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "start", provider }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (body.authUrl) {
+      window.location.assign(body.authUrl);
+      return body;
+    }
+    return body;
+  };
+
+  const confirmConnection = async (selectedIds, choices) => {
+    if (preview) return { ok: false };
+    if (!activeSessionId) return { ok: false, failure: "expired" };
+    const response = await fetch("/api/connections/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "confirm", sessionId: activeSessionId, selectedIds, choices }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (body.failure === "match") {
+      setSessionNeedsChoice(body.needsChoice || []);
+      return body;
+    }
+    if (!body.ok) return body;
+    for (const account of [...(body.created || []), ...(body.linked || [])]) {
+      if (getAccount(account.id)) updateAccount(account.id, account);
+      else createAccount(account);
+    }
+    setConnectOpen(false);
+    toast?.push?.("Account connected.", "ok");
+    return body;
+  };
+
+  const cancelConnection = async () => {
+    if (!activeSessionId || preview) return;
+    await fetch("/api/connections/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "cancel", sessionId: activeSessionId }),
+    }).catch(() => {});
+    setActiveSessionId("");
+    setSessionDestinations([]);
   };
 
   const startAdd = () => {
@@ -269,15 +378,30 @@ export default function AccountsPage() {
     setComposerOpen(true);
   };
 
+  const shownAccounts = (hydrated ? accounts : []).filter((account) => account.id !== PREVIEW_CONNECTED_ACCOUNT.id);
+  if (preview === "connected") shownAccounts.unshift(PREVIEW_CONNECTED_ACCOUNT);
+  const connectSheetOpen = connectOpen || preview === "picker" || preview === "instagram" || preview === "destinations";
+  const connectSheetStep = preview === "instagram"
+    ? "continue"
+    : preview === "destinations"
+      ? "destinations"
+      : connectStep;
+  const connectSheetDestinations = preview === "destinations" ? PREVIEW_DESTINATIONS : sessionDestinations;
+
   return (
     <PageShell dense>
       <PageHeader
         title="Social Accounts"
-        description={`Social accounts and channels for ${brandName}. A pasted URL identifies the account. It does not connect it.`}
+        description={`Social accounts and channels for ${brandName}. Connect a provider to verify an identity. A pasted URL only identifies an account.`}
         actions={(
-          <button type="button" className="rl-btn whitespace-nowrap" onClick={startAdd}>
-            + Add social account
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="rl-btn whitespace-nowrap" onClick={openConnect}>
+              + Connect account
+            </button>
+            <button type="button" className="rl-btn-ghost whitespace-nowrap" onClick={startAdd}>
+              Add manually
+            </button>
+          </div>
         )}
       />
 
@@ -287,22 +411,23 @@ export default function AccountsPage() {
         </div>
       ) : null}
 
-      {(hydrated ? accounts : []).length === 0 ? (
+      {shownAccounts.length === 0 ? (
         <EmptyState
           title="No social accounts added yet."
-          body="Add the Instagram, YouTube, or other channels this workspace publishes from. Pasting a URL never marks an account Connected."
+          body="Connect Instagram, Facebook, Threads, or YouTube. A pasted URL never marks an account Connected."
           action={(
-            <button type="button" className="rl-btn" onClick={startAdd}>
-              Add social account
-            </button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button type="button" className="rl-btn" onClick={openConnect}>Connect account</button>
+              <button type="button" className="rl-btn-ghost" onClick={startAdd}>Add manually</button>
+            </div>
           )}
         />
       ) : (
         <ul className="grid gap-4">
-          {(hydrated ? accounts : []).map((account) => {
+          {shownAccounts.map((account) => {
             const usedBy = campaigns.filter((campaign) => (campaign.accountIds || []).includes(account.id)).length;
             const view = displayConnectionState(account, { providerReadiness: readinessFor(account.platform) });
-            const caps = capabilityBits(account.platform);
+            const caps = account.connectionState === "CONNECTED" ? capabilityBits(account.platform) : [];
             return (
               <li key={account.id}>
                 <article className="flex h-full flex-col rounded-2xl border border-rl_border bg-rl_surface p-5 shadow-rl_soft">
@@ -337,7 +462,14 @@ export default function AccountsPage() {
                       <dt className="text-rl_muted">Campaigns</dt>
                       <dd className="text-right text-rl_text">{usedBy}</dd>
                     </div>
+                    {account.lastVerifiedAt ? (
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-rl_muted">Last verified</dt>
+                        <dd className="text-right text-rl_text">{formatStamp(account.lastVerifiedAt)}</dd>
+                      </div>
+                    ) : null}
                   </dl>
+                  {account.preview ? <p className="mt-3 text-xs uppercase tracking-[0.14em] text-rl_muted">Preview</p> : null}
                   <div className="mt-auto pt-4">
                     <button
                       type="button"
@@ -354,17 +486,36 @@ export default function AccountsPage() {
         </ul>
       )}
 
+      <ConnectAccountSheet
+        open={connectSheetOpen}
+        onClose={() => {
+          setConnectOpen(false);
+          if (!preview) cancelConnection();
+        }}
+        workspaceName={brandName}
+        definitions={providers}
+        initialStep={connectSheetStep}
+        initialProvider={preview === "instagram" ? "instagram" : connectProviderId}
+        destinations={connectSheetDestinations}
+        failure={connectFailure}
+        preview={preview === "destinations" || preview === "instagram" || preview === "picker"}
+        needsChoice={sessionNeedsChoice}
+        onStart={startProviderAuthorization}
+        onConfirm={confirmConnection}
+        onCancelSession={cancelConnection}
+      />
+
       <SideSheet
-        open={composerOpen}
+        open={composerOpen || preview === "manual"}
         onClose={closeComposer}
-        title={editingId ? "Edit social account" : "Add social account"}
+        title={editingId ? "Edit social account" : "Add manually"}
         subtitle="Identifier only. This never marks the account Connected."
         width="md"
         footer={(
           <div className="flex justify-end gap-2">
             <button type="button" className="rl-btn-ghost" onClick={closeComposer}>Cancel</button>
-            <button type="submit" form="social-account-composer" className="rl-btn">
-              {editingId ? "Save" : "Add social account"}
+            <button type="submit" form="social-account-composer" className="rl-btn" disabled={Boolean(preview)}>
+              {editingId ? "Save" : "Add manually"}
             </button>
           </div>
         )}

@@ -54,14 +54,14 @@ export default function SocialAccountPicker({
       return (
         <Link
           href="/accounts"
-          title="Add social account"
-          aria-label="Add social account"
+          title="Connect account"
+          aria-label="Connect account"
           className="flex items-center text-sm text-rl_muted transition-colors hover:bg-rl_surfaceHover hover:text-rl_text"
         >
           <span className="flex h-10 w-[4.5rem] shrink-0 items-center justify-center">
             <NavIcon name="social" size={20} />
           </span>
-          {showDetail ? <span className="min-w-0 flex-1 truncate pr-3">Add social account</span> : null}
+          {showDetail ? <span className="min-w-0 flex-1 truncate pr-3">Connect account</span> : null}
         </Link>
       );
     }
@@ -139,11 +139,11 @@ export default function SocialAccountPicker({
         <Link
           href="/accounts"
           className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-rl_muted transition-colors hover:bg-rl_surfaceHover hover:text-rl_text"
-          title="Add social account"
-          aria-label="Add social account"
+          title="Connect account"
+          aria-label="Connect account"
         >
           <NavIcon name="create" size={18} />
-          {!collapsed && <span>Add social account</span>}
+          {!collapsed && <span>Connect account</span>}
         </Link>
       </div>
     );

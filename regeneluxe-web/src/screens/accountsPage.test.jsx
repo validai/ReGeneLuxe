@@ -61,7 +61,7 @@ function typeHandle(input, text) {
     value += char;
     fireEvent.keyDown(input, { key: char, bubbles: true });
     fireEvent.change(input, { target: { value } });
-    expect(screen.getByRole("dialog", { name: /add social account/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /add manually/i })).toBeInTheDocument();
     expect(input).toHaveFocus();
     expect(input).toHaveValue(value);
   }
@@ -82,7 +82,8 @@ describe("Social Accounts page", () => {
     expect(screen.getByText(/no social accounts added yet/i)).toBeInTheDocument();
     expect(screen.getByText(/social accounts and channels for dj coast/i)).toBeInTheDocument();
     expect(screen.queryByText(/active profile/i)).not.toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /add social account/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /connect account/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /add manually/i }).length).toBeGreaterThan(0);
   });
 
   it("renders one card per social account", async () => {
@@ -108,7 +109,7 @@ describe("Social Accounts page", () => {
 
   it("opens platform-specific add fields and never marks a pasted URL Connected", () => {
     renderAccounts();
-    fireEvent.click(screen.getAllByRole("button", { name: /add social account/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /add manually/i })[0]);
     expect(screen.getByText(/identifier only/i)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/instagram profile url or @handle/i), {
       target: { value: "https://www.instagram.com/djcoast/" },
@@ -160,11 +161,11 @@ describe("Social Accounts page", () => {
     routerPush.mockClear();
     renderAccountsInWorkspace();
     const before = listAccounts().length;
-    fireEvent.click(screen.getAllByRole("button", { name: /\+ add social account/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /add manually/i })[0]);
     fireEvent.change(screen.getByLabelText(/^platform$/i), { target: { value: "Instagram" } });
 
     const input = screen.getByLabelText(/instagram profile url or @handle/i);
-    const submit = screen.getAllByRole("button", { name: "Add social account" }).find((button) => button.getAttribute("type") === "submit");
+    const submit = screen.getAllByRole("button", { name: "Add manually" }).find((button) => button.getAttribute("type") === "submit");
     expect(submit).toHaveAttribute("type", "submit");
     expect(screen.getByRole("button", { name: "Cancel" })).toHaveAttribute("type", "button");
     expect(screen.getByRole("button", { name: "Close" })).toHaveAttribute("type", "button");
@@ -174,7 +175,7 @@ describe("Social Accounts page", () => {
     typeHandle(input, "@djcoast");
     expect(listAccounts()).toHaveLength(before);
     expect(routerPush).not.toHaveBeenCalled();
-    expect(screen.getByRole("dialog", { name: /add social account/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /add manually/i })).toBeInTheDocument();
     expect(fireEvent.keyDown(input, { key: "Enter" })).toBe(false);
     expect(listAccounts()).toHaveLength(before);
 
@@ -186,13 +187,13 @@ describe("Social Accounts page", () => {
     expect(input).toHaveFocus();
 
     fireEvent.keyDown(input, { key: "Tab" });
-    expect(screen.getByRole("dialog", { name: /add social account/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /add manually/i })).toBeInTheDocument();
     name.focus();
     expect(input).toHaveValue("@djcoast");
     expect(listAccounts()).toHaveLength(before);
 
     fireEvent.change(screen.getByLabelText(/^platform$/i), { target: { value: "YouTube" } });
-    expect(screen.getByRole("dialog", { name: /add social account/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /add manually/i })).toBeInTheDocument();
     expect(listAccounts()).toHaveLength(before);
     fireEvent.change(screen.getByLabelText(/^platform$/i), { target: { value: "Instagram" } });
 
@@ -200,7 +201,7 @@ describe("Social Accounts page", () => {
     const created = listAccounts().find((account) => account.displayName === "DJ Coast IG");
     expect(created?.handle).toBe("@djcoast");
     expect(created?.connectionState).not.toBe("CONNECTED");
-    expect(screen.queryByRole("dialog", { name: /add social account/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /add manually/i })).not.toBeInTheDocument();
     expect(routerPush).not.toHaveBeenCalled();
   });
 
@@ -208,7 +209,7 @@ describe("Social Accounts page", () => {
     routerPush.mockClear();
     renderAccountsInWorkspace();
     const before = listAccounts().length;
-    fireEvent.click(screen.getAllByRole("button", { name: /\+ add social account/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /add manually/i })[0]);
     const input = screen.getByLabelText(/instagram profile url or @handle/i);
     input.focus();
     const url = "https://www.instagram.com/djcoast/";
@@ -222,7 +223,7 @@ describe("Social Accounts page", () => {
     fireEvent.change(input, { target: { value: shortened } });
     expect(input).toHaveFocus();
     expect(input).toHaveValue(shortened);
-    expect(screen.getByRole("dialog", { name: /add social account/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /add manually/i })).toBeInTheDocument();
     expect(listAccounts()).toHaveLength(before);
   });
 
@@ -230,31 +231,31 @@ describe("Social Accounts page", () => {
     renderAccountsInWorkspace();
     const before = listAccounts().length;
 
-    fireEvent.click(screen.getAllByRole("button", { name: /\+ add social account/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /add manually/i })[0]);
     const input = screen.getByLabelText(/instagram profile url or @handle/i);
     input.focus();
     typeHandle(input, "@dj");
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByRole("dialog", { name: /add social account/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /add manually/i })).not.toBeInTheDocument();
     expect(listAccounts()).toHaveLength(before);
 
-    fireEvent.click(screen.getAllByRole("button", { name: /\+ add social account/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /add manually/i })[0]);
     const again = screen.getByLabelText(/instagram profile url or @handle/i);
     again.focus();
     typeHandle(again, "@dj");
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
-    expect(screen.queryByRole("dialog", { name: /add social account/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /add manually/i })).not.toBeInTheDocument();
     expect(listAccounts()).toHaveLength(before);
   });
 
   it("does not navigate when a letter is pressed on the sheet close button", () => {
     routerPush.mockClear();
     renderAccountsInWorkspace();
-    fireEvent.click(screen.getAllByRole("button", { name: /\+ add social account/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /add manually/i })[0]);
     const close = screen.getByRole("button", { name: "Close" });
     close.focus();
     fireEvent.keyDown(close, { key: "c" });
     expect(routerPush).not.toHaveBeenCalled();
-    expect(screen.getByRole("dialog", { name: /add social account/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /add manually/i })).toBeInTheDocument();
   });
 });

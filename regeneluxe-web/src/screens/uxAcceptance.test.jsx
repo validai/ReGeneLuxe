@@ -37,6 +37,9 @@ describe("UX acceptance flows", () => {
       displayName: "DJ Coast",
       handle: "@djcoast",
       platform: "Instagram",
+      connectionState: "CONNECTED",
+      connectionMethod: "OAUTH",
+      providerAccountId: "ig_verified_dj",
     });
 
     renderAt("/content/new");

@@ -63,7 +63,7 @@ describe("workspace shell sidebar states", () => {
     expect(screen.getByRole("link", { name: /^dashboard$/i })).toHaveTextContent("Dashboard");
     expect(screen.getByText("DJ Coast")).toBeInTheDocument();
     expect(screen.getByText("djcoast239@gmail.com")).toBeInTheDocument();
-    expect(screen.getByText(/add social account/i)).toBeInTheDocument();
+    expect(screen.getByText(/connect account/i)).toBeInTheDocument();
   });
 
   it("renders compact icons without clipped card labels", async () => {

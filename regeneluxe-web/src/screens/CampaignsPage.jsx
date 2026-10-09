@@ -11,6 +11,7 @@ import { useAppData } from "../hooks/useAppData.js";
 import { createCampaign, deleteCampaign, setActiveCampaignId, setCampaignActive, updateCampaign } from "../data/campaignRepository.js";
 import { optionLabels, GOAL_OPTIONS } from "../data/options.js";
 import { buildCampaignStateSnapshot } from "../data/campaignMonitor.js";
+import PublishDestinations from "../components/app/PublishDestinations.jsx";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -102,24 +103,11 @@ export default function CampaignsPage() {
           </FormField>
           <fieldset>
             <legend className="mb-2 text-xs text-rl_muted">Accounts</legend>
-            <div className="flex flex-wrap gap-2">
-              {accounts.map((account) => {
-                const active = draft.accountIds.includes(account.id);
-                return (
-                  <button
-                    key={account.id}
-                    type="button"
-                    onClick={() => toggleDraftAccount(account.id)}
-                    aria-pressed={active}
-                    className={`rounded-full border px-3 py-1.5 text-sm ${
-                      active ? "border-rl_accent bg-rl_accent/10 text-rl_text" : "border-rl_border text-rl_muted"
-                    }`}
-                  >
-                    {account.platform} · {account.handle || account.displayName}
-                  </button>
-                );
-              })}
-            </div>
+            <PublishDestinations
+              accounts={accounts}
+              selectedIds={draft.accountIds}
+              onToggle={toggleDraftAccount}
+            />
           </fieldset>
           <FormField id="camp-notes" label="Anything else? (optional)">
             <textarea id="camp-notes" className={fieldClass} rows={2} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />

@@ -6,6 +6,7 @@ import AutosaveIndicator from "../../components/choices/AutosaveIndicator.jsx";
 import { updateCampaign } from "../../data/campaignRepository.js";
 import { mergeIntake } from "../../data/models.js";
 import { campaignCompleteness } from "../../data/campaignContext.js";
+import { publishDestinationView } from "../../data/connectionFlow.js";
 import {
   GOAL_OPTIONS,
   CONTENT_TYPE_OPTIONS,
@@ -73,7 +74,7 @@ export default function IntakePanel({ campaign, accounts, essentialsOnly = false
 
   const completeness = campaignCompleteness({ ...campaign, intake, accountIds: intake.accountIds });
   const groupedAccounts = PLATFORM_LIST.reduce((acc, platform) => {
-    const items = accounts.filter((account) => account.platform === platform);
+    const items = accounts.filter((account) => account.platform === platform && publishDestinationView(account).visible);
     if (items.length) acc.push([platform, items]);
     return acc;
   }, []);
@@ -212,13 +213,16 @@ export default function IntakePanel({ campaign, accounts, essentialsOnly = false
                     <div className="grid gap-2 sm:grid-cols-2">
                       {items.map((account) => {
                         const checked = intake.accountIds.includes(account.id);
+                        const destination = publishDestinationView(account);
                         return (
-                          <label key={account.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${checked ? "border-rl_accent bg-rl_accent/10 text-rl_text" : "border-rl_border bg-rl_bg text-rl_muted"}`}>
+                          <label key={account.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${checked ? "border-rl_accent bg-rl_accent/10 text-rl_text" : "border-rl_border bg-rl_bg text-rl_muted"} ${destination.selectable ? "cursor-pointer" : "opacity-70"}`}>
                             <input
                               type="checkbox"
                               className="h-4 w-4 accent-rl_accent"
                               checked={checked}
+                              disabled={!destination.selectable}
                               onChange={() => {
+                                if (!destination.selectable) return;
                                 const next = new Set(intake.accountIds);
                                 if (next.has(account.id)) next.delete(account.id);
                                 else next.add(account.id);
@@ -226,6 +230,7 @@ export default function IntakePanel({ campaign, accounts, essentialsOnly = false
                               }}
                             />
                             <span>{account.handle || account.displayName}</span>
+                            {destination.reason ? <span className="text-xs">{destination.reason}</span> : null}
                           </label>
                         );
                       })}

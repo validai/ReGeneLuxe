@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getConnector, normalizeProviderId } from "../../../../../server/connectors/registry.js";
-import { consumeOAuthState, friendlyOAuthError } from "../../../../../server/connectors/oauth/state.js";
+import { consumeOAuthState, friendlyOAuthError, peekOAuthState } from "../../../../../server/connectors/oauth/state.js";
+import { isConnectionSessionId } from "../../../../../src/data/connectionFlow.js";
+import { recordConnectionCallback } from "../../../../../server/connectors/accountConnection.js";
 import { initDb, get, upsert, COLLECTIONS } from "../../../../../server/db/index.js";
 import { nowIso } from "../../../../../src/data/ids.js";
 import { syncConnectedAccount } from "../../../../../server/connectors/syncAccount.js";
@@ -46,6 +48,8 @@ export async function GET(
   }
 
   if (provider === "youtube") {
+    const peeked = peekOAuthState(state);
+    if (!(peeked.ok && isConnectionSessionId(peeked.accountId))) {
     const authz = await requireOperator();
     const result = await completeYoutubeAuth({
       code,
@@ -55,6 +59,7 @@ export async function GET(
       operator: authz.ok ? authz.operator : null,
     });
     return NextResponse.redirect(result.redirectTo || `${process.env.RL_PUBLIC_ORIGIN || "http://127.0.0.1:5174"}/settings?youtube=error`);
+    }
   }
 
   try {
@@ -75,6 +80,38 @@ export async function GET(
     }
     if (!authz.ok) {
       return redirectTo("/signin");
+    }
+
+    if (isConnectionSessionId(stateResult.accountId)) {
+      const connector = getConnector(provider);
+      const cancelled = error === "access_denied";
+      const result = cancelled || error
+        ? { ok: false, error: friendlyOAuthError(error || "access_denied", connector.displayName || provider) }
+        : await connector.completeAuth({
+          code,
+          state,
+          stateMeta: stateResult,
+          error,
+          errorDescription,
+        });
+      const recorded = await recordConnectionCallback({
+        provider,
+        sessionId: stateResult.accountId,
+        operatorId: authz.operator.id,
+        workspaceId: authz.workspace?.id || authz.activeProfile?.id || stateResult.managedProfileId || null,
+        result,
+        cancelled,
+      });
+      if (!recorded.ok) {
+        return redirectTo("/accounts", {
+          connect: "failed",
+          message: recorded.failure || "unavailable",
+        });
+      }
+      return redirectTo("/accounts", {
+        connect: "select",
+        session: stateResult.accountId,
+      });
     }
 
     const account = await get(COLLECTIONS.accounts, stateResult.accountId);
