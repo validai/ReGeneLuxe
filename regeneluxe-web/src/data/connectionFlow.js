@@ -82,6 +82,16 @@ export const CONNECTION_FAILURES = Object.freeze({
     body: "The provider could not finish authorization. Try again shortly.",
     action: "Try again",
   },
+  permission: {
+    title: "Permission required",
+    body: "Threads did not grant the permission needed to read this profile.",
+    action: "Back to providers",
+  },
+  provider: {
+    title: "Threads unavailable",
+    body: "Threads could not finish this connection. Try again shortly.",
+    action: "Try again",
+  },
   duplicate: {
     title: "Already connected",
     body: "This provider identity is already in the workspace.",
@@ -345,8 +355,10 @@ export function failureFromAuth(result = {}) {
   const message = String(result.error || result.message || "");
   if (/denied|cancel/i.test(message)) return "cancelled";
   if (/professional instagram/i.test(message)) return "professional";
-  if (/no youtube channel|no eligible|no facebook page|no professional/i.test(message)) return "none";
-  if (result.connectionState === "RECONNECT_REQUIRED") return "reconnect";
+  if (result.code === "PERMISSION_MISSING") return "permission";
+  if (result.code === "NO_DESTINATIONS" || /no threads profile|no youtube channel|no eligible|no facebook page|no professional/i.test(message)) return "none";
+  if (result.code === "PROVIDER_ERROR") return "provider";
+  if (result.connectionState === "RECONNECT_REQUIRED" || result.code === "RECONNECT_REQUIRED") return "reconnect";
   if (result.readiness === "PROVIDER_REVIEW_REQUIRED" || result.reason === "PROVIDER_REVIEW_REQUIRED") return "review";
   if (result.connectionState === "SETUP_REQUIRED" || result.readiness === "SETUP_REQUIRED" || result.reason === "SETUP_REQUIRED") return "setup";
   if (result.readiness === "UNSUPPORTED" || result.reason === "UNSUPPORTED") return "unavailable";

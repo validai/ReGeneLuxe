@@ -385,9 +385,10 @@ describe("threads and youtube identity", () => {
     expect(auth.connectionState).toBe("CONNECTED");
     expect(auth.profile.providerAccountId).toBe("th_1");
     expect(JSON.stringify(auth)).not.toContain("long-token");
-    const exchangeBody = String(fetch.mock.calls[1][1].body);
-    expect(exchangeBody).toContain("th_exchange_token");
-    expect(exchangeBody).not.toContain("https://");
+    const exchangeUrl = String(fetch.mock.calls[1][0]);
+    expect(exchangeUrl).toContain("grant_type=th_exchange_token");
+    expect(exchangeUrl.startsWith("https://graph.threads.com/access_token")).toBe(true);
+    expect(JSON.stringify(auth)).not.toContain("threads-secret");
 
     fetch
       .mockResolvedValueOnce({ ok: true, json: async () => ({ id: "creation_1" }) })

@@ -1,66 +1,117 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
 import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
-import { baseConnector, defaultRedirect, unavailable } from "../base.js";
+import { baseConnector, defaultRedirect, envCredentials, unavailable } from "../base.js";
 import { canonicalOAuthRedirect } from "../../auth/origin.js";
 import { createOAuthState, friendlyOAuthError } from "../oauth/state.js";
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
+
+const THREADS_AUTHORIZE = "https://threads.com/oauth/authorize";
+const THREADS_TOKEN = "https://graph.threads.com/oauth/access_token";
+const THREADS_GRAPH = "https://graph.threads.com";
+const THREADS_SCOPE = "threads_basic";
 
 export const threadsConnector = baseConnector({
   provider: "threads",
   displayName: "Threads",
   readiness: PROVIDER_READINESS.IMPLEMENTED,
   setupInstructions: [
-    "1. Create a Meta app with Threads API product",
-    "2. Set THREADS_APP_ID and THREADS_APP_SECRET (or META_APP_ID / META_APP_SECRET fallback)",
+    "1. Add the Access the Threads API use case to the existing ReGeneLuxe Social Meta app",
+    "2. Set THREADS_APP_ID and THREADS_APP_SECRET from that use case. Do not reuse the Facebook app secret",
     `3. Add redirect URI: ${defaultRedirect("threads")}`,
   ].join("\n"),
   envKeys: {
     clientId: "THREADS_APP_ID",
     clientSecret: "THREADS_APP_SECRET",
-    redirectUri: "THREADS_REDIRECT_URI",
   },
   capabilities: [
     CAPABILITY.READ_PROFILE,
-    CAPABILITY.READ_CONTENT,
     CAPABILITY.PUBLISH_TEXT,
-    CAPABILITY.PUBLISH_IMAGE,
   ],
 });
 
-const originalGet = threadsConnector.getAppCredentials.bind(threadsConnector);
 threadsConnector.getAppCredentials = () => {
-  const own = originalGet();
-  if (own.complete) return own;
-  const metaId = process.env.META_APP_ID || "";
-  const metaSecret = process.env.META_APP_SECRET || "";
-  if (metaId && metaSecret) {
-    return {
-      complete: true,
-      clientId: metaId,
-      clientSecret: metaSecret,
-      redirectUri: canonicalOAuthRedirect(process.env.THREADS_REDIRECT_URI) || defaultRedirect("threads"),
-      source: "meta-env-fallback",
-    };
-  }
-  return own;
+  const creds = envCredentials("threads", {
+    clientId: "THREADS_APP_ID",
+    clientSecret: "THREADS_APP_SECRET",
+  });
+  return {
+    ...creds,
+    redirectUri: canonicalOAuthRedirect(process.env.THREADS_REDIRECT_URI) || defaultRedirect("threads"),
+  };
 };
 
-threadsConnector._beginAuth = async ({ accountId, returnTo, operatorId = null, managedProfileId = null }) => {
+threadsConnector.resolveReadiness = () => (
+  threadsConnector.getAppCredentials().complete
+    ? PROVIDER_READINESS.IMPLEMENTED
+    : PROVIDER_READINESS.SETUP_REQUIRED
+);
+
+function safeThreadsError(json, status) {
+  const message = String(json?.error_message || json?.error?.message || json?.error_description || "").toLowerCase();
+  if (/permission|scope|not authorized to|requires .*permission/.test(message)) {
+    return {
+      ok: false,
+      code: "PERMISSION_MISSING",
+      connectionState: SOCIAL_CONNECTION_STATES.ERROR,
+      error: "Threads did not grant permission to read this profile.",
+    };
+  }
+  if (/client secret|client_id|invalid client|unknown app|threads api/.test(message)) {
+    return {
+      ok: false,
+      code: "SETUP_REQUIRED",
+      connectionState: SOCIAL_CONNECTION_STATES.SETUP_REQUIRED,
+      error: "Threads app credentials are not configured.",
+    };
+  }
+  if (status === 401 || /already used|expired|invalid.?grant|invalid.?token|code was not found/.test(message)) {
+    return {
+      ok: false,
+      code: "RECONNECT_REQUIRED",
+      connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED,
+      error: friendlyOAuthError("invalid_grant", "Threads"),
+    };
+  }
+  if (status >= 500) {
+    return {
+      ok: false,
+      code: "PROVIDER_ERROR",
+      connectionState: SOCIAL_CONNECTION_STATES.ERROR,
+      error: "Threads is temporarily unavailable.",
+    };
+  }
+  return {
+    ok: false,
+    code: "PROVIDER_ERROR",
+    connectionState: SOCIAL_CONNECTION_STATES.ERROR,
+    error: "Threads could not complete this connection.",
+  };
+}
+
+threadsConnector._beginAuth = async ({ accountId, returnTo, operatorId = null, managedProfileId = null, connectionId = null }) => {
   const creds = threadsConnector.getAppCredentials();
   if (!creds.complete) {
     return {
       ok: false,
       readiness: "SETUP_REQUIRED",
       reason: "SETUP_REQUIRED",
+      code: "SETUP_REQUIRED",
       instructions: threadsConnector.setupInstructions,
       message: "Threads app credentials are not configured.",
     };
   }
-  const state = createOAuthState({ provider: "threads", accountId, returnTo, operatorId, managedProfileId });
-  const url = new URL("https://threads.net/oauth/authorize");
+  const state = createOAuthState({
+    provider: "threads",
+    accountId,
+    returnTo,
+    operatorId,
+    managedProfileId,
+    connectionId: connectionId || accountId,
+  });
+  const url = new URL(THREADS_AUTHORIZE);
   url.searchParams.set("client_id", creds.clientId);
   url.searchParams.set("redirect_uri", creds.redirectUri);
-  url.searchParams.set("scope", "threads_basic,threads_content_publish");
+  url.searchParams.set("scope", THREADS_SCOPE);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("state", state);
   return { ok: true, authUrl: url.toString(), state };
@@ -68,11 +119,33 @@ threadsConnector._beginAuth = async ({ accountId, returnTo, operatorId = null, m
 
 threadsConnector._completeAuth = async ({ code, stateMeta, error, errorDescription }) => {
   if (error) {
-    return { ok: false, connectionState: SOCIAL_CONNECTION_STATES.ERROR, error: friendlyOAuthError(error, "Threads"), detail: errorDescription };
+    const denied = String(error) === "access_denied";
+    return {
+      ok: false,
+      code: denied ? "CANCELLED" : "PROVIDER_ERROR",
+      connectionState: SOCIAL_CONNECTION_STATES.ERROR,
+      error: friendlyOAuthError(error, "Threads"),
+      detail: denied ? "" : String(errorDescription || "").replace(/access_token|client_secret|code=[^&\s]+/gi, ""),
+    };
   }
-  if (!code) return { ok: false, connectionState: SOCIAL_CONNECTION_STATES.ERROR, error: friendlyOAuthError("missing_code", "Threads") };
+  const authorizationCode = String(code || "").replace(/#_$/, "").trim();
+  if (!authorizationCode) {
+    return { ok: false, code: "RECONNECT_REQUIRED", connectionState: SOCIAL_CONNECTION_STATES.ERROR, error: friendlyOAuthError("missing_code", "Threads") };
+  }
+  const accountKey = stateMeta?.connectionId || stateMeta?.accountId;
+  if (!accountKey) {
+    return { ok: false, code: "PROVIDER_ERROR", connectionState: SOCIAL_CONNECTION_STATES.ERROR, error: "Threads connection session is missing." };
+  }
   const creds = threadsConnector.getAppCredentials();
-  const tokenRes = await fetch("https://graph.threads.net/oauth/access_token", {
+  if (!creds.complete) {
+    return {
+      ok: false,
+      code: "SETUP_REQUIRED",
+      connectionState: SOCIAL_CONNECTION_STATES.SETUP_REQUIRED,
+      error: "Threads app credentials are not configured.",
+    };
+  }
+  const tokenRes = await fetch(THREADS_TOKEN, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -80,43 +153,40 @@ threadsConnector._completeAuth = async ({ code, stateMeta, error, errorDescripti
       client_secret: creds.clientSecret,
       grant_type: "authorization_code",
       redirect_uri: creds.redirectUri,
-      code,
+      code: authorizationCode,
     }),
   });
   const tokenJson = await tokenRes.json().catch(() => ({}));
-  if (!tokenRes.ok || !tokenJson.access_token) {
-    return {
-      ok: false,
-      connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED,
-      error: friendlyOAuthError("invalid_grant", "Threads"),
-    };
-  }
-  const exchange = await fetch("https://graph.threads.net/access_token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "th_exchange_token",
-      client_secret: creds.clientSecret,
-      access_token: tokenJson.access_token,
-    }),
-  });
+  if (!tokenRes.ok || !tokenJson.access_token) return safeThreadsError(tokenJson, tokenRes.status);
+
+  const exchangeUrl = new URL(`${THREADS_GRAPH}/access_token`);
+  exchangeUrl.searchParams.set("grant_type", "th_exchange_token");
+  exchangeUrl.searchParams.set("client_secret", creds.clientSecret);
+  exchangeUrl.searchParams.set("access_token", tokenJson.access_token);
+  const exchange = await fetch(exchangeUrl);
   const exchangeJson = await exchange.json().catch(() => ({}));
   const accessToken = exchange.ok && exchangeJson.access_token ? exchangeJson.access_token : tokenJson.access_token;
-  const profileRes = await fetch(`https://graph.threads.net/v1.0/me?fields=id,username,name&access_token=${encodeURIComponent(accessToken)}`);
+  const profileUrl = new URL(`${THREADS_GRAPH}/v1.0/me`);
+  profileUrl.searchParams.set("fields", "id,username,name");
+  profileUrl.searchParams.set("access_token", accessToken);
+  const profileRes = await fetch(profileUrl);
   const profile = await profileRes.json().catch(() => ({}));
-  if (!profileRes.ok || !profile.id) {
+  if (!profileRes.ok) return safeThreadsError(profile, profileRes.status);
+  if (!profile.id) {
     return {
       ok: false,
-      connectionState: SOCIAL_CONNECTION_STATES.RECONNECT_REQUIRED,
-      error: friendlyOAuthError("invalid_grant", "Threads"),
+      code: "NO_DESTINATIONS",
+      connectionState: SOCIAL_CONNECTION_STATES.ERROR,
+      error: "No Threads profile was returned for this account.",
     };
   }
-  const expiresIn = Number(exchangeJson.expires_in || tokenJson.expires_in || 0);
-  setAccountTokens("threads", stateMeta.accountId, {
+  const expiresIn = Number((exchange.ok && exchangeJson.expires_in) || tokenJson.expires_in || 0);
+  const scopes = String(tokenJson.scope || THREADS_SCOPE).split(/[,\s]+/).filter(Boolean);
+  setAccountTokens("threads", accountKey, {
     accessToken,
     refreshToken: null,
     expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000).toISOString() : null,
-    scopes: ["threads_basic", "threads_content_publish"],
+    scopes,
     providerAccountId: String(profile.id),
   });
   return {
@@ -134,7 +204,7 @@ threadsConnector._completeAuth = async ({ code, stateMeta, error, errorDescripti
 threadsConnector._getProfile = async (_account, tokens) => {
   const id = tokens.providerAccountId || "me";
   const res = await fetch(
-    `https://graph.threads.net/v1.0/${id}?fields=id,username,name&access_token=${encodeURIComponent(tokens.accessToken)}`,
+    `${THREADS_GRAPH}/v1.0/${encodeURIComponent(id)}?fields=id,username,name&access_token=${encodeURIComponent(tokens.accessToken)}`,
   );
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -161,7 +231,7 @@ threadsConnector._publishContent = async (_account, payload, tokens) => {
   if (!text) return unavailable("Threads publishing requires text.");
   const userId = tokens.providerAccountId;
   if (!userId) return unavailable("Threads user id missing — reconnect.");
-  const createRes = await fetch(`https://graph.threads.net/v1.0/${userId}/threads`, {
+  const createRes = await fetch(`${THREADS_GRAPH}/v1.0/${userId}/threads`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -174,7 +244,7 @@ threadsConnector._publishContent = async (_account, payload, tokens) => {
   if (!createRes.ok || !created.id) {
     return { ok: false, error: created.error?.message || "Failed to create Threads container." };
   }
-  const pubRes = await fetch(`https://graph.threads.net/v1.0/${userId}/threads_publish`, {
+  const pubRes = await fetch(`${THREADS_GRAPH}/v1.0/${userId}/threads_publish`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -187,7 +257,7 @@ threadsConnector._publishContent = async (_account, payload, tokens) => {
     return { ok: false, error: published.error?.message || "Threads publish failed." };
   }
   const linkRes = await fetch(
-    `https://graph.threads.net/v1.0/${published.id}?fields=id,permalink&access_token=${encodeURIComponent(tokens.accessToken)}`,
+    `${THREADS_GRAPH}/v1.0/${published.id}?fields=id,permalink&access_token=${encodeURIComponent(tokens.accessToken)}`,
   );
   const link = await linkRes.json().catch(() => ({}));
   return {

@@ -81,9 +81,8 @@ const DEFINITIONS = {
       "CREATE_POST",
       "PUBLISH_POST",
       "PUBLISH_TEXT",
-      "PUBLISH_IMAGE",
     ],
-    notes: "Requires Threads / Meta app credentials.",
+    notes: "Requires the Threads app ID and secret from the Threads use case. Connection requests threads_basic.",
   },
   SoundCloud: {
     capabilities: [

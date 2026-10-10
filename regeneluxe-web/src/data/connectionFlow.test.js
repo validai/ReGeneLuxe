@@ -163,5 +163,9 @@ describe("connection flow contract", () => {
     expect(failureFromAuth({ error: "No professional Instagram account is linked to a Page you manage." })).toBe("professional");
     expect(failureFromAuth({ readiness: "SETUP_REQUIRED" })).toBe("setup");
     expect(failureFromAuth({ reason: "PROVIDER_REVIEW_REQUIRED" })).toBe("review");
+    expect(failureFromAuth({ code: "PERMISSION_MISSING" })).toBe("permission");
+    expect(failureFromAuth({ code: "NO_DESTINATIONS" })).toBe("none");
+    expect(failureFromAuth({ code: "PROVIDER_ERROR" })).toBe("provider");
+    expect(failureFromAuth({ code: "RECONNECT_REQUIRED" })).toBe("reconnect");
   });
 });

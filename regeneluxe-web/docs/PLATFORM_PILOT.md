@@ -49,15 +49,19 @@ Facebook publish is a Page feed post (`POST /{page-id}/feed`) as the selected Pa
 
 ## Threads
 
-Threads uses its own authorization host, `https://threads.net/oauth/authorize`, and `https://graph.threads.net/v1.0`.
+Threads uses its own authorization window. It does not use Facebook Login for Business. The existing ReGeneLuxe Social Meta app can host the Threads use case, but Meta issues a separate Threads app id and secret. Do not send `META_APP_ID` or `META_APP_SECRET` to Threads.
 
 | Item | Value |
 | --- | --- |
-| Env | `THREADS_APP_ID` and `THREADS_APP_SECRET`, or the Meta app pair as fallback |
+| Authorization | `https://threads.com/oauth/authorize` |
+| Token exchange | `POST https://graph.threads.com/oauth/access_token` |
+| Long-lived exchange | `GET https://graph.threads.com/access_token` with `grant_type=th_exchange_token` |
+| Profile | `GET https://graph.threads.com/v1.0/me?fields=id,username,name` |
+| Env | `THREADS_APP_ID` and `THREADS_APP_SECRET` |
 | Redirect | `http://localhost:5174/api/oauth/threads/callback` |
-| Scopes | `threads_basic`, `threads_content_publish` |
+| Scope | `threads_basic` |
 
-The account becomes `CONNECTED` only after `GET /me?fields=id,username,name` succeeds. The short-lived token is exchanged for a long-lived token when Threads accepts `th_exchange_token`. The first publish path is text only: create a text container, then publish that creation id. ReGeneLuxe does not use a provider auto-publish flag.
+The callback stores the token in the vault and returns one Threads profile. The operator confirms that destination before any account row is created or linked. A matching manual Threads entry is not merged automatically. The confirmed account is `CONNECTED` with `APPROVAL_REQUIRED`. Real Threads connect has not been executed. Publishing is not part of this connection.
 
 ## YouTube
 
