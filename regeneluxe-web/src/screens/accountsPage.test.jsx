@@ -1,6 +1,6 @@
 import { MemoryRouter } from "@/nav";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import AccountsPage from "./AccountsPage.jsx";
 import WorkspaceProviders from "../components/app/WorkspaceProviders.jsx";
 import { ProfileSessionProvider } from "../components/app/ProfileSession.jsx";
@@ -105,6 +105,56 @@ describe("Social Accounts page", () => {
     expect(screen.getByText("Coast YT")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /^manage$/i })).toHaveLength(2);
     expect(screen.queryByRole("heading", { name: /add account/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps connected account metadata beside its labels", async () => {
+    createAccount({
+      platform: "YouTube",
+      displayName: "Coast Ent",
+      handle: "@_djcoast",
+      profileUrl: "https://www.youtube.com/@_djcoast",
+      connectionState: "CONNECTED",
+    });
+    createAccount({
+      platform: "Instagram",
+      displayName: "_djcoast",
+      handle: "@_djcoast",
+      profileUrl: "https://www.instagram.com/_djcoast/",
+      connectionState: "CONNECTED",
+    });
+    createAccount({
+      platform: "Facebook",
+      displayName: "DJ Coast",
+      connectionState: "CONNECTED",
+    });
+    renderAccounts();
+    const cardFor = async (platform) => within((await screen.findByRole("heading", { name: platform })).closest("article"));
+    const youtube = await cardFor("YouTube");
+    const instagram = await cardFor("Instagram");
+    const facebook = await cardFor("Facebook");
+
+    expect(youtube.getByText("Coast Ent")).toBeInTheDocument();
+    expect(youtube.getByText("@_djcoast")).toBeInTheDocument();
+    expect(youtube.getByText("youtube.com/@_djcoast")).toBeInTheDocument();
+    expect(within(youtube.getByText("Connection").closest("div")).getByText("Connected")).toBeInTheDocument();
+    expect(youtube.getByRole("checkbox", { name: "Video" })).toBeChecked();
+    expect(youtube.getByRole("checkbox", { name: "Image" })).not.toBeChecked();
+    expect(youtube.getByRole("checkbox", { name: "Text" })).not.toBeChecked();
+
+    expect(instagram.getByText("_djcoast")).toBeInTheDocument();
+    expect(instagram.getByText("@_djcoast")).toBeInTheDocument();
+    expect(instagram.getByRole("checkbox", { name: "Image" })).toBeChecked();
+    expect(instagram.getByRole("checkbox", { name: "Video" })).toBeChecked();
+    expect(instagram.getByRole("checkbox", { name: "Text" })).not.toBeChecked();
+    expect(within(instagram.getByText("Public media").closest("div")).getByText("Not configured")).toBeInTheDocument();
+    expect(within(instagram.getByText("Campaigns").closest("div")).getByText("0")).toBeInTheDocument();
+
+    expect(facebook.getByRole("checkbox", { name: "Text" })).toBeChecked();
+    expect(facebook.getByRole("checkbox", { name: "Image" })).not.toBeChecked();
+    expect(facebook.getByRole("checkbox", { name: "Video" })).not.toBeChecked();
+    for (const box of screen.getAllByRole("checkbox")) {
+      expect(box).toBeDisabled();
+    }
   });
 
   it("opens platform-specific add fields and never marks a pasted URL Connected", () => {

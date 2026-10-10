@@ -39,13 +39,56 @@ const blank = () => emptyAccount({
   active: true,
 });
 
-function capabilityBits(platform) {
+const CAPABILITY_MARKS = [
+  { key: "image", label: "Image" },
+  { key: "video", label: "Video" },
+  { key: "text", label: "Text" },
+];
+
+function capabilityMarks(platform) {
   const media = publishMediaSupport(platform);
-  return [
-    media.image ? "Image" : null,
-    media.video ? "Video" : null,
-    media.text ? "Text" : null,
-  ].filter(Boolean);
+  return CAPABILITY_MARKS.map((mark) => ({
+    ...mark,
+    supported: Boolean(media[mark.key]),
+  }));
+}
+
+function compactProfileUrl(value) {
+  return String(value || "").trim().replace(/^https?:\/\//i, "").replace(/^www\./i, "");
+}
+
+function AccountMeta({ label, children }) {
+  return (
+    <div className="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-x-3 sm:grid-cols-[8.75rem_minmax(0,1fr)]">
+      <dt className="text-rl_muted">{label}</dt>
+      <dd className="min-w-0 text-rl_text">{children}</dd>
+    </div>
+  );
+}
+
+function CapabilityMarks({ platform }) {
+  return (
+    <div>
+      <p className="text-sm text-rl_muted">Capabilities</p>
+      <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+        {capabilityMarks(platform).map((mark) => (
+          <li key={mark.key}>
+            <label className={`inline-flex cursor-default items-center gap-1.5 text-sm ${mark.supported ? "text-rl_text" : "text-rl_muted"}`}>
+              <input
+                type="checkbox"
+                checked={mark.supported}
+                disabled
+                onChange={() => {}}
+                className="h-3.5 w-3.5 accent-rl_accent disabled:opacity-100"
+                aria-label={mark.label}
+              />
+              {mark.label}
+            </label>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function providerSlug(platform) {
@@ -427,68 +470,52 @@ export default function AccountsPage() {
           {shownAccounts.map((account) => {
             const usedBy = campaigns.filter((campaign) => (campaign.accountIds || []).includes(account.id)).length;
             const view = displayConnectionState(account, { providerReadiness: readinessFor(account.platform) });
-            const caps = account.connectionState === "CONNECTED" ? capabilityBits(account.platform) : [];
+            const handleLabel = formatHandle(account.handle);
+            const displayName = account.displayName || handleLabel || "Untitled account";
+            const profileLabel = compactProfileUrl(account.profileUrl);
+            const publicMediaReady = providers.find((item) => item.provider === "instagram")?.mediaDelivery === "READY";
             return (
               <li key={account.id}>
-                <article className="flex h-full flex-col rounded-2xl border border-rl_border bg-rl_surface p-5 shadow-rl_soft">
+                <article className="rounded-2xl border border-rl_border bg-rl_surface p-4 shadow-rl_soft">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h2 className="flex items-center gap-2 text-sm font-semibold text-rl_text">
-                        <PlatformIcon platform={account.platform} size="sm" />
-                        {account.platform}
-                      </h2>
-                      <p className="mt-1 truncate text-base font-medium text-rl_text">
-                        {account.displayName || formatHandle(account.handle) || "Untitled account"}
-                      </p>
-                    </div>
+                    <h2 className="flex min-w-0 items-center gap-2 text-sm font-semibold text-rl_text">
+                      <PlatformIcon platform={account.platform} size="sm" />
+                      {account.platform}
+                    </h2>
                     <StatusBadge value={view.code} label={view.label} tone={view.toneClass} />
                   </div>
-                  {formatHandle(account.handle) ? (
-                    <p className="mt-2 text-sm text-rl_muted">{formatHandle(account.handle)}</p>
-                  ) : null}
-                  {account.profileUrl ? (
-                    <p className="mt-1 truncate text-sm text-rl_muted">{account.profileUrl}</p>
-                  ) : null}
-                  <dl className="mt-4 space-y-2 text-sm">
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-rl_muted">Connection</dt>
-                      <dd className="text-right text-rl_text">{view.label}</dd>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-rl_muted">Capabilities</dt>
-                      <dd className="text-right text-rl_text">{caps.length ? caps.join(" · ") : "—"}</dd>
-                    </div>
-                    {account.platform === "Instagram" && account.connectionState === "CONNECTED" ? (
-                      <div className="flex justify-between gap-3">
-                        <dt className="text-rl_muted">Public media</dt>
-                        <dd className="text-right text-rl_text">
-                          {providers.find((item) => item.provider === "instagram")?.mediaDelivery === "READY"
-                            ? "Ready"
-                            : "Not configured"}
-                        </dd>
-                      </div>
+                  <div className="mt-2 min-w-0">
+                    <p className="truncate text-base font-medium text-rl_text">{displayName}</p>
+                    {handleLabel && handleLabel !== displayName ? (
+                      <p className="truncate text-sm text-rl_muted">{handleLabel}</p>
                     ) : null}
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-rl_muted">Campaigns</dt>
-                      <dd className="text-right text-rl_text">{usedBy}</dd>
-                    </div>
+                    {profileLabel ? (
+                      <p className="truncate text-sm text-rl_muted">{profileLabel}</p>
+                    ) : null}
+                  </div>
+                  <dl className="mt-3 space-y-1 text-sm">
+                    <AccountMeta label="Connection">{view.label}</AccountMeta>
+                  </dl>
+                  <div className="mt-3">
+                    <CapabilityMarks platform={account.platform} />
+                  </div>
+                  <dl className="mt-3 space-y-1 text-sm">
+                    {account.platform === "Instagram" && account.connectionState === "CONNECTED" ? (
+                      <AccountMeta label="Public media">{publicMediaReady ? "Ready" : "Not configured"}</AccountMeta>
+                    ) : null}
+                    <AccountMeta label="Campaigns">{usedBy}</AccountMeta>
                     {account.lastVerifiedAt ? (
-                      <div className="flex justify-between gap-3">
-                        <dt className="text-rl_muted">Last verified</dt>
-                        <dd className="text-right text-rl_text">{formatStamp(account.lastVerifiedAt)}</dd>
-                      </div>
+                      <AccountMeta label="Last verified">{formatStamp(account.lastVerifiedAt)}</AccountMeta>
                     ) : null}
                   </dl>
                   {account.preview ? <p className="mt-3 text-xs uppercase tracking-[0.14em] text-rl_muted">Preview</p> : null}
-                  <div className="mt-auto pt-4">
-                    <button
-                      type="button"
-                      className="rl-btn-ghost w-full"
-                      onClick={() => setSelectedId(account.id)}
-                    >
-                      Manage
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className="rl-btn-ghost mt-3"
+                    onClick={() => setSelectedId(account.id)}
+                  >
+                    Manage
+                  </button>
                 </article>
               </li>
             );
