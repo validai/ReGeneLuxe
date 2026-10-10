@@ -57,9 +57,11 @@ Threads uses its own authorization window. It does not use Facebook Login for Bu
 | Token exchange | `POST https://graph.threads.com/oauth/access_token` |
 | Long-lived exchange | `GET https://graph.threads.com/access_token` with `grant_type=th_exchange_token` |
 | Profile | `GET https://graph.threads.com/v1.0/me?fields=id,username,name` |
-| Env | `THREADS_APP_ID` and `THREADS_APP_SECRET` |
-| Redirect | `http://localhost:5174/api/oauth/threads/callback` |
+| Env | `THREADS_APP_ID`, `THREADS_APP_SECRET`, and `THREADS_REDIRECT_URI` |
+| Redirect | `https://threads.regeneluxe.test:5175/api/oauth/threads/callback` |
 | Scope | `threads_basic` |
+
+The ReGeneLuxe app stays on `http://localhost:5174`. Threads local OAuth uses a separate HTTPS bridge on `threads.regeneluxe.test:5175`. That bridge accepts only the Threads callback, deauthorize, and data-deletion paths. The callback redirects `code` and `state` to `http://localhost:5174/api/oauth/threads/callback`. Token exchange still sends the HTTPS redirect URI. `npm run dev` does not start the bridge. Local development runs `npm run dev:threads-https` beside it. Certificate files stay in `.certs/` and are not committed. Meta cannot reach this hostname from the internet.
 
 The callback stores the token in the vault and returns one Threads profile. The operator confirms that destination before any account row is created or linked. A matching manual Threads entry is not merged automatically. The confirmed account is `CONNECTED` with `APPROVAL_REQUIRED`. Real Threads connect has not been executed. Publishing is not part of this connection.
 

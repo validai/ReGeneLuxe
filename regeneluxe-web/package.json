@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node scripts/canonical-dev.mjs",
     "dev:status": "node scripts/canonical-dev.mjs --status",
+    "dev:threads-https": "node scripts/threads-https-bridge.mjs",
     "dev:next": "next dev -H 127.0.0.1 -p 5174",
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 5174",

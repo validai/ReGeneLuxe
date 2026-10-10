@@ -1,9 +1,9 @@
 import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
 import { SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
-import { baseConnector, defaultRedirect, envCredentials, unavailable } from "../base.js";
-import { canonicalOAuthRedirect } from "../../auth/origin.js";
+import { baseConnector, envCredentials, unavailable } from "../base.js";
 import { createOAuthState, friendlyOAuthError } from "../oauth/state.js";
 import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
+import { THREADS_CALLBACK_URL, threadsRedirectUri } from "../threadsHttpsBridge.js";
 
 const THREADS_AUTHORIZE = "https://threads.com/oauth/authorize";
 const THREADS_TOKEN = "https://graph.threads.com/oauth/access_token";
@@ -17,7 +17,7 @@ export const threadsConnector = baseConnector({
   setupInstructions: [
     "1. Add the Access the Threads API use case to the existing ReGeneLuxe Social Meta app",
     "2. Set THREADS_APP_ID and THREADS_APP_SECRET from that use case. Do not reuse the Facebook app secret",
-    `3. Add redirect URI: ${defaultRedirect("threads")}`,
+    `3. Add redirect URI: ${THREADS_CALLBACK_URL}`,
   ].join("\n"),
   envKeys: {
     clientId: "THREADS_APP_ID",
@@ -36,15 +36,16 @@ threadsConnector.getAppCredentials = () => {
   });
   return {
     ...creds,
-    redirectUri: canonicalOAuthRedirect(process.env.THREADS_REDIRECT_URI) || defaultRedirect("threads"),
+    redirectUri: threadsRedirectUri(),
   };
 };
 
-threadsConnector.resolveReadiness = () => (
-  threadsConnector.getAppCredentials().complete
+threadsConnector.resolveReadiness = () => {
+  const creds = threadsConnector.getAppCredentials();
+  return creds.complete && creds.redirectUri
     ? PROVIDER_READINESS.IMPLEMENTED
-    : PROVIDER_READINESS.SETUP_REQUIRED
-);
+    : PROVIDER_READINESS.SETUP_REQUIRED;
+};
 
 function safeThreadsError(json, status) {
   const message = String(json?.error_message || json?.error?.message || json?.error_description || "").toLowerCase();
@@ -90,7 +91,7 @@ function safeThreadsError(json, status) {
 
 threadsConnector._beginAuth = async ({ accountId, returnTo, operatorId = null, managedProfileId = null, connectionId = null }) => {
   const creds = threadsConnector.getAppCredentials();
-  if (!creds.complete) {
+  if (!creds.complete || !creds.redirectUri) {
     return {
       ok: false,
       readiness: "SETUP_REQUIRED",
@@ -137,7 +138,7 @@ threadsConnector._completeAuth = async ({ code, stateMeta, error, errorDescripti
     return { ok: false, code: "PROVIDER_ERROR", connectionState: SOCIAL_CONNECTION_STATES.ERROR, error: "Threads connection session is missing." };
   }
   const creds = threadsConnector.getAppCredentials();
-  if (!creds.complete) {
+  if (!creds.complete || !creds.redirectUri) {
     return {
       ok: false,
       code: "SETUP_REQUIRED",

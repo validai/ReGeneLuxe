@@ -362,7 +362,7 @@ describe("threads and youtube identity", () => {
     }
     process.env.THREADS_APP_ID = "threads-app";
     process.env.THREADS_APP_SECRET = "threads-secret";
-    process.env.THREADS_REDIRECT_URI = "http://127.0.0.1:5174/api/oauth/threads/callback";
+    process.env.THREADS_REDIRECT_URI = "https://threads.regeneluxe.test:5175/api/oauth/threads/callback";
     process.env.AUTH_GOOGLE_ID = "google-client";
     process.env.AUTH_GOOGLE_SECRET = "google-secret";
   });

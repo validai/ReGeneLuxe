@@ -46,6 +46,7 @@ describe("threads connection", () => {
   function configureThreads() {
     process.env.THREADS_APP_ID = "threads-app-id";
     process.env.THREADS_APP_SECRET = "threads-app-secret";
+    process.env.THREADS_REDIRECT_URI = "https://threads.regeneluxe.test:5175/api/oauth/threads/callback";
   }
 
   it("stays setup required until the Threads app id and secret exist", async () => {
@@ -62,9 +63,11 @@ describe("threads connection", () => {
     expect(await list(COLLECTIONS.accounts)).toHaveLength(0);
   });
 
-  it("sends localhost, threads_basic, and the Threads app id", async () => {
+  it("sends the https bridge callback, threads_basic, and the Threads app id", async () => {
     configureThreads();
     process.env.THREADS_REDIRECT_URI = "http://127.0.0.1:5174/api/oauth/threads/callback";
+    expect(threadsConnector.resolveReadiness()).toBe("SETUP_REQUIRED");
+    process.env.THREADS_REDIRECT_URI = "https://threads.regeneluxe.test:5175/api/oauth/threads/callback";
     const session = createConnectionSession({
       provider: "threads",
       operatorId: "opr_1",
@@ -81,7 +84,7 @@ describe("threads connection", () => {
     expect(url.origin).toBe("https://threads.com");
     expect(url.pathname).toBe("/oauth/authorize");
     expect(url.searchParams.get("client_id")).toBe("threads-app-id");
-    expect(url.searchParams.get("redirect_uri")).toBe("http://localhost:5174/api/oauth/threads/callback");
+    expect(url.searchParams.get("redirect_uri")).toBe("https://threads.regeneluxe.test:5175/api/oauth/threads/callback");
     expect(url.searchParams.get("scope")).toBe("threads_basic");
     expect(url.searchParams.get("response_type")).toBe("code");
     expect(started.authUrl).not.toContain("threads-app-secret");
@@ -113,6 +116,8 @@ describe("threads connection", () => {
     });
     expect(JSON.stringify(auth)).not.toMatch(/short-token|long-token|threads-app-secret|auth-code/);
     expect(String(fetch.mock.calls[0][0])).toBe("https://graph.threads.com/oauth/access_token");
+    expect(String(fetch.mock.calls[0][1].body)).toContain("redirect_uri=https%3A%2F%2Fthreads.regeneluxe.test%3A5175%2Fapi%2Foauth%2Fthreads%2Fcallback");
+    expect(String(fetch.mock.calls[0][1].body)).not.toContain("localhost");
     expect(String(fetch.mock.calls[0][1].body)).toContain("code=auth-code");
     expect(String(fetch.mock.calls[0][1].body)).not.toContain("auth-code%23_");
     expect(String(fetch.mock.calls[1][0])).toContain("https://graph.threads.com/access_token?grant_type=th_exchange_token");
