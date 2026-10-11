@@ -81,8 +81,8 @@ const DEFINITIONS = {
     notes: "Requires SoundCloud app credentials.",
   },
   LinkedIn: {
-    capabilities: ["READ_PROFILE", "CREATE_POST", "PUBLISH_POST", "PUBLISH_TEXT"],
-    notes: "Rails reserved — UNSUPPORTED in this sprint.",
+    capabilities: ["READ_PROFILE"],
+    notes: "Sign In with LinkedIn using OpenID Connect requests openid and profile. Posting is not part of this connection.",
   },
   Snapchat: {
     capabilities: [],

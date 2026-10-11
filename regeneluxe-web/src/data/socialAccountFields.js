@@ -40,7 +40,7 @@ export function fieldsForPlatform(platform) {
       displayName: true,
       handle: false,
       profileUrl: false,
-      note: "LinkedIn stays Unsupported until a real connector exists. A URL does not connect it.",
+      note: "A pasted LinkedIn URL does not connect the account. Use Connect account.",
     };
   }
   if (platform === "YouTube") {

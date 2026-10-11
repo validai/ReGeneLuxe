@@ -48,7 +48,10 @@ describe("connectors", () => {
     expect(publishMediaSupport("Twitch")).toMatchObject({ text: false, image: false, video: false, schedule: false });
     expect(publishMediaSupport("Kick")).toMatchObject({ text: false, image: false, video: false, schedule: false });
     expect(hasCapability(emptyAccount({ platform: "Twitch", connectionState: "CONNECTED" }), "READ_PROFILE")).toBe(true);
-    expect(hasCapability(emptyAccount({ platform: "Kick", connectionState: "CONNECTED" }), "READ_PROFILE")).toBe(true);
+    expect(declaredCapabilities("LinkedIn")).toEqual(["READ_PROFILE"]);
+    expect(publishMediaSupport("LinkedIn")).toMatchObject({ text: false, image: false, video: false, schedule: false });
+    expect(hasCapability(emptyAccount({ platform: "LinkedIn", connectionState: "CONNECTED" }), "READ_PROFILE")).toBe(true);
+    expect(hasCapability(emptyAccount({ platform: "LinkedIn", connectionState: "CONNECTED" }), "PUBLISH_TEXT")).toBe(false);
     expect(declaredCapabilities("Snapchat")).toEqual([]);
     for (const platform of ["Snapchat", "Twitch", "Kick"]) {
       const account = emptyAccount({ platform, connectionState: "MANUAL_ONLY" });

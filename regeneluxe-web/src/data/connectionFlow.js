@@ -20,7 +20,7 @@ export const CONNECT_PROVIDERS = Object.freeze([
   { id: "youtube", label: "YouTube", continueWith: "Continue with Google", grant: "youtube", live: true },
   { id: "tiktok", label: "TikTok", continueWith: "Continue with TikTok", grant: "tiktok", live: true },
   { id: "x", label: "X", continueWith: "Continue with X", grant: "x", live: true },
-  { id: "linkedin", label: "LinkedIn", continueWith: "Continue with LinkedIn", grant: "linkedin", live: false },
+  { id: "linkedin", label: "LinkedIn", continueWith: "Continue with LinkedIn", grant: "linkedin", live: true },
   { id: "soundcloud", label: "SoundCloud", continueWith: "Continue with SoundCloud", grant: "soundcloud", live: false },
   { id: "snapchat", label: "Snapchat", continueWith: "Continue with Snapchat", grant: "snapchat", live: false },
   { id: "twitch", label: "Twitch", continueWith: "Continue with Twitch", grant: "twitch", live: true },
@@ -391,6 +391,22 @@ export function destinationsFromAuthResult(provider, result = {}) {
       match: "login",
     }];
   }
+  if (id === "linkedin" && result.profile?.providerAccountId) {
+    return [{
+      id: `linkedin:${result.profile.providerAccountId}`,
+      provider: "linkedin",
+      platform: "LinkedIn",
+      name: result.profile.displayName || "LinkedIn",
+      handle: result.profile.handle || "",
+      type: "LinkedIn member",
+      externalId: String(result.profile.providerAccountId),
+      relationship: "",
+      profileUrl: result.profile.profileUrl || "",
+      pageId: "",
+      pageName: "",
+      match: "login",
+    }];
+  }
   if (id === "kick" && result.profile?.providerAccountId) {
     return [{
       id: `kick:${result.profile.providerAccountId}`,
@@ -436,7 +452,7 @@ export function failureFromAuth(result = {}) {
   if (result.code === "INVALID_CLIENT" || result.code === "INVALID_REDIRECT") return "setup";
   if (result.code === "INVALID_PKCE" || result.code === "TOKEN_INACTIVE") return "reconnect";
   if (result.code === "TOKEN_EXCHANGE_FAILED") return "provider";
-  if (result.code === "NO_DESTINATIONS" || /no threads profile|no x account|no tiktok account|no twitch account|no kick account|no youtube channel|no eligible|no facebook page|no professional/i.test(message)) return "none";
+  if (result.code === "NO_DESTINATIONS" || /no threads profile|no x account|no tiktok account|no twitch account|no kick account|no linkedin member|no youtube channel|no eligible|no facebook page|no professional/i.test(message)) return "none";
   if (result.code === "PROVIDER_ERROR") return "provider";
   if (result.connectionState === "RECONNECT_REQUIRED" || result.code === "RECONNECT_REQUIRED") return "reconnect";
   if (result.readiness === "PROVIDER_REVIEW_REQUIRED" || result.reason === "PROVIDER_REVIEW_REQUIRED") return "review";

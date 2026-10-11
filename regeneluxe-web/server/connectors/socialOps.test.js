@@ -103,6 +103,15 @@ describe("connector registry", () => {
     const snapAuth = await snapchat.beginAuth();
     expect(snapAuth.ok).toBe(false);
     expect(snapAuth.reason).toBe("UNSUPPORTED");
+    delete process.env.LINKEDIN_CLIENT_ID;
+    delete process.env.LINKEDIN_CLIENT_SECRET;
+    const linkedin = getConnector("linkedin");
+    expect(linkedin.resolveReadiness()).toBe("SETUP_REQUIRED");
+    expect(linkedin.capabilities).toEqual(["READ_PROFILE"]);
+    const linkedinAuth = await linkedin.beginAuth();
+    expect(linkedinAuth.ok).toBe(false);
+    expect(linkedinAuth.reason).toBe("SETUP_REQUIRED");
+    expect(linkedinAuth.authUrl).toBeUndefined();
     delete process.env.KICK_CLIENT_ID;
     delete process.env.KICK_CLIENT_SECRET;
     const kick = getConnector("kick");
@@ -125,6 +134,7 @@ describe("connector registry", () => {
     expect(defs.find((d) => d.provider === "snapchat")?.readiness).toBe("UNSUPPORTED");
     expect(defs.find((d) => d.provider === "twitch")?.readiness).toBe("SETUP_REQUIRED");
     expect(defs.find((d) => d.provider === "kick")?.readiness).toBe("SETUP_REQUIRED");
+    expect(defs.find((d) => d.provider === "linkedin")?.readiness).toBe("SETUP_REQUIRED");
   });
 });
 

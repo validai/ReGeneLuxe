@@ -27,6 +27,7 @@ describe("connection flow contract", () => {
       "youtube",
       "tiktok",
       "x",
+      "linkedin",
       "twitch",
       "kick",
     ]);

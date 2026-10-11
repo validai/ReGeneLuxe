@@ -6,6 +6,7 @@ import { threadsConnector } from "./providers/threads.js";
 import { soundcloudConnector } from "./providers/soundcloud.js";
 import { twitchConnector } from "./providers/twitch.js";
 import { kickConnector } from "./providers/kick.js";
+import { linkedinConnector } from "./providers/linkedin.js";
 import { createMockConnector } from "./providers/mock.js";
 import { expandCapabilities, hasCapabilityIn, PROVIDER_READINESS } from "./capabilities.js";
 import { hasAccountTokens } from "../secrets/providers.js";
@@ -73,7 +74,7 @@ const CORE = {
   x: xConnector,
   threads: threadsConnector,
   soundcloud: soundcloudConnector,
-  linkedin: unsupportedStub({ provider: "linkedin", displayName: "LinkedIn", reservedRails: true }),
+  linkedin: linkedinConnector,
   snapchat: unsupportedStub({ provider: "snapchat", displayName: "Snapchat" }),
   twitch: twitchConnector,
   kick: kickConnector,

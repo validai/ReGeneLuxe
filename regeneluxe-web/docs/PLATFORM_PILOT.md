@@ -137,6 +137,22 @@ Kick connection uses the OAuth 2.1 authorization code grant with PKCE. The callb
 
 The PKCE challenge is the base64url SHA-256 of the verifier. The verifier stays in the server OAuth state and is discarded with that state. Kick's token response includes `expires_in` and a new refresh token on refresh. The callback stores tokens only after introspection reports an active user token for this client with `user:read`, and Get Users returns a `user_id`. That user id is the account identity. Channel, chat, stream-key, event, moderation, rewards, and ads endpoints are not called. The operator confirms the Kick account before any row is created or linked. A manual row links only when its handle is the same username. Display name alone is not a match. The confirmed account is `CONNECTED` with `APPROVAL_REQUIRED`. Real Kick connect has not been executed.
 
+## LinkedIn
+
+LinkedIn connection uses Sign In with LinkedIn using OpenID Connect. It is the confidential authorization-code flow. PKCE is not required. The callback stays on the canonical local origin. The Threads HTTPS bridge is not used.
+
+| Item | Value |
+| --- | --- |
+| Authorization | `GET https://www.linkedin.com/oauth/v2/authorization` |
+| Token exchange | `POST https://www.linkedin.com/oauth/v2/accessToken` |
+| Refresh | Only when LinkedIn returns a refresh token. Most identity apps do not |
+| Profile | `GET https://api.linkedin.com/v2/userinfo` |
+| Env | `LINKEDIN_CLIENT_ID` and `LINKEDIN_CLIENT_SECRET`. `LINKEDIN_REDIRECT_URI` is an optional override |
+| Redirect | `http://localhost:5174/api/oauth/linkedin/callback` |
+| Scope | `openid` and `profile` |
+
+The member subject `sub` is the account id. Userinfo also supplies the name and picture. Email is not requested and is not stored. OpenID Connect does not return a public profile slug, so the destination does not invent a `/in/` URL. The access token lasts 60 days. Programmatic refresh tokens are partner-only; when one is absent, reconnect is a new authorization. The operator confirms the member before any row is created or linked. A manual row is not linked from the display name. The confirmed account is `CONNECTED` with `APPROVAL_REQUIRED`. Share on LinkedIn, organization posting, and ads are not requested. Real LinkedIn connect has not been executed.
+
 ## YouTube
 
 The Settings YouTube connection stays a readonly channel grant. It uses `youtube.readonly` and `yt-analytics.readonly`, and it still selects the only channel or asks when Google returns more than one. That path does not request upload permission.
@@ -197,5 +213,6 @@ Do not publish from a script. After credentials exist, connect in the app, confi
 | YouTube | access token about 1 hour, refresh token when Google returns one | `RECONNECT_REQUIRED` when refresh or upload auth fails |
 | Twitch | access token about 4 hours, confidential refresh token until revoked or rotated | `RECONNECT_REQUIRED` when validation or refresh fails |
 | Kick | `expires_in` from the token response; refresh token is replaced when Kick returns a new one | `RECONNECT_REQUIRED` when introspection or refresh fails |
+| LinkedIn | access token 60 days; refresh token only when LinkedIn issues one | `RECONNECT_REQUIRED` when the token expires and no refresh token is stored |
 
 Ordinary provider failures that are not an authorization rejection stay `ERROR`. Refreshed tokens stay in the vault.
