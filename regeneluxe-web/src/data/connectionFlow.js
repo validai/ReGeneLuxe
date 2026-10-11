@@ -19,7 +19,7 @@ export const CONNECT_PROVIDERS = Object.freeze([
   { id: "threads", label: "Threads", continueWith: "Continue with Threads", grant: "threads", live: true },
   { id: "youtube", label: "YouTube", continueWith: "Continue with Google", grant: "youtube", live: true },
   { id: "tiktok", label: "TikTok", continueWith: "Continue with TikTok", grant: "tiktok", live: false },
-  { id: "x", label: "X", continueWith: "Continue with X", grant: "x", live: false },
+  { id: "x", label: "X", continueWith: "Continue with X", grant: "x", live: true },
   { id: "linkedin", label: "LinkedIn", continueWith: "Continue with LinkedIn", grant: "linkedin", live: false },
   { id: "soundcloud", label: "SoundCloud", continueWith: "Continue with SoundCloud", grant: "soundcloud", live: false },
   { id: "snapchat", label: "Snapchat", continueWith: "Continue with Snapchat", grant: "snapchat", live: false },
@@ -86,6 +86,16 @@ export const CONNECTION_FAILURES = Object.freeze({
     title: "Permission required",
     body: "Threads did not grant the permission needed to read this profile.",
     action: "Back to providers",
+  },
+  plan: {
+    title: "X API credits required",
+    body: "Reading this X profile needs X API credits. Nothing was added.",
+    action: "Back to providers",
+  },
+  rate: {
+    title: "X rate limit",
+    body: "X limited this connection attempt. Try again shortly.",
+    action: "Try again",
   },
   provider: {
     title: "Threads unavailable",
@@ -333,6 +343,21 @@ export function destinationsFromAuthResult(provider, result = {}) {
       pageName: "",
     })).filter((destination) => destination.externalId);
   }
+  if (id === "x" && result.profile?.providerAccountId) {
+    return [{
+      id: `x:${result.profile.providerAccountId}`,
+      provider: "x",
+      platform: "X",
+      name: result.profile.displayName || result.profile.handle || "X",
+      handle: result.profile.handle || "",
+      type: "X account",
+      externalId: String(result.profile.providerAccountId),
+      relationship: "",
+      profileUrl: result.profile.profileUrl || "",
+      pageId: "",
+      pageName: "",
+    }];
+  }
   if (id === "threads" && result.profile?.providerAccountId) {
     return [{
       id: `threads:${result.profile.providerAccountId}`,
@@ -356,7 +381,9 @@ export function failureFromAuth(result = {}) {
   if (/denied|cancel/i.test(message)) return "cancelled";
   if (/professional instagram/i.test(message)) return "professional";
   if (result.code === "PERMISSION_MISSING") return "permission";
-  if (result.code === "NO_DESTINATIONS" || /no threads profile|no youtube channel|no eligible|no facebook page|no professional/i.test(message)) return "none";
+  if (result.code === "PLAN_REQUIRED") return "plan";
+  if (result.code === "RATE_LIMITED") return "rate";
+  if (result.code === "NO_DESTINATIONS" || /no threads profile|no x account|no youtube channel|no eligible|no facebook page|no professional/i.test(message)) return "none";
   if (result.code === "PROVIDER_ERROR") return "provider";
   if (result.connectionState === "RECONNECT_REQUIRED" || result.code === "RECONNECT_REQUIRED") return "reconnect";
   if (result.readiness === "PROVIDER_REVIEW_REQUIRED" || result.reason === "PROVIDER_REVIEW_REQUIRED") return "review";

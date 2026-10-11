@@ -61,17 +61,8 @@ const DEFINITIONS = {
     notes: "Available after TikTok provider approval for posting/analytics products.",
   },
   X: {
-    capabilities: [
-      ...ALL_READ,
-      "READ_COMMENTS",
-      "READ_MENTIONS",
-      "READ_MESSAGES",
-      "CREATE_POST",
-      "PUBLISH_POST",
-      "PUBLISH_TEXT",
-      "PUBLISH_IMAGE",
-    ],
-    notes: "Requires X OAuth 2.0 client credentials.",
+    capabilities: ["READ_PROFILE"],
+    notes: "OAuth 2.0 PKCE connection requests users.read and offline.access. Text posting code exists and has not been live-tested, so it is not shown as a capability.",
   },
   Threads: {
     capabilities: [

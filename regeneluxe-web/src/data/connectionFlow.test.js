@@ -25,6 +25,7 @@ describe("connection flow contract", () => {
       "facebook",
       "threads",
       "youtube",
+      "x",
     ]);
     expect(CONNECT_PROVIDERS.some((provider) => provider.id === "tiktok" && provider.live === false)).toBe(true);
     expect(readinessLabel("IMPLEMENTED")).toBe("Ready to connect");

@@ -65,6 +65,24 @@ The ReGeneLuxe app stays on `http://localhost:5174`. Threads local OAuth uses a 
 
 The callback stores the token in the vault and returns one Threads profile. The operator confirms that destination before any account row is created or linked. A matching manual Threads entry is not merged automatically. The confirmed account is `CONNECTED` with `APPROVAL_REQUIRED`. Real Threads connect has not been executed. Publishing is not part of this connection.
 
+## X
+
+X uses OAuth 2.0 Authorization Code with PKCE. It does not use OAuth 1.0a or an app-only bearer token. The app type is a confidential Web App. ReGeneLuxe keeps the client secret on the server.
+
+| Item | Value |
+| --- | --- |
+| Authorization | `https://x.com/i/oauth2/authorize` |
+| Token exchange | `POST https://api.x.com/2/oauth2/token` |
+| Refresh | `POST https://api.x.com/2/oauth2/token` with `grant_type=refresh_token` |
+| Profile | `GET https://api.x.com/2/users/me?user.fields=id,username,name,profile_image_url` |
+| Env | `X_CLIENT_ID` and `X_CLIENT_SECRET`. `X_REDIRECT_URI` is an optional override |
+| Redirect | `http://localhost:5174/api/oauth/x/callback` |
+| Scope | `users.read` and `offline.access` |
+
+The access token lasts about two hours. `offline.access` asks X for a refresh token so the vault can renew it. The PKCE verifier stays in the server OAuth state and is discarded with that state. The callback stores tokens only after X returns a user id. The operator confirms that one X account before any account row is created or linked. A matching manual X entry is not merged automatically. The confirmed account is `CONNECTED` with `APPROVAL_REQUIRED`.
+
+This connection does not request `tweet.write` and does not post. Older text-posting code remains in the connector and has not been live-tested, so the account card does not show a publishing capability. `GET /2/users/me` is a billed X user read. A zero credit balance blocks profile discovery. Real X connect has not been executed.
+
 ## YouTube
 
 The Settings YouTube connection stays a readonly channel grant. It uses `youtube.readonly` and `yt-analytics.readonly`, and it still selects the only channel or asks when Google returns more than one. That path does not request upload permission.

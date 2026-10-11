@@ -17,6 +17,7 @@ export function createOAuthState({
   managedProfileId = null,
   operatorId = null,
   connectionId = null,
+  pkceVerifier = null,
 } = {}) {
   const secrets = store();
   const state = randomBytes(24).toString("hex");
@@ -28,6 +29,7 @@ export function createOAuthState({
     ...(managedProfileId ? { managedProfileId } : {}),
     ...(operatorId ? { operatorId } : {}),
     ...(connectionId ? { connectionId } : {}),
+    ...(pkceVerifier ? { pkceVerifier } : {}),
   };
   // prune expired
   const now = Date.now();
