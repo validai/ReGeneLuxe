@@ -119,6 +119,24 @@ Twitch connection uses the authorization code grant. The app is a confidential s
 
 Get Users returns the authorizing user without a scope. Email, chat, channel management, clips, and schedule scopes are not requested. The access token lasts about four hours. A confidential refresh token does not expire on a timer, and Twitch may replace it on refresh. The callback validates the token, reads the user id, login, display name, and profile image, then stores the tokens. The operator confirms that Twitch account before any row is created or linked. A manual row links only when its handle is the same login. Display name alone is not a match. The confirmed account is `CONNECTED` with `APPROVAL_REQUIRED`. Stream, chat, clip, and moderation calls are not part of this connection. Real Twitch connect has not been executed.
 
+## Kick
+
+Kick connection uses the OAuth 2.1 authorization code grant with PKCE. The callback stays on the canonical local origin. Use `localhost`, not `127.0.0.1`. The Threads HTTPS bridge is not used.
+
+| Item | Value |
+| --- | --- |
+| Authorization | `GET https://id.kick.com/oauth/authorize` |
+| Token exchange | `POST https://id.kick.com/oauth/token` |
+| Refresh | `POST https://id.kick.com/oauth/token` with `grant_type=refresh_token` |
+| Introspection | `POST https://id.kick.com/oauth/token/introspect` once after the code exchange |
+| Profile | `GET https://api.kick.com/public/v1/users` |
+| Revoke | `POST https://id.kick.com/oauth/revoke` on disconnect |
+| Env | `KICK_CLIENT_ID` and `KICK_CLIENT_SECRET`. `KICK_REDIRECT_URI` is an optional override |
+| Redirect | `http://localhost:5174/api/oauth/kick/callback` |
+| Scope | `user:read` |
+
+The PKCE challenge is the base64url SHA-256 of the verifier. The verifier stays in the server OAuth state and is discarded with that state. Kick's token response includes `expires_in` and a new refresh token on refresh. The callback stores tokens only after introspection reports an active user token for this client with `user:read`, and Get Users returns a `user_id`. That user id is the account identity. Channel, chat, stream-key, event, moderation, rewards, and ads endpoints are not called. The operator confirms the Kick account before any row is created or linked. A manual row links only when its handle is the same username. Display name alone is not a match. The confirmed account is `CONNECTED` with `APPROVAL_REQUIRED`. Real Kick connect has not been executed.
+
 ## YouTube
 
 The Settings YouTube connection stays a readonly channel grant. It uses `youtube.readonly` and `yt-analytics.readonly`, and it still selects the only channel or asks when Google returns more than one. That path does not request upload permission.
@@ -178,5 +196,6 @@ Do not publish from a script. After credentials exist, connect in the app, confi
 | Threads | short-lived, then long-lived after exchange | `RECONNECT_REQUIRED` when identity or publish auth fails |
 | YouTube | access token about 1 hour, refresh token when Google returns one | `RECONNECT_REQUIRED` when refresh or upload auth fails |
 | Twitch | access token about 4 hours, confidential refresh token until revoked or rotated | `RECONNECT_REQUIRED` when validation or refresh fails |
+| Kick | `expires_in` from the token response; refresh token is replaced when Kick returns a new one | `RECONNECT_REQUIRED` when introspection or refresh fails |
 
 Ordinary provider failures that are not an authorization rejection stay `ERROR`. Refreshed tokens stay in the vault.

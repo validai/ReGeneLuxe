@@ -24,7 +24,7 @@ export const CONNECT_PROVIDERS = Object.freeze([
   { id: "soundcloud", label: "SoundCloud", continueWith: "Continue with SoundCloud", grant: "soundcloud", live: false },
   { id: "snapchat", label: "Snapchat", continueWith: "Continue with Snapchat", grant: "snapchat", live: false },
   { id: "twitch", label: "Twitch", continueWith: "Continue with Twitch", grant: "twitch", live: true },
-  { id: "kick", label: "Kick", continueWith: "Continue with Kick", grant: "kick", live: false },
+  { id: "kick", label: "Kick", continueWith: "Continue with Kick", grant: "kick", live: true },
 ]);
 
 const PLATFORM_LABEL = Object.freeze({
@@ -391,6 +391,22 @@ export function destinationsFromAuthResult(provider, result = {}) {
       match: "login",
     }];
   }
+  if (id === "kick" && result.profile?.providerAccountId) {
+    return [{
+      id: `kick:${result.profile.providerAccountId}`,
+      provider: "kick",
+      platform: "Kick",
+      name: result.profile.displayName || result.profile.handle || "Kick",
+      handle: result.profile.handle || "",
+      type: "Kick account",
+      externalId: String(result.profile.providerAccountId),
+      relationship: "",
+      profileUrl: result.profile.profileUrl || "",
+      pageId: "",
+      pageName: "",
+      match: "login",
+    }];
+  }
   if (id === "threads" && result.profile?.providerAccountId) {
     return [{
       id: `threads:${result.profile.providerAccountId}`,
@@ -417,7 +433,10 @@ export function failureFromAuth(result = {}) {
   if (result.code === "PLAN_REQUIRED") return "plan";
   if (result.code === "RATE_LIMITED") return "rate";
   if (result.code === "REVIEW_REQUIRED") return "review";
-  if (result.code === "NO_DESTINATIONS" || /no threads profile|no x account|no tiktok account|no twitch account|no youtube channel|no eligible|no facebook page|no professional/i.test(message)) return "none";
+  if (result.code === "INVALID_CLIENT" || result.code === "INVALID_REDIRECT") return "setup";
+  if (result.code === "INVALID_PKCE" || result.code === "TOKEN_INACTIVE") return "reconnect";
+  if (result.code === "TOKEN_EXCHANGE_FAILED") return "provider";
+  if (result.code === "NO_DESTINATIONS" || /no threads profile|no x account|no tiktok account|no twitch account|no kick account|no youtube channel|no eligible|no facebook page|no professional/i.test(message)) return "none";
   if (result.code === "PROVIDER_ERROR") return "provider";
   if (result.connectionState === "RECONNECT_REQUIRED" || result.code === "RECONNECT_REQUIRED") return "reconnect";
   if (result.readiness === "PROVIDER_REVIEW_REQUIRED" || result.reason === "PROVIDER_REVIEW_REQUIRED") return "review";

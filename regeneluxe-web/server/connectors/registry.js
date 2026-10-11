@@ -5,6 +5,7 @@ import { xConnector } from "./providers/x.js";
 import { threadsConnector } from "./providers/threads.js";
 import { soundcloudConnector } from "./providers/soundcloud.js";
 import { twitchConnector } from "./providers/twitch.js";
+import { kickConnector } from "./providers/kick.js";
 import { createMockConnector } from "./providers/mock.js";
 import { expandCapabilities, hasCapabilityIn, PROVIDER_READINESS } from "./capabilities.js";
 import { hasAccountTokens } from "../secrets/providers.js";
@@ -75,7 +76,7 @@ const CORE = {
   linkedin: unsupportedStub({ provider: "linkedin", displayName: "LinkedIn", reservedRails: true }),
   snapchat: unsupportedStub({ provider: "snapchat", displayName: "Snapchat" }),
   twitch: twitchConnector,
-  kick: unsupportedStub({ provider: "kick", displayName: "Kick" }),
+  kick: kickConnector,
 };
 
 function allowMock() {

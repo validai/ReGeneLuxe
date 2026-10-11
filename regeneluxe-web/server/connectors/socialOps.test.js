@@ -96,15 +96,22 @@ describe("connector registry", () => {
     else process.env.AUTH_GOOGLE_SECRET = previousGoogleSecret;
   });
 
-  it("reports Snapchat and Kick as UNSUPPORTED and Twitch as setup until credentials exist", async () => {
-    for (const id of ["snapchat", "kick"]) {
-      const connector = getConnector(id);
-      expect(connector.resolveReadiness()).toBe("UNSUPPORTED");
-      expect(connector.capabilities).toEqual([]);
-      const auth = await connector.beginAuth();
-      expect(auth.ok).toBe(false);
-      expect(auth.reason).toBe("UNSUPPORTED");
-    }
+  it("reports Snapchat as UNSUPPORTED and Kick and Twitch as setup until credentials exist", async () => {
+    const snapchat = getConnector("snapchat");
+    expect(snapchat.resolveReadiness()).toBe("UNSUPPORTED");
+    expect(snapchat.capabilities).toEqual([]);
+    const snapAuth = await snapchat.beginAuth();
+    expect(snapAuth.ok).toBe(false);
+    expect(snapAuth.reason).toBe("UNSUPPORTED");
+    delete process.env.KICK_CLIENT_ID;
+    delete process.env.KICK_CLIENT_SECRET;
+    const kick = getConnector("kick");
+    expect(kick.resolveReadiness()).toBe("SETUP_REQUIRED");
+    expect(kick.capabilities).toEqual(["READ_PROFILE"]);
+    const kickAuth = await kick.beginAuth();
+    expect(kickAuth.ok).toBe(false);
+    expect(kickAuth.reason).toBe("SETUP_REQUIRED");
+    expect(kickAuth.authUrl).toBeUndefined();
     delete process.env.TWITCH_CLIENT_ID;
     delete process.env.TWITCH_CLIENT_SECRET;
     const twitch = getConnector("twitch");
@@ -117,7 +124,7 @@ describe("connector registry", () => {
     const defs = listProviderDefinitions();
     expect(defs.find((d) => d.provider === "snapchat")?.readiness).toBe("UNSUPPORTED");
     expect(defs.find((d) => d.provider === "twitch")?.readiness).toBe("SETUP_REQUIRED");
-    expect(defs.find((d) => d.provider === "kick")?.readiness).toBe("UNSUPPORTED");
+    expect(defs.find((d) => d.provider === "kick")?.readiness).toBe("SETUP_REQUIRED");
   });
 });
 

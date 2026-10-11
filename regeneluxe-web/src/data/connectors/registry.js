@@ -93,8 +93,8 @@ const DEFINITIONS = {
     notes: "Authorization code connection requests no extra scopes. Stream, chat, and clip actions are not part of this connection.",
   },
   Kick: {
-    capabilities: [],
-    notes: "No authenticated connector yet. Manual accounts stay MANUAL_ONLY.",
+    capabilities: ["READ_PROFILE"],
+    notes: "OAuth 2.1 PKCE connection requests user:read. Chat, channel changes, and stream-key access are not part of this connection.",
   },
   Other: {
     capabilities: [],

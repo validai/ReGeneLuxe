@@ -28,6 +28,7 @@ describe("connection flow contract", () => {
       "tiktok",
       "x",
       "twitch",
+      "kick",
     ]);
     expect(CONNECT_PROVIDERS.some((provider) => provider.id === "soundcloud" && provider.live === false)).toBe(true);
     expect(readinessLabel("IMPLEMENTED")).toBe("Ready to connect");
