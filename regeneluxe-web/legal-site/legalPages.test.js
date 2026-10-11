@@ -23,8 +23,10 @@ describe("public legal pages", () => {
       expect(document.querySelector('meta[name="robots"]').getAttribute("content")).toBe("index, follow");
       expect(document.querySelectorAll("script")).toHaveLength(0);
       expect(html).not.toMatch(/AUTH_SECRET|TIKTOK_CLIENT_SECRET|client_secret=|localStorage|gtag\(|googletagmanager/i);
-      expect(html).not.toMatch(/@[a-z0-9.-]+\.[a-z]{2,}/i);
-      expect(document.querySelector("[data-legal-contact]").textContent).toMatch(/not been set/i);
+      const contact = document.querySelector("[data-legal-contact] a");
+      expect(contact.getAttribute("href")).toBe("mailto:validsstudio@gmail.com");
+      expect(contact.textContent).toBe("validsstudio@gmail.com");
+      expect(html).not.toMatch(/djcoast239@gmail\.com|not been set/i);
     }
   });
 
