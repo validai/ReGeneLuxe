@@ -63,6 +63,7 @@ function safeDecrypt(value) {
  *   expiresAt: string | null,
  *   scopes: string[],
  *   providerAccountId: string | null,
+ *   tokenType: string | null,
  *   updatedAt: string | null,
  *   pages: Array<Record<string, unknown>>,
  * } | null}
@@ -86,6 +87,7 @@ export function getAccountTokens(provider, accountId) {
     expiresAt: row.expiresAt || null,
     scopes: row.scopes || [],
     providerAccountId: row.providerAccountId || null,
+    tokenType: row.tokenType || null,
     updatedAt: row.updatedAt || null,
     pages,
   };
@@ -100,6 +102,7 @@ export function getAccountTokens(provider, accountId) {
  *   expiresAt?: string | null,
  *   scopes?: string[],
  *   providerAccountId?: string | null,
+ *   tokenType?: string | null,
  *   pages?: Array<Record<string, unknown>> | null,
  * }} [tokens]
  */
@@ -109,6 +112,7 @@ export function setAccountTokens(provider, accountId, {
   expiresAt = null,
   scopes = [],
   providerAccountId = null,
+  tokenType,
   pages = null,
 } = {}) {
   if (!accountId) throw new Error("accountId required for token storage");
@@ -123,6 +127,7 @@ export function setAccountTokens(provider, accountId, {
     expiresAt,
     scopes,
     providerAccountId,
+    tokenType: tokenType !== undefined ? tokenType : (prev.tokenType || null),
     pagesCipher: pages ? encryptSecret(JSON.stringify(pages)) : prev.pagesCipher,
     updatedAt: new Date().toISOString(),
   };

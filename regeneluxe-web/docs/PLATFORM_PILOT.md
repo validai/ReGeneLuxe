@@ -101,6 +101,24 @@ Desktop Login Kit requires PKCE. TikTok's code challenge is the hex SHA-256 of t
 
 Content Posting API is not added. The account card shows no publishing capability. Sandbox mode lets a target user connect without app review and without payment. A public Login Kit app still needs TikTok app review. Real TikTok connect has not been executed.
 
+## Twitch
+
+Twitch connection uses the authorization code grant. The app is a confidential server client, so PKCE is not required. The callback stays on the canonical local origin. The Threads HTTPS bridge is not used.
+
+| Item | Value |
+| --- | --- |
+| Authorization | `https://id.twitch.tv/oauth2/authorize` |
+| Token exchange | `POST https://id.twitch.tv/oauth2/token` |
+| Refresh | `POST https://id.twitch.tv/oauth2/token` with `grant_type=refresh_token` |
+| Validation | `GET https://id.twitch.tv/oauth2/validate` once after the code exchange |
+| Profile | `GET https://api.twitch.tv/helix/users` with the user token and `Client-Id` |
+| Revoke | `POST https://id.twitch.tv/oauth2/revoke` on disconnect |
+| Env | `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET`. `TWITCH_REDIRECT_URI` is an optional override |
+| Redirect | `http://localhost:5174/api/oauth/twitch/callback` |
+| Scope | none |
+
+Get Users returns the authorizing user without a scope. Email, chat, channel management, clips, and schedule scopes are not requested. The access token lasts about four hours. A confidential refresh token does not expire on a timer, and Twitch may replace it on refresh. The callback validates the token, reads the user id, login, display name, and profile image, then stores the tokens. The operator confirms that Twitch account before any row is created or linked. A manual row links only when its handle is the same login. Display name alone is not a match. The confirmed account is `CONNECTED` with `APPROVAL_REQUIRED`. Stream, chat, clip, and moderation calls are not part of this connection. Real Twitch connect has not been executed.
+
 ## YouTube
 
 The Settings YouTube connection stays a readonly channel grant. It uses `youtube.readonly` and `yt-analytics.readonly`, and it still selects the only channel or asks when Google returns more than one. That path does not request upload permission.
@@ -159,5 +177,6 @@ Do not publish from a script. After credentials exist, connect in the app, confi
 | Page token | follows the user grant | same |
 | Threads | short-lived, then long-lived after exchange | `RECONNECT_REQUIRED` when identity or publish auth fails |
 | YouTube | access token about 1 hour, refresh token when Google returns one | `RECONNECT_REQUIRED` when refresh or upload auth fails |
+| Twitch | access token about 4 hours, confidential refresh token until revoked or rotated | `RECONNECT_REQUIRED` when validation or refresh fails |
 
 Ordinary provider failures that are not an authorization rejection stay `ERROR`. Refreshed tokens stay in the vault.

@@ -96,8 +96,8 @@ describe("connector registry", () => {
     else process.env.AUTH_GOOGLE_SECRET = previousGoogleSecret;
   });
 
-  it("reports Snapchat, Twitch, and Kick as UNSUPPORTED without inventing OAuth", async () => {
-    for (const id of ["snapchat", "twitch", "kick"]) {
+  it("reports Snapchat and Kick as UNSUPPORTED and Twitch as setup until credentials exist", async () => {
+    for (const id of ["snapchat", "kick"]) {
       const connector = getConnector(id);
       expect(connector.resolveReadiness()).toBe("UNSUPPORTED");
       expect(connector.capabilities).toEqual([]);
@@ -105,9 +105,18 @@ describe("connector registry", () => {
       expect(auth.ok).toBe(false);
       expect(auth.reason).toBe("UNSUPPORTED");
     }
+    delete process.env.TWITCH_CLIENT_ID;
+    delete process.env.TWITCH_CLIENT_SECRET;
+    const twitch = getConnector("twitch");
+    expect(twitch.resolveReadiness()).toBe("SETUP_REQUIRED");
+    expect(twitch.capabilities).toEqual(["READ_PROFILE"]);
+    const twitchAuth = await twitch.beginAuth();
+    expect(twitchAuth.ok).toBe(false);
+    expect(twitchAuth.reason).toBe("SETUP_REQUIRED");
+    expect(twitchAuth.authUrl).toBeUndefined();
     const defs = listProviderDefinitions();
     expect(defs.find((d) => d.provider === "snapchat")?.readiness).toBe("UNSUPPORTED");
-    expect(defs.find((d) => d.provider === "twitch")?.readiness).toBe("UNSUPPORTED");
+    expect(defs.find((d) => d.provider === "twitch")?.readiness).toBe("SETUP_REQUIRED");
     expect(defs.find((d) => d.provider === "kick")?.readiness).toBe("UNSUPPORTED");
   });
 });

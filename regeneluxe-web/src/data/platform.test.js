@@ -43,8 +43,13 @@ describe("connectors", () => {
   });
 
   it("does not declare publish capabilities for Snapchat, Twitch, or Kick", () => {
-    for (const platform of ["Snapchat", "Twitch", "Kick"]) {
+    expect(declaredCapabilities("Twitch")).toEqual(["READ_PROFILE"]);
+    expect(publishMediaSupport("Twitch")).toMatchObject({ text: false, image: false, video: false, schedule: false });
+    expect(hasCapability(emptyAccount({ platform: "Twitch", connectionState: "CONNECTED" }), "READ_PROFILE")).toBe(true);
+    for (const platform of ["Snapchat", "Kick"]) {
       expect(declaredCapabilities(platform)).toEqual([]);
+    }
+    for (const platform of ["Snapchat", "Twitch", "Kick"]) {
       const account = emptyAccount({ platform, connectionState: "MANUAL_ONLY" });
       expect(availableCapabilities(account)).toEqual([]);
       expect(hasCapability(account, "PUBLISH_POST")).toBe(false);

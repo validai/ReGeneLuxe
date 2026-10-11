@@ -23,7 +23,7 @@ export const CONNECT_PROVIDERS = Object.freeze([
   { id: "linkedin", label: "LinkedIn", continueWith: "Continue with LinkedIn", grant: "linkedin", live: false },
   { id: "soundcloud", label: "SoundCloud", continueWith: "Continue with SoundCloud", grant: "soundcloud", live: false },
   { id: "snapchat", label: "Snapchat", continueWith: "Continue with Snapchat", grant: "snapchat", live: false },
-  { id: "twitch", label: "Twitch", continueWith: "Continue with Twitch", grant: "twitch", live: false },
+  { id: "twitch", label: "Twitch", continueWith: "Continue with Twitch", grant: "twitch", live: true },
   { id: "kick", label: "Kick", continueWith: "Continue with Kick", grant: "kick", live: false },
 ]);
 
@@ -171,13 +171,15 @@ export function findVerifiedAccount(accounts, { workspaceId, provider, externalI
 }
 
 export function findLikelyManualMatch(accounts, destination) {
-  const handle = normalizeHandle(destination?.handle || destination?.name);
+  const loginOnly = destination?.match === "login";
+  const handle = normalizeHandle(loginOnly ? destination?.handle : (destination?.handle || destination?.name));
   if (!handle) return null;
   return (accounts || []).find((account) => {
     if (account.providerAccountId) return false;
     if (account.connectionState !== "MANUAL_ONLY" && account.connectionState !== "SETUP_REQUIRED") return false;
     if (normalizeProviderId(account.platform) !== normalizeProviderId(destination.provider || destination.platform)) return false;
-    return normalizeHandle(account.handle || account.displayName) === handle;
+    const candidate = loginOnly ? account.handle : (account.handle || account.displayName);
+    return normalizeHandle(candidate) === handle;
   }) || null;
 }
 
@@ -373,6 +375,22 @@ export function destinationsFromAuthResult(provider, result = {}) {
       pageName: "",
     }];
   }
+  if (id === "twitch" && result.profile?.providerAccountId) {
+    return [{
+      id: `twitch:${result.profile.providerAccountId}`,
+      provider: "twitch",
+      platform: "Twitch",
+      name: result.profile.displayName || result.profile.handle || "Twitch",
+      handle: result.profile.handle || "",
+      type: "Twitch account",
+      externalId: String(result.profile.providerAccountId),
+      relationship: "",
+      profileUrl: result.profile.profileUrl || "",
+      pageId: "",
+      pageName: "",
+      match: "login",
+    }];
+  }
   if (id === "threads" && result.profile?.providerAccountId) {
     return [{
       id: `threads:${result.profile.providerAccountId}`,
@@ -399,7 +417,7 @@ export function failureFromAuth(result = {}) {
   if (result.code === "PLAN_REQUIRED") return "plan";
   if (result.code === "RATE_LIMITED") return "rate";
   if (result.code === "REVIEW_REQUIRED") return "review";
-  if (result.code === "NO_DESTINATIONS" || /no threads profile|no x account|no tiktok account|no youtube channel|no eligible|no facebook page|no professional/i.test(message)) return "none";
+  if (result.code === "NO_DESTINATIONS" || /no threads profile|no x account|no tiktok account|no twitch account|no youtube channel|no eligible|no facebook page|no professional/i.test(message)) return "none";
   if (result.code === "PROVIDER_ERROR") return "provider";
   if (result.connectionState === "RECONNECT_REQUIRED" || result.code === "RECONNECT_REQUIRED") return "reconnect";
   if (result.readiness === "PROVIDER_REVIEW_REQUIRED" || result.reason === "PROVIDER_REVIEW_REQUIRED") return "review";

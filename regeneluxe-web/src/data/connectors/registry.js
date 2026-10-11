@@ -89,8 +89,8 @@ const DEFINITIONS = {
     notes: "No authenticated connector yet. Manual accounts stay MANUAL_ONLY.",
   },
   Twitch: {
-    capabilities: [],
-    notes: "No authenticated connector yet. Manual accounts stay MANUAL_ONLY.",
+    capabilities: ["READ_PROFILE"],
+    notes: "Authorization code connection requests no extra scopes. Stream, chat, and clip actions are not part of this connection.",
   },
   Kick: {
     capabilities: [],
