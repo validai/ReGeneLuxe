@@ -25,9 +25,10 @@ describe("connection flow contract", () => {
       "facebook",
       "threads",
       "youtube",
+      "tiktok",
       "x",
     ]);
-    expect(CONNECT_PROVIDERS.some((provider) => provider.id === "tiktok" && provider.live === false)).toBe(true);
+    expect(CONNECT_PROVIDERS.some((provider) => provider.id === "soundcloud" && provider.live === false)).toBe(true);
     expect(readinessLabel("IMPLEMENTED")).toBe("Ready to connect");
     expect(readinessLabel("SETUP_REQUIRED")).toBe("Setup required");
     expect(readinessLabel("PROVIDER_REVIEW_REQUIRED")).toBe("Provider review required");

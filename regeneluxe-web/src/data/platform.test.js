@@ -37,6 +37,7 @@ describe("connectors", () => {
   it("advertises only the publish shapes each Meta connector implements", () => {
     expect(publishMediaSupport("Instagram")).toMatchObject({ text: false, image: true, video: true });
     expect(publishMediaSupport("Facebook")).toMatchObject({ text: true, image: false, video: false });
+    expect(publishMediaSupport("TikTok")).toMatchObject({ text: false, image: false, video: false });
     expect(hasCapability(emptyAccount({ platform: "Instagram", connectionState: "CONNECTED" }), "PUBLISH_TEXT")).toBe(false);
     expect(hasCapability(emptyAccount({ platform: "Facebook", connectionState: "CONNECTED" }), "PUBLISH_TEXT")).toBe(true);
   });

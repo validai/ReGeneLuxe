@@ -83,6 +83,24 @@ The access token lasts about two hours. `offline.access` asks X for a refresh to
 
 This connection does not request `tweet.write` and does not post. Older text-posting code remains in the connector and has not been live-tested, so the account card does not show a publishing capability. `GET /2/users/me` is a billed X user read. A zero credit balance blocks profile discovery. Real X connect has not been executed.
 
+## TikTok
+
+TikTok connection uses Login Kit for Desktop so the local callback can stay on `http://localhost:5174`. Web Login Kit redirect URIs must begin with `https`, so that product is not used for this local app. No separate TLS host was added.
+
+| Item | Value |
+| --- | --- |
+| Authorization | `https://www.tiktok.com/v2/auth/authorize/` |
+| Token exchange | `POST https://open.tiktokapis.com/v2/oauth/token/` |
+| Refresh | `POST https://open.tiktokapis.com/v2/oauth/token/` with `grant_type=refresh_token` |
+| Profile | `GET https://open.tiktokapis.com/v2/user/info/?fields=open_id,union_id,avatar_url,display_name` |
+| Env | `TIKTOK_CLIENT_KEY` and `TIKTOK_CLIENT_SECRET`. `TIKTOK_REDIRECT_URI` is an optional override |
+| Redirect | `http://localhost:5174/api/oauth/tiktok/callback` |
+| Scope | `user.info.basic` |
+
+Desktop Login Kit requires PKCE. TikTok's code challenge is the hex SHA-256 of the verifier, kept in the server OAuth state. The access token lasts 24 hours. The refresh token lasts 365 days and is replaced in the vault when TikTok rotates it. The callback stores tokens only after an `open_id` exists. Username is not requested, because it needs `user.info.profile`. The operator confirms the TikTok account before any row is created or linked. A matching manual entry is not merged automatically. The confirmed account is `CONNECTED` with `APPROVAL_REQUIRED`.
+
+Content Posting API is not added. The account card shows no publishing capability. Sandbox mode lets a target user connect without app review and without payment. A public Login Kit app still needs TikTok app review. Real TikTok connect has not been executed.
+
 ## YouTube
 
 The Settings YouTube connection stays a readonly channel grant. It uses `youtube.readonly` and `yt-analytics.readonly`, and it still selects the only channel or asks when Google returns more than one. That path does not request upload permission.

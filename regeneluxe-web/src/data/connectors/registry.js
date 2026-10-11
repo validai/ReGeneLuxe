@@ -52,13 +52,8 @@ const DEFINITIONS = {
     notes: "Requires Google OAuth (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).",
   },
   TikTok: {
-    capabilities: [
-      ...ALL_READ,
-      "CREATE_POST",
-      "PUBLISH_POST",
-      "PUBLISH_VIDEO",
-    ],
-    notes: "Available after TikTok provider approval for posting/analytics products.",
+    capabilities: ["READ_PROFILE"],
+    notes: "Login Kit connection requests user.info.basic. Publishing is not part of this connection.",
   },
   X: {
     capabilities: ["READ_PROFILE"],
@@ -168,7 +163,7 @@ export function publishMediaSupport(platform) {
   return {
     text: caps.includes("PUBLISH_TEXT"),
     image: caps.includes("PUBLISH_IMAGE"),
-    video: caps.includes("PUBLISH_VIDEO") || platform === "YouTube" || platform === "TikTok",
+    video: caps.includes("PUBLISH_VIDEO") || platform === "YouTube",
     schedule: caps.includes("SCHEDULE") || caps.includes("SCHEDULE_POST"),
   };
 }

@@ -12,6 +12,7 @@ const definitions = [
   { provider: "threads", readiness: "PROVIDER_REVIEW_REQUIRED" },
   { provider: "youtube", readiness: "IMPLEMENTED" },
   { provider: "x", readiness: "SETUP_REQUIRED" },
+  { provider: "tiktok", readiness: "SETUP_REQUIRED" },
 ];
 
 describe("Connect account experience", () => {
@@ -32,10 +33,11 @@ describe("Connect account experience", () => {
     expect(screen.getByRole("button", { name: /threads/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /youtube/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "XSetup required" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "TikTokSetup required" })).toBeInTheDocument();
     expect(screen.getAllByText("Ready to connect").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Setup required").length).toBeGreaterThan(0);
     expect(screen.getByText("Provider review required")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /tiktok/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /soundcloud/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /instagram/i }));
     expect(screen.getByText("Connecting: Instagram")).toBeInTheDocument();

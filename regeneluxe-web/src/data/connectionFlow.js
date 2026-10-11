@@ -18,7 +18,7 @@ export const CONNECT_PROVIDERS = Object.freeze([
   { id: "facebook", label: "Facebook", continueWith: "Continue with Meta", grant: "meta", live: true },
   { id: "threads", label: "Threads", continueWith: "Continue with Threads", grant: "threads", live: true },
   { id: "youtube", label: "YouTube", continueWith: "Continue with Google", grant: "youtube", live: true },
-  { id: "tiktok", label: "TikTok", continueWith: "Continue with TikTok", grant: "tiktok", live: false },
+  { id: "tiktok", label: "TikTok", continueWith: "Continue with TikTok", grant: "tiktok", live: true },
   { id: "x", label: "X", continueWith: "Continue with X", grant: "x", live: true },
   { id: "linkedin", label: "LinkedIn", continueWith: "Continue with LinkedIn", grant: "linkedin", live: false },
   { id: "soundcloud", label: "SoundCloud", continueWith: "Continue with SoundCloud", grant: "soundcloud", live: false },
@@ -343,6 +343,21 @@ export function destinationsFromAuthResult(provider, result = {}) {
       pageName: "",
     })).filter((destination) => destination.externalId);
   }
+  if (id === "tiktok" && result.profile?.providerAccountId) {
+    return [{
+      id: `tiktok:${result.profile.providerAccountId}`,
+      provider: "tiktok",
+      platform: "TikTok",
+      name: result.profile.displayName || "TikTok",
+      handle: result.profile.handle || "",
+      type: "TikTok account",
+      externalId: String(result.profile.providerAccountId),
+      relationship: "",
+      profileUrl: result.profile.profileUrl || "",
+      pageId: "",
+      pageName: "",
+    }];
+  }
   if (id === "x" && result.profile?.providerAccountId) {
     return [{
       id: `x:${result.profile.providerAccountId}`,
@@ -383,7 +398,8 @@ export function failureFromAuth(result = {}) {
   if (result.code === "PERMISSION_MISSING") return "permission";
   if (result.code === "PLAN_REQUIRED") return "plan";
   if (result.code === "RATE_LIMITED") return "rate";
-  if (result.code === "NO_DESTINATIONS" || /no threads profile|no x account|no youtube channel|no eligible|no facebook page|no professional/i.test(message)) return "none";
+  if (result.code === "REVIEW_REQUIRED") return "review";
+  if (result.code === "NO_DESTINATIONS" || /no threads profile|no x account|no tiktok account|no youtube channel|no eligible|no facebook page|no professional/i.test(message)) return "none";
   if (result.code === "PROVIDER_ERROR") return "provider";
   if (result.connectionState === "RECONNECT_REQUIRED" || result.code === "RECONNECT_REQUIRED") return "reconnect";
   if (result.readiness === "PROVIDER_REVIEW_REQUIRED" || result.reason === "PROVIDER_REVIEW_REQUIRED") return "review";
