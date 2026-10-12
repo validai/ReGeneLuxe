@@ -62,6 +62,8 @@ export async function startAccountConnection({
   workspaceId,
   workspaceName = "",
 } = {}) {
+  const { cleanupOrphanSessionCredentials } = await import("../secrets/sessionCredentialCleanup.js");
+  await cleanupOrphanSessionCredentials().catch(() => {});
   const spec = connectProvider(provider);
   if (!spec?.live) {
     return { ok: false, failure: "unavailable", readiness: "UNSUPPORTED", message: "This provider is not available yet." };
@@ -210,7 +212,7 @@ export async function confirmAccountConnection({
   const plan = planConnectionConfirmation({
     accounts: existing,
     workspaceId: session.workspaceId,
-    destinations: session.destinations || [],
+    destinations: (session.destinations || []).filter((destination) => destination.provider === session.provider),
     selectedIds,
     choices,
   });

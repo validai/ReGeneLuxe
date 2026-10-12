@@ -127,8 +127,10 @@ describe("account connection orchestration", () => {
       workspaceId: "prf_1",
       selectedIds: ["instagram:ig_1"],
     });
-    expect(duplicate.ok).toBe(false);
-    expect(duplicate.failure).toBe("duplicate");
+    expect(duplicate.ok).toBe(true);
+    expect(duplicate.created).toEqual([]);
+    expect(duplicate.linked[0].id).toBe(confirmed.created[0].id);
+    expect(duplicate.linked[0].providerAccountId).toBe("ig_1");
     expect(await list(COLLECTIONS.accounts)).toHaveLength(1);
     expect(renamed.providerAccountId).toBe("ig_1");
   });

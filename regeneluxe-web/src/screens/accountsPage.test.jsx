@@ -127,6 +127,16 @@ describe("Social Accounts page", () => {
       displayName: "DJ Coast",
       connectionState: "CONNECTED",
     });
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        ok: true,
+        providers: [
+          { provider: "instagram", mediaDelivery: "NOT_CONFIGURED" },
+          { provider: "facebook", pagePosting: "NEEDS_PERMISSION" },
+        ],
+      }),
+    })));
     renderAccounts();
     const cardFor = async (platform) => within((await screen.findByRole("heading", { name: platform })).closest("article"));
     const youtube = await cardFor("YouTube");
@@ -149,6 +159,8 @@ describe("Social Accounts page", () => {
     expect(within(instagram.getByText("Public media").closest("div")).getByText("Not configured")).toBeInTheDocument();
     expect(within(instagram.getByText("Campaigns").closest("div")).getByText("0")).toBeInTheDocument();
 
+    expect(within(facebook.getByText("Connection").closest("div")).getByText("Connected")).toBeInTheDocument();
+    expect(within(facebook.getByText("Page posting").closest("div")).getByText("Needs pages_manage_posts")).toBeInTheDocument();
     expect(facebook.getByRole("checkbox", { name: "Text" })).toBeChecked();
     expect(facebook.getByRole("checkbox", { name: "Image" })).not.toBeChecked();
     expect(facebook.getByRole("checkbox", { name: "Video" })).not.toBeChecked();

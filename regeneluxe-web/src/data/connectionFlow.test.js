@@ -108,9 +108,11 @@ describe("connection flow contract", () => {
       ]),
       selectedIds: ["instagram:ig_1"],
     });
-    expect(plan.ok).toBe(false);
-    expect(plan.failure).toBe("duplicate");
+    expect(plan.ok).toBe(true);
     expect(plan.created).toEqual([]);
+    expect(plan.linked).toHaveLength(1);
+    expect(plan.linked[0].accountId).toBe("acc_ig");
+    expect(plan.linked[0].account.providerAccountId).toBe("ig_1");
   });
 
   it("does not auto-merge a manual record that only shares a username", () => {

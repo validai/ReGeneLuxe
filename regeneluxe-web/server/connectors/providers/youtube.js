@@ -207,7 +207,9 @@ function youtubeAccessStale(tokens) {
   return Number.isFinite(expiresAt) && expiresAt <= Date.now() + 60_000;
 }
 
-async function refreshYoutubeTokens(account, tokens) {
+const youtubeRefreshInflight = new Map();
+
+async function refreshYoutubeTokensOnce(account, tokens) {
   if (!tokens?.refreshToken) {
     return {
       ok: false,
@@ -239,14 +241,27 @@ async function refreshYoutubeTokens(account, tokens) {
     ? new Date(Date.now() + Number(tokenJson.expires_in) * 1000).toISOString()
     : tokens.expiresAt;
   const scopes = String(tokenJson.scope || (tokens.scopes || []).join(" ")).split(/\s+/).filter(Boolean);
+  const refreshToken = tokenJson.refresh_token || tokens.refreshToken;
   setAccountTokens("youtube", account.id, {
     accessToken: tokenJson.access_token,
-    refreshToken: tokenJson.refresh_token || tokens.refreshToken,
+    refreshToken,
     expiresAt,
     scopes,
     providerAccountId: tokens.providerAccountId || null,
   });
   return { ok: true, tokens: getAccountTokens("youtube", account.id) };
+}
+
+function refreshYoutubeTokens(account, tokens) {
+  const key = String(account?.id || "");
+  if (!key) return refreshYoutubeTokensOnce(account, tokens);
+  const existing = youtubeRefreshInflight.get(key);
+  if (existing) return existing;
+  const pending = refreshYoutubeTokensOnce(account, tokens).finally(() => {
+    if (youtubeRefreshInflight.get(key) === pending) youtubeRefreshInflight.delete(key);
+  });
+  youtubeRefreshInflight.set(key, pending);
+  return pending;
 }
 
 async function freshYoutubeTokens(account, tokens, { force = false } = {}) {

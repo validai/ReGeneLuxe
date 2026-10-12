@@ -291,7 +291,9 @@ describe("threads connection", () => {
       workspaceId: "prf_1",
       selectedIds: ["threads:th_1"],
     });
-    expect(duplicate.failure).toBe("duplicate");
+    expect(duplicate.ok).toBe(true);
+    expect(duplicate.created).toEqual([]);
+    expect(duplicate.linked[0].id).toBe("acc_manual");
     expect(await list(COLLECTIONS.accounts)).toHaveLength(1);
   });
 

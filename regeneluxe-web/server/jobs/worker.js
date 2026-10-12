@@ -450,6 +450,8 @@ async function jobAllowedForWorkspace(job, authz) {
  * }} [options]
  */
 export async function processJobQueue(options = {}) {
+  const { cleanupOrphanSessionCredentials } = await import("../secrets/sessionCredentialCleanup.js");
+  await cleanupOrphanSessionCredentials().catch(() => {});
   const limit = options.limit ?? 5;
   const types = options.types ?? null;
   const results = [];

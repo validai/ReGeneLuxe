@@ -4,10 +4,11 @@ import { assertPublicProviderMedia } from "../../../src/data/mediaReadiness.js";
 import { baseConnector, defaultRedirect, setupRequired, unavailable } from "../base.js";
 import { canonicalOAuthRedirect } from "../../auth/origin.js";
 import { createOAuthState, friendlyOAuthError } from "../oauth/state.js";
-import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
+import { clearAccountTokens, getAccountTokens, setAccountTokens } from "../../secrets/providers.js";
 import {
-  META_BUSINESS_LOGIN_PERMISSIONS,
+  FACEBOOK_PAGE_POST_PERMISSION,
   destinationsForSurface,
+  grantedMetaPermissions,
   metaDialogUrl,
   metaGraphUrl,
   publicDestinationsFromPages,
@@ -127,11 +128,13 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
     }
 
     const discovered = destinationsForSurface(publicDestinationsFromPages(pagesJson.data || []), surface);
+    const granted = await grantedMetaPermissions(accessToken);
+    const previousScopes = getAccountTokens(provider, stateMeta.accountId)?.scopes || [];
     setAccountTokens(provider, stateMeta.accountId, {
       accessToken,
       refreshToken: null,
       expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000).toISOString() : null,
-      scopes: [...META_BUSINESS_LOGIN_PERMISSIONS],
+      scopes: granted || previousScopes,
       providerAccountId: null,
       pages: pagesJson.data || [],
     });
@@ -182,6 +185,13 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
 
   connector._publishContent = async (account, payload, tokens) => {
     if (surface === "facebook") {
+      if (!(tokens?.scopes || []).includes(FACEBOOK_PAGE_POST_PERMISSION)) {
+        return {
+          ok: false,
+          error: "Facebook Page posting needs the pages_manage_posts permission.",
+          code: "PERMISSION_MISSING",
+        };
+      }
       const message = payload?.caption || payload?.text || "";
       if (!message) return unavailable("Facebook Page publishing requires text.");
       const page = (tokens.pages || []).find((item) => String(item.id) === String(account.pageId || account.providerAccountId));

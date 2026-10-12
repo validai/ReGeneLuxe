@@ -222,7 +222,11 @@ export function planConnectionConfirmation({
       externalId: destination.externalId,
     });
     if (duplicate) {
-      blocked.push({ destination, accountId: duplicate.id, reason: "duplicate" });
+      linked.push({
+        destination,
+        accountId: duplicate.id,
+        account: accountFromDestination(destination, workspaceId),
+      });
       continue;
     }
     const manual = findLikelyManualMatch(accounts, destination);

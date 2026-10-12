@@ -316,7 +316,9 @@ describe("linkedin connection", () => {
       workspaceId: "prf_1",
       selectedIds: ["linkedin:member-sub-1"],
     });
-    expect(duplicate.failure).toBe("duplicate");
+    expect(duplicate.ok).toBe(true);
+    expect(duplicate.created).toEqual([]);
+    expect(duplicate.linked).toHaveLength(1);
     expect(await list(COLLECTIONS.accounts)).toHaveLength(1);
   });
 

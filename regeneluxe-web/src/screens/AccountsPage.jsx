@@ -503,6 +503,9 @@ export default function AccountsPage() {
                     {account.platform === "Instagram" && account.connectionState === "CONNECTED" ? (
                       <AccountMeta label="Public media">{publicMediaReady ? "Ready" : "Not configured"}</AccountMeta>
                     ) : null}
+                    {account.platform === "Facebook" && account.connectionState === "CONNECTED" && providers.find((item) => item.provider === "facebook")?.pagePosting === "NEEDS_PERMISSION" ? (
+                      <AccountMeta label="Page posting">Needs pages_manage_posts</AccountMeta>
+                    ) : null}
                     <AccountMeta label="Campaigns">{usedBy}</AccountMeta>
                     {account.lastVerifiedAt ? (
                       <AccountMeta label="Last verified">{formatStamp(account.lastVerifiedAt)}</AccountMeta>

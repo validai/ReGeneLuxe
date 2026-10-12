@@ -19,6 +19,25 @@ export const META_BUSINESS_LOGIN_PERMISSIONS = Object.freeze([
   "pages_show_list",
 ]);
 
+/** Required by the existing Page feed publisher. Not sent on the auth URL; the Login configuration grants it. */
+export const FACEBOOK_PAGE_POST_PERMISSION = "pages_manage_posts";
+
+export function facebookPagePostGrant(scopes) {
+  return (Array.isArray(scopes) ? scopes : []).includes(FACEBOOK_PAGE_POST_PERMISSION);
+}
+
+export async function grantedMetaPermissions(accessToken, fetchImpl = fetch) {
+  if (!accessToken) return null;
+  const url = new URL(metaGraphUrl("/me/permissions"));
+  url.searchParams.set("access_token", accessToken);
+  const res = await fetchImpl(url);
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !Array.isArray(json.data)) return null;
+  return json.data
+    .filter((row) => row && row.status === "granted" && row.permission)
+    .map((row) => String(row.permission));
+}
+
 export const META_PILOT_SCOPES = META_BUSINESS_LOGIN_PERMISSIONS;
 
 export function metaGraphVersion() {

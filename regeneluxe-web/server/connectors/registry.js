@@ -9,8 +9,18 @@ import { kickConnector } from "./providers/kick.js";
 import { linkedinConnector } from "./providers/linkedin.js";
 import { createMockConnector } from "./providers/mock.js";
 import { expandCapabilities, hasCapabilityIn, PROVIDER_READINESS } from "./capabilities.js";
-import { hasAccountTokens } from "../secrets/providers.js";
+import { hasAccountTokens, publicProviderVaultStatus } from "../secrets/providers.js";
+import { facebookPagePostGrant } from "./providers/metaGraph.js";
+import { isConnectionSessionId } from "../../src/data/connectionFlow.js";
 import { publicMediaReadiness } from "../media/publicProvider.js";
+
+function facebookPagePostingStatus() {
+  const rows = publicProviderVaultStatus().accounts.filter((row) => (
+    row.provider === "facebook" && !isConnectionSessionId(row.accountId)
+  ));
+  if (!rows.length) return "UNKNOWN";
+  return rows.every((row) => facebookPagePostGrant(row.scopes)) ? "GRANTED" : "NEEDS_PERMISSION";
+}
 
 const PLATFORM_ALIASES = {
   Instagram: "instagram",
@@ -132,6 +142,7 @@ export function listProviderDefinitions() {
     analyticsNormalization: true,
     publishingSupport: (connector.capabilities || []).some((c) => String(c).startsWith("PUBLISH") || c === "SCHEDULE"),
     ...(connector.provider === "instagram" ? { mediaDelivery: publicMediaReadiness().status } : {}),
+    ...(connector.provider === "facebook" ? { pagePosting: facebookPagePostingStatus() } : {}),
   }));
   if (allowMock()) {
     const mock = createMockConnector();
