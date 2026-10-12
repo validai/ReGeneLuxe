@@ -41,7 +41,7 @@ describe("content thumbnails on operator surfaces", () => {
     expect(screen.queryByRole("img")).toBeNull();
   });
 
-  it("shows a compact calendar thumbnail only for visual items", () => {
+  it("keeps month cells readable and shows a thumbnail in the calendar list", () => {
     const visual = emptyContentItem({
       title: "On the grid",
       status: "SCHEDULED",
@@ -53,13 +53,33 @@ describe("content thumbnails on operator surfaces", () => {
       status: "SCHEDULED",
       scheduledAt: new Date().toISOString(),
     });
-    render(
+    const month = render(
       <MemoryRouter>
         <CalendarBoard items={[visual, text]} accounts={[]} campaigns={[]} view="month" />
       </MemoryRouter>
     );
-    expect(screen.getByRole("img", { name: "On the grid" })).toHaveAttribute("src", COVER);
+    expect(screen.getByText("On the grid")).toBeInTheDocument();
     expect(screen.getByText("Caption slot")).toBeInTheDocument();
+    expect(screen.queryByRole("img")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /on the grid/i }));
+    expect(screen.getByRole("img", { name: "On the grid" })).toHaveAttribute("src", COVER);
+    month.unmount();
+
+    const week = render(
+      <MemoryRouter>
+        <CalendarBoard items={[visual, text]} accounts={[]} campaigns={[]} view="week" />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole("img", { name: "On the grid" })).toHaveAttribute("src", COVER);
+    expect(screen.getAllByRole("img")).toHaveLength(1);
+    week.unmount();
+
+    render(
+      <MemoryRouter>
+        <CalendarBoard items={[visual, text]} accounts={[]} campaigns={[]} view="list" />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole("img", { name: "On the grid" })).toHaveAttribute("src", COVER);
     expect(screen.getAllByRole("img")).toHaveLength(1);
   });
 

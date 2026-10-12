@@ -76,7 +76,7 @@ function moveScheduledAt(item, dateKey) {
   return `${dateKey}T${time}`;
 }
 
-function CalendarItemCard({ item, accounts, onOpen, draggable = false }) {
+function CalendarItemCard({ item, accounts, onOpen, draggable = false, showThumbnail = false }) {
   const account = primaryAccount(item, accounts);
   const time = formatTimeOfDay(item.scheduledAt || item.publishedAt);
   const title = item.title || "Untitled";
@@ -95,7 +95,7 @@ function CalendarItemCard({ item, accounts, onOpen, draggable = false }) {
       className="flex w-full items-start gap-1 rounded px-1 py-1 text-left hover:bg-rl_surfaceSoft"
       title={title}
     >
-      <ContentThumbnail content={item} size="dense" />
+      {showThumbnail && <ContentThumbnail content={item} size="dense" />}
       <span className="min-w-0 flex-1">
       <div className="flex items-start justify-between gap-1">
         <p className="min-w-0 truncate text-[11px] font-medium text-rl_text">{title}</p>
@@ -425,6 +425,7 @@ export default function CalendarBoard({ items, accounts, campaigns, view = "mont
                       accounts={accounts}
                       onOpen={openPreview}
                       draggable
+                      showThumbnail={mode === "week"}
                     />
                   </li>
                 ))}

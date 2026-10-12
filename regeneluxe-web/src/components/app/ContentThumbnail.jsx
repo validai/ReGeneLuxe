@@ -5,7 +5,7 @@ const FRAME = {
   dense: "h-6 w-6 rounded",
   compact: "h-10 w-10 rounded-md",
   standard: "h-16 w-16 rounded-lg",
-  large: "aspect-video w-full max-h-56 rounded-xl",
+  large: "h-32 w-48 rounded-xl",
 };
 
 /**
