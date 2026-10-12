@@ -112,6 +112,18 @@ describe("server/db", () => {
     expect(none).toBeNull();
   });
 
+  it("claims a pending job only once when two workers race", async () => {
+    const job = await enqueueJob({ type: JOB_TYPES.SYNC_REMOTE, payload: { reason: "race" } });
+    const [first, second] = await Promise.all([
+      claimNextJob("worker-a"),
+      claimNextJob("worker-b"),
+    ]);
+    const claimed = [first, second].filter(Boolean);
+    expect(claimed).toHaveLength(1);
+    expect(claimed[0].id).toBe(job.id);
+    expect(claimed[0].state).toBe("RUNNING");
+  });
+
   it("migrateLocalStorageDump twice — second skipped", async () => {
     const dump = {
       rl_accounts_v1: [{ id: "acc1", handle: "@a", displayName: "A" }],

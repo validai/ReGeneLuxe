@@ -15,7 +15,7 @@ import { AI_MODES, AI_MODE_LABELS } from "../data/domain.js";
 import { updateSettings } from "../data/settingsRepository.js";
 import { normalizeThemePreference, THEME_OPTIONS } from "../data/theme.js";
 import { downloadBackupFile, importBackup, validateBackup } from "../data/backupService.js";
-import { getRuntimeStatus, getRuntimeHealth, saveRuntimeSecret } from "../data/runtimeClient.js";
+import { getRuntimeStatus, getRuntimeHealth, listedConnectionProviders, saveRuntimeSecret } from "../data/runtimeClient.js";
 import { fetchDbHealth, reconcileCloud } from "../data/durableBootstrap.js";
 import { useProfileSession } from "../components/app/ProfileSession.jsx";
 import { signOutOperator } from "../../app/actions/auth";
@@ -537,9 +537,8 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
               </li>
               <li>
                 Social connections ·{" "}
-                {(health?.connectedProviders || runtime.connectedProviders || []).length
-                  ? (health?.connectedProviders || runtime.connectedProviders).join(", ")
-                  : "none configured on the local runtime"}
+                {listedConnectionProviders(runtime.connectedProviders, health?.connectedProviders).join(", ")
+                  || "none configured on the local runtime"}
               </li>
             </ul>
             {runtime.state === "UNAVAILABLE" && (

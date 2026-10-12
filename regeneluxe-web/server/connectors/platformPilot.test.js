@@ -269,6 +269,36 @@ describe("worker does not call the provider without approval", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("does not call a provider for a connection-only account", async () => {
+    const account = connectedAccount({
+      id: "acc_tt",
+      platform: "TikTok",
+      providerAccountId: "tt_open_1",
+      publishPermission: "APPROVAL_REQUIRED",
+    });
+    await upsert(COLLECTIONS.accounts, account);
+    await upsert(COLLECTIONS.content, imageContent({ id: "cnt_tt" }));
+    setAccountTokens("tiktok", account.id, { accessToken: "secret", providerAccountId: "tt_open_1" });
+    await enqueueJob({
+      type: JOB_TYPES.PUBLISH_CONTENT,
+      payload: {
+        contentId: "cnt_tt",
+        accountId: account.id,
+        approved: true,
+        managedProfileId: "prf_1",
+        operatorId: "opr_1",
+        idempotencyKey: "publish:cnt_tt:acc_tt:now",
+      },
+      idempotencyKey: "publish:cnt_tt:acc_tt:now",
+    });
+    const processed = await processJobQueue({ limit: 1, types: [JOB_TYPES.PUBLISH_CONTENT] });
+    expect(processed.results[0].ok).toBe(false);
+    expect(processed.results[0].error).toBe("PUBLISH_NOT_SUPPORTED");
+    expect(fetch).not.toHaveBeenCalled();
+    const again = await processJobQueue({ limit: 1, types: [JOB_TYPES.PUBLISH_CONTENT] });
+    expect(again.results).toHaveLength(0);
+  });
+
   it("publishes once and does not call the provider again for the same attempt", async () => {
     const account = connectedAccount();
     const content = imageContent();

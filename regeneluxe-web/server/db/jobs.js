@@ -96,7 +96,6 @@ export async function enqueueJob(
 export async function claimNextJob(owner, types = null, client = null, { excludeIds = [] } = {}) {
   const db = clientOr(client);
   const now = nowIso();
-  const nowMs = Date.now();
 
   let sql = `SELECT * FROM jobs
     WHERE state IN (?, ?)
@@ -117,22 +116,29 @@ export async function claimNextJob(owner, types = null, client = null, { exclude
 
   sql += " ORDER BY scheduled_at ASC LIMIT 1";
 
-  const result = await db.execute({ sql, args });
-  const row = result.rows[0];
-  if (!row) return null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const result = await db.execute({ sql, args });
+    const row = result.rows[0];
+    if (!row) return null;
 
-  const leaseUntil = new Date(nowMs + LEASE_MS).toISOString();
-  await db.execute({
-    sql: `UPDATE jobs SET state = ?, started_at = ?, lease_owner = ?, lease_until = ?,
-      attempt_count = attempt_count + 1 WHERE id = ?`,
-    args: [JOB_STATES.RUNNING, now, owner, leaseUntil, row.id],
-  });
+    const leaseUntil = new Date(Date.now() + LEASE_MS).toISOString();
+    const claimed = await db.execute({
+      sql: `UPDATE jobs SET state = ?, started_at = ?, lease_owner = ?, lease_until = ?,
+        attempt_count = attempt_count + 1
+        WHERE id = ?
+          AND state IN (?, ?)
+          AND (lease_until IS NULL OR lease_until < ?)`,
+      args: [JOB_STATES.RUNNING, now, owner, leaseUntil, row.id, JOB_STATES.PENDING, JOB_STATES.ERROR, now],
+    });
+    if (Number(claimed.rowsAffected || 0) !== 1) continue;
 
-  const updated = await db.execute({
-    sql: "SELECT * FROM jobs WHERE id = ?",
-    args: [row.id],
-  });
-  return rowToJob(updated.rows[0]);
+    const updated = await db.execute({
+      sql: "SELECT * FROM jobs WHERE id = ?",
+      args: [row.id],
+    });
+    return rowToJob(updated.rows[0]);
+  }
+  return null;
 }
 
 export async function releaseJob(id, client = null) {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { availableCapabilities, declaredCapabilities, hasCapability, publishMediaSupport } from "./connectors/registry.js";
+import { listedConnectionProviders } from "./runtimeClient.js";
 import { emptyAccount } from "./models.js";
 import { emptyContentItem, emptyDecision } from "./domain.js";
 import { validateCampaignPlan, sanitizeAiContext } from "./ai/validator.js";
@@ -35,9 +36,19 @@ describe("connectors", () => {
   });
 
   it("advertises only the publish shapes each Meta connector implements", () => {
-    expect(publishMediaSupport("Instagram")).toMatchObject({ text: false, image: true, video: true });
-    expect(publishMediaSupport("Facebook")).toMatchObject({ text: true, image: false, video: false });
+    expect(publishMediaSupport("Instagram")).toMatchObject({ text: false, image: true, video: true, schedule: false });
+    expect(publishMediaSupport("Facebook")).toMatchObject({ text: true, image: false, video: false, schedule: false });
+    expect(publishMediaSupport("YouTube")).toMatchObject({ text: false, video: true, schedule: false });
     expect(publishMediaSupport("TikTok")).toMatchObject({ text: false, image: false, video: false });
+    expect(hasCapability(emptyAccount({ platform: "Instagram", connectionState: "CONNECTED" }), "READ_COMMENTS")).toBe(false);
+    expect(hasCapability(emptyAccount({ platform: "Facebook", connectionState: "CONNECTED" }), "READ_MESSAGES")).toBe(false);
+    expect(hasCapability(emptyAccount({ platform: "YouTube", connectionState: "CONNECTED" }), "PUBLISH_POST")).toBe(true);
+    expect(declaredCapabilities("YouTube")).not.toContain("READ_COMMENTS");
+    expect(listedConnectionProviders(
+      ["instagram", "instagram", "facebook", "youtube"],
+      [],
+    )).toEqual(["instagram", "facebook", "youtube"]);
+    expect(listedConnectionProviders(undefined, ["tiktok"])).toEqual(["tiktok"]);
     expect(hasCapability(emptyAccount({ platform: "Instagram", connectionState: "CONNECTED" }), "PUBLISH_TEXT")).toBe(false);
     expect(hasCapability(emptyAccount({ platform: "Facebook", connectionState: "CONNECTED" }), "PUBLISH_TEXT")).toBe(true);
   });

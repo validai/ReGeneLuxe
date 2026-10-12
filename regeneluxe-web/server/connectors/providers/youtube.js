@@ -2,7 +2,7 @@ import { CAPABILITY, PROVIDER_READINESS } from "../capabilities.js";
 import { PROVIDER_CONNECTION_STATES, SOCIAL_CONNECTION_STATES } from "../../../src/data/statusContracts.js";
 import { baseConnector, envCredentials, unavailable } from "../base.js";
 import { createOAuthState, friendlyOAuthError, pkcePair } from "../oauth/state.js";
-import { clearAccountTokens, setAccountTokens } from "../../secrets/providers.js";
+import { clearAccountTokens, getAccountTokens, setAccountTokens } from "../../secrets/providers.js";
 import { readSecrets, writeSecrets } from "../../secrets.js";
 import { youtubeCallbackUrl } from "../../auth/origin.js";
 import { YOUTUBE_CONNECTION_SCOPE_STRING, YOUTUBE_PILOT_SCOPE_STRING } from "../../auth/googleScopes.js";
@@ -202,12 +202,78 @@ export function publicYoutubeChannel(item) {
   };
 }
 
-youtubeConnector._getProfile = async (_account, tokens) => {
+function youtubeAccessStale(tokens) {
+  const expiresAt = Date.parse(tokens?.expiresAt || "");
+  return Number.isFinite(expiresAt) && expiresAt <= Date.now() + 60_000;
+}
+
+async function refreshYoutubeTokens(account, tokens) {
+  if (!tokens?.refreshToken) {
+    return {
+      ok: false,
+      connectionState: PROVIDER_CONNECTION_STATES.RECONNECT_REQUIRED,
+      error: "YouTube needs to be reconnected.",
+    };
+  }
+  const creds = youtubeConnector.getAppCredentials();
+  const body = new URLSearchParams({
+    client_id: creds.clientId,
+    client_secret: creds.clientSecret,
+    refresh_token: tokens.refreshToken,
+    grant_type: "refresh_token",
+  });
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  const tokenJson = await tokenRes.json().catch(() => ({}));
+  if (!tokenRes.ok || !tokenJson.access_token) {
+    return {
+      ok: false,
+      connectionState: PROVIDER_CONNECTION_STATES.RECONNECT_REQUIRED,
+      error: "YouTube needs to be reconnected.",
+    };
+  }
+  const expiresAt = tokenJson.expires_in
+    ? new Date(Date.now() + Number(tokenJson.expires_in) * 1000).toISOString()
+    : tokens.expiresAt;
+  const scopes = String(tokenJson.scope || (tokens.scopes || []).join(" ")).split(/\s+/).filter(Boolean);
+  setAccountTokens("youtube", account.id, {
+    accessToken: tokenJson.access_token,
+    refreshToken: tokenJson.refresh_token || tokens.refreshToken,
+    expiresAt,
+    scopes,
+    providerAccountId: tokens.providerAccountId || null,
+  });
+  return { ok: true, tokens: getAccountTokens("youtube", account.id) };
+}
+
+async function freshYoutubeTokens(account, tokens, { force = false } = {}) {
+  if (!force && !youtubeAccessStale(tokens)) return { ok: true, tokens };
+  return refreshYoutubeTokens(account, tokens);
+}
+
+youtubeConnector._refreshAuth = async (account, tokens) => {
+  const refreshed = await refreshYoutubeTokens(account, tokens);
+  if (!refreshed.ok) return refreshed;
+  return youtubeConnector._getProfile(account, refreshed.tokens);
+};
+
+youtubeConnector._getProfile = async (account, tokens, { allowRefresh = true } = {}) => {
+  const fresh = allowRefresh ? await freshYoutubeTokens(account, tokens) : { ok: true, tokens };
+  if (!fresh.ok) return fresh;
+  const accessToken = fresh.tokens?.accessToken;
   const res = await fetch(
     "https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true",
-    { headers: { Authorization: `Bearer ${tokens.accessToken}` } },
+    { headers: { Authorization: `Bearer ${accessToken}` } },
   );
   const json = await res.json().catch(() => ({}));
+  if (res.status === 401 && allowRefresh && !youtubeAccessStale(tokens)) {
+    const retry = await freshYoutubeTokens(account, tokens, { force: true });
+    if (!retry.ok) return retry;
+    return youtubeConnector._getProfile(account, retry.tokens, { allowRefresh: false });
+  }
   if (!res.ok) {
     return {
       ok: false,
@@ -252,10 +318,12 @@ youtubeConnector._getAccountMetrics = async (_account, tokens) => {
   };
 };
 
-youtubeConnector._getContent = async (_account, tokens) => {
+youtubeConnector._getContent = async (account, tokens) => {
+  const fresh = await freshYoutubeTokens(account, tokens);
+  if (!fresh.ok) return fresh;
   const res = await fetch(
     "https://www.googleapis.com/youtube/v3/search?part=snippet&forMine=true&type=video&maxResults=25",
-    { headers: { Authorization: `Bearer ${tokens.accessToken}` } },
+    { headers: { Authorization: `Bearer ${fresh.tokens.accessToken}` } },
   );
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -272,12 +340,14 @@ youtubeConnector._getContent = async (_account, tokens) => {
   };
 };
 
-youtubeConnector._getContentMetrics = async (_account, contentRef, tokens) => {
+youtubeConnector._getContentMetrics = async (account, contentRef, tokens) => {
   const id = typeof contentRef === "string" ? contentRef : contentRef?.providerContentId;
   if (!id) return unavailable("Video id required.");
+  const fresh = await freshYoutubeTokens(account, tokens);
+  if (!fresh.ok) return fresh;
   const res = await fetch(
     `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${encodeURIComponent(id)}`,
-    { headers: { Authorization: `Bearer ${tokens.accessToken}` } },
+    { headers: { Authorization: `Bearer ${fresh.tokens.accessToken}` } },
   );
   const json = await res.json().catch(() => ({}));
   const stats = json.items?.[0]?.statistics;
@@ -303,8 +373,10 @@ youtubeConnector._publishContent = async (_account, payload, tokens) => {
   if (String(payload?.privacyStatus || "private").toLowerCase() !== "private") {
     return { ok: false, error: "YOUTUBE_PILOT_PRIVATE_ONLY", code: "YOUTUBE_PILOT_PRIVATE_ONLY" };
   }
+  const fresh = await freshYoutubeTokens(_account, tokens);
+  if (!fresh.ok) return fresh;
   return uploadPrivateYouTube({
-    accessToken: tokens.accessToken,
+    accessToken: fresh.tokens.accessToken,
     filePath,
     title: payload?.title || payload?.caption || "ReGeneLuxe private pilot",
     description: payload?.caption || "",

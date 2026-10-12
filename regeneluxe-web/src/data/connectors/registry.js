@@ -3,7 +3,7 @@
  * Real OAuth / tokens / API calls go through same-origin /api.
  */
 
-const ALL_READ = [
+const YOUTUBE_READ = [
   "READ_PROFILE",
   "READ_POSTS",
   "READ_CONTENT",
@@ -15,41 +15,29 @@ const ALL_READ = [
 const DEFINITIONS = {
   Instagram: {
     capabilities: [
-      ...ALL_READ,
-      "READ_COMMENTS",
-      "CREATE_POST",
+      "READ_PROFILE",
       "PUBLISH_POST",
       "PUBLISH_IMAGE",
       "PUBLISH_VIDEO",
-      "SCHEDULE_POST",
-      "SCHEDULE",
-      "DELETE_POST",
-      "DELETE_CONTENT",
     ],
-    notes: "Requires Meta app credentials (META_APP_ID / META_APP_SECRET).",
+    notes: "Image and video publishing need a public media URL. Comments, scheduling, and deletion are not part of this connection.",
   },
   Facebook: {
     capabilities: [
-      ...ALL_READ,
-      "READ_COMMENTS",
-      "READ_MESSAGES",
+      "READ_PROFILE",
       "CREATE_POST",
       "PUBLISH_POST",
       "PUBLISH_TEXT",
-      "SCHEDULE_POST",
-      "SCHEDULE",
     ],
-    notes: "Facebook Page publishing in this pilot is a text feed post.",
+    notes: "Facebook Page publishing in this pilot is a text feed post. Comments, messages, and scheduling are not part of this connection.",
   },
   YouTube: {
     capabilities: [
-      ...ALL_READ,
-      "READ_COMMENTS",
-      "CREATE_POST",
+      ...YOUTUBE_READ,
       "PUBLISH_POST",
       "PUBLISH_VIDEO",
     ],
-    notes: "Requires Google OAuth (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).",
+    notes: "Private video upload uses youtube.upload. Comments and provider scheduling are not part of this connection.",
   },
   TikTok: {
     capabilities: ["READ_PROFILE"],
@@ -139,7 +127,7 @@ export function hasCapability(account, capability) {
   if (caps.includes(capability)) return true;
   // Alias tolerance
   const aliases = {
-    PUBLISH_POST: ["PUBLISH_IMAGE", "PUBLISH_TEXT"],
+    PUBLISH_POST: ["PUBLISH_IMAGE", "PUBLISH_TEXT", "PUBLISH_VIDEO"],
     SCHEDULE_POST: ["SCHEDULE"],
     READ_POSTS: ["READ_CONTENT"],
     READ_POST_METRICS: ["READ_CONTENT_METRICS"],

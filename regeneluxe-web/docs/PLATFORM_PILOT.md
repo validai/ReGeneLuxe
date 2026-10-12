@@ -165,7 +165,7 @@ A social YouTube account connect from Accounts requests the pilot scopes:
 
 Redirect: `http://localhost:5174/api/oauth/youtube/callback`
 
-The publish destination is that verified channel id. One channel can become `CONNECTED`. More than one channel leaves the social account at `SETUP_REQUIRED` with the discovered channel list; the first channel is not chosen automatically. The Settings connection still uses its existing picker. The upload is a server-side resumable session to YouTube Data API v3. `privacyStatus` is always `private`. A public or unlisted upload is rejected before the upload starts. The Google Cloud project is not assumed to be approved for public uploads.
+The publish destination is that verified channel id. One channel can become `CONNECTED`. More than one channel leaves the social account at `SETUP_REQUIRED` with the discovered channel list; the first channel is not chosen automatically. The Settings connection still uses its existing picker. The upload is a server-side resumable session to YouTube Data API v3. `privacyStatus` is always `private`. A public or unlisted upload is rejected before the upload starts. The Google Cloud project is not assumed to be approved for public uploads. When the stored access token is expired and a refresh token is present, a channel read or private upload refreshes it first. A failed refresh stops before any upload. Provider scheduling, comments, and public uploads are not part of this connection.
 
 ## Fresh approval
 

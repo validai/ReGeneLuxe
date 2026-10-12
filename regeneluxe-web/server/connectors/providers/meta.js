@@ -49,14 +49,10 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
     capabilities: surface === "facebook"
       ? [
         CAPABILITY.READ_PROFILE,
-        CAPABILITY.READ_CONTENT,
-        CAPABILITY.READ_ACCOUNT_METRICS,
         CAPABILITY.PUBLISH_TEXT,
       ]
       : [
         CAPABILITY.READ_PROFILE,
-        CAPABILITY.READ_CONTENT,
-        CAPABILITY.READ_ACCOUNT_METRICS,
         CAPABILITY.PUBLISH_IMAGE,
         CAPABILITY.PUBLISH_VIDEO,
       ],

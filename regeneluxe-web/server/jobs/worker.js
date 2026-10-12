@@ -187,6 +187,20 @@ async function handlePublishContent(payload = {}) {
     return { ok: true, deduped: true, code: "DUPLICATE_SUPPRESSED", attempt: ambiguous };
   }
 
+  const connectorForGate = getConnector(account.platform);
+  const publishCapabilities = connectorForGate.capabilities || [];
+  const canPublish = publishCapabilities.some((capability) => (
+    capability === "PUBLISH_TEXT" || capability === "PUBLISH_IMAGE" || capability === "PUBLISH_VIDEO"
+  ));
+  if (!canPublish) {
+    await upsert(COLLECTIONS.publication_attempts, blockedAttempt({
+      content, account, provider, idempotencyKey, approvalId: payload.approvalId || "", error: "PUBLISH_NOT_SUPPORTED",
+    }));
+    const error = new Error("PUBLISH_NOT_SUPPORTED");
+    error.code = "PUBLISH_NOT_SUPPORTED";
+    throw error;
+  }
+
   const variant = variantForAccount(content, account);
   let approval = null;
   if (isPilotProvider(provider)) {
@@ -454,7 +468,7 @@ export async function processJobQueue(options = {}) {
       results.push({ id: job.id, type: job.type, ok: true, result });
     } catch (error) {
       await failJob(job.id, error, {
-        maxAttempts: error?.code === "RATE_LIMITED" ? 12 : 8,
+        maxAttempts: error?.code === "RATE_LIMITED" ? 12 : error?.code === "PUBLISH_NOT_SUPPORTED" ? 1 : 8,
       });
       results.push({
         id: job.id,

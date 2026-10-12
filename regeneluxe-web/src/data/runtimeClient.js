@@ -4,6 +4,14 @@
  */
 const DEFAULT_URL = "/api";
 
+/** Status is the vault summary. An empty health list must not hide it. */
+export function listedConnectionProviders(statusProviders, healthProviders) {
+  const source = Array.isArray(statusProviders) && statusProviders.length
+    ? statusProviders
+    : healthProviders;
+  return [...new Set((source || []).map((item) => String(item || "").trim()).filter(Boolean))];
+}
+
 function friendlyNetworkError(error) {
   const message = String(error?.message || error || "");
   if (/ECONNREFUSED|Failed to fetch|NetworkError|abort/i.test(message)) {
