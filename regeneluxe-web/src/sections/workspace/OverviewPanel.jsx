@@ -10,6 +10,7 @@ import {
 } from "../../data/campaignMonitor.js";
 import { useAppData } from "../../hooks/useAppData.js";
 import { formatStamp } from "../../utils/dates.js";
+import ContentThumbnail from "../../components/app/ContentThumbnail.jsx";
 
 function metricLabel(key) {
   return String(key).replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
@@ -97,7 +98,10 @@ export default function OverviewPanel({ campaign, accounts, content, decisions }
             <ul className="mt-3 space-y-2 text-sm">
               {upcoming.map((item) => (
                 <li key={item.id}>
-                  <Link to={`/content/${item.id}`} className="hover:underline">{item.title || "Untitled"}</Link>
+                  <Link to={`/content/${item.id}`} className="inline-flex items-center gap-3 hover:underline">
+                    <ContentThumbnail content={item} size="compact" />
+                    <span>{item.title || "Untitled"}</span>
+                  </Link>
                   <span className="ml-2 text-xs text-rl_muted">{formatStamp(item.scheduledAt)}</span>
                 </li>
               ))}

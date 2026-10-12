@@ -3,6 +3,7 @@ import { useAppNavigate as useNavigate } from "@/nav";
 import { useAppData } from "../../hooks/useAppData.js";
 import { setWorkingAccountId, accountOptionLabel } from "../../data/workingContext.js";
 import { setActiveCampaignId } from "../../data/campaignRepository.js";
+import ContentThumbnail from "./ContentThumbnail.jsx";
 
 const STATIC_ACTIONS = [
   { id: "create", label: "Create post", hint: "Composer", run: (navigate) => navigate("/content/new") },
@@ -49,6 +50,7 @@ function CommandPaletteView({ open, onClose, navigate }) {
         id: `content-${item.id}`,
         label: item.title || item.caption?.slice(0, 48) || "Untitled",
         hint: "Content",
+        content: item,
         run: (nav) => nav(`/content/${item.id}`),
       })),
     ];
@@ -154,7 +156,10 @@ function CommandPaletteView({ open, onClose, navigate }) {
                 onMouseEnter={() => setIndex(actionIndex)}
                 onClick={() => run(action)}
               >
-                <span>{action.label}</span>
+                <span className="flex min-w-0 items-center gap-3">
+                  {action.content && <ContentThumbnail content={action.content} size="compact" />}
+                  <span className="truncate">{action.label}</span>
+                </span>
                 <span className="text-xs text-rl_muted">{action.hint}</span>
               </button>
             </li>

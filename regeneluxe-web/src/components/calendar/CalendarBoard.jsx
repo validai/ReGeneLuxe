@@ -9,6 +9,7 @@ import { emptyContentItem } from "../../data/domain.js";
 import { saveContent, getContent } from "../../data/collectionRepository.js";
 import { recordEvent } from "../../data/events.js";
 import { addDays, formatStamp, startOfMonth, toDateKey } from "../../utils/dates.js";
+import ContentThumbnail from "../app/ContentThumbnail.jsx";
 
 const PLATFORM_ABBR = {
   Instagram: "IG",
@@ -91,9 +92,11 @@ function CalendarItemCard({ item, accounts, onOpen, draggable = false }) {
         event.dataTransfer.effectAllowed = "move";
       }}
       onClick={() => onOpen(item.id)}
-      className="block w-full rounded px-1 py-1 text-left hover:bg-rl_surfaceSoft"
+      className="flex w-full items-start gap-1 rounded px-1 py-1 text-left hover:bg-rl_surfaceSoft"
       title={title}
     >
+      <ContentThumbnail content={item} size="dense" />
+      <span className="min-w-0 flex-1">
       <div className="flex items-start justify-between gap-1">
         <p className="min-w-0 truncate text-[11px] font-medium text-rl_text">{title}</p>
         {time && <span className="shrink-0 text-[10px] tabular-nums text-rl_muted">{time}</span>}
@@ -111,6 +114,7 @@ function CalendarItemCard({ item, accounts, onOpen, draggable = false }) {
           <StatusBadge value={item.status} />
         </span>
       </div>
+      </span>
     </button>
   );
 }
@@ -262,6 +266,7 @@ export default function CalendarBoard({ items, accounts, campaigns, view = "mont
     >
       {preview && (
         <div className="space-y-4 text-sm">
+          <ContentThumbnail content={preview} size="large" />
           <div>
             <p className="rl-label">Status</p>
             <div className="mt-2">
@@ -325,7 +330,9 @@ export default function CalendarBoard({ items, accounts, campaigns, view = "mont
                   onClick={() => openPreview(item.id)}
                   className="flex w-full items-center justify-between gap-3 py-3 text-left hover:opacity-90"
                 >
-                  <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-3">
+                    <ContentThumbnail content={item} size="compact" />
+                    <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{item.title || "Untitled"}</p>
                     <p className="mt-0.5 text-xs text-rl_muted">
                       {platformAbbr(account?.platform)}
@@ -333,6 +340,7 @@ export default function CalendarBoard({ items, accounts, campaigns, view = "mont
                       {" · "}
                       {formatStamp(item.scheduledAt || item.publishedAt)}
                     </p>
+                    </div>
                   </div>
                   <StatusBadge value={item.status} />
                 </button>

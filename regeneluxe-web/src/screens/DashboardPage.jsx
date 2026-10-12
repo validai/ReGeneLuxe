@@ -13,6 +13,7 @@ import { listEvents } from "../data/events.js";
 import { filterByWorkingAccount } from "../data/workingContext.js";
 import { compareAgainstBaseline, buildAccountBaseline } from "../data/performanceCompare.js";
 import { formatDate, formatStamp, toDateKey } from "../utils/dates.js";
+import ContentThumbnail from "../components/app/ContentThumbnail.jsx";
 
 function metricLabel(key) {
   return String(key).replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
@@ -171,12 +172,15 @@ export default function DashboardPage() {
                     const account = accounts.find((entry) => (item.accountIds || []).includes(entry.id));
                     return (
                       <li key={item.id} className="py-3">
-                        <Link to={`/content/${item.id}`} className="block hover:opacity-90">
+                        <Link to={`/content/${item.id}`} className="flex items-center gap-3 hover:opacity-90">
+                          <ContentThumbnail content={item} size="compact" />
+                          <span className="min-w-0">
                           <p className="text-sm font-medium">{item.title || "Untitled"}</p>
                           <p className="mt-1 text-xs text-rl_muted">
                             {formatStamp(item.scheduledAt)}
                             {account ? ` · ${account.platform} · ${account.handle || account.displayName}` : ""}
                           </p>
+                          </span>
                         </Link>
                       </li>
                     );
@@ -273,9 +277,12 @@ export default function DashboardPage() {
                 <ul className="mt-3 space-y-2">
                   {upcoming.map((item) => (
                     <li key={item.id}>
-                      <Link to={`/content/${item.id}`} className="text-sm hover:underline">
+                      <Link to={`/content/${item.id}`} className="flex items-center gap-3 text-sm hover:underline">
+                        <ContentThumbnail content={item} size="compact" />
+                        <span className="min-w-0">
                         {item.title || "Untitled"}
                         <span className="ml-2 text-xs text-rl_muted">{formatStamp(item.scheduledAt)}</span>
+                        </span>
                       </Link>
                     </li>
                   ))}

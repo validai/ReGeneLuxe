@@ -14,6 +14,7 @@ import { refreshAccountAnalytics } from "../data/connectors/registry.js";
 import { buildAccountBaseline, compareAgainstBaseline, formatFactLine, platformTotals } from "../data/performanceCompare.js";
 import { formatStamp, toDateKey } from "../utils/dates.js";
 import { useProfileSession } from "../components/app/ProfileSession.jsx";
+import ContentThumbnail from "../components/app/ContentThumbnail.jsx";
 
 function metricLabel(key) {
   return String(key).replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
@@ -112,6 +113,7 @@ export default function AnalyticsPage() {
         score: data.score,
         snaps: data.snaps,
         title: content.find((item) => item.id === id)?.title || id,
+        content: content.find((item) => item.id === id) || null,
         reach: data.metrics.reach ?? data.metrics.views ?? data.metrics.impressions ?? null,
         engagement: data.metrics.engagementRate ?? data.metrics.likes ?? null,
       }));
@@ -282,7 +284,10 @@ export default function AnalyticsPage() {
                     {summary.topContent.map((item) => (
                       <tr key={item.id}>
                         <td className="py-2.5">
-                          <Link to={`/content/${item.id}`} className="hover:underline">{item.title}</Link>
+                          <Link to={`/content/${item.id}`} className="flex items-center gap-3 hover:underline">
+                            {item.content && <ContentThumbnail content={item.content} size="compact" />}
+                            <span className="min-w-0">{item.title}</span>
+                          </Link>
                         </td>
                         <td className="py-2.5 tabular-nums text-rl_textSecondary">
                           {item.reach == null ? "—" : item.reach.toLocaleString()}

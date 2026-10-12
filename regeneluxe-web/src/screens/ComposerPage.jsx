@@ -13,6 +13,8 @@ import { publishMediaSupport, declaredCapabilities } from "../data/connectors/re
 import PublishDestinations from "../components/app/PublishDestinations.jsx";
 import { ASSET_TYPES } from "../data/models.js";
 import { recordEvent } from "../data/events.js";
+import ContentThumbnail from "../components/app/ContentThumbnail.jsx";
+import { mediaAttachmentLabel } from "../data/contentThumbnail.js";
 
 function shortenCaption(text, max = 120) {
   const trimmed = String(text || "").replace(/\s+/g, " ").trim();
@@ -560,6 +562,8 @@ export default function ComposerPage() {
                   {form.mediaRefs.length === 0 ? (
                     <p className="text-sm text-rl_muted">Drop a link, or add a note below.</p>
                   ) : (
+                    <div className="space-y-3">
+                      <ContentThumbnail content={form} size="large" />
                     <ul className="space-y-2">
                       {form.mediaRefs.map((ref, index) => (
                         <li
@@ -577,7 +581,10 @@ export default function ComposerPage() {
                           className="flex items-center gap-2 rounded-md border border-rl_border bg-rl_bg px-2.5 py-1.5 text-sm"
                         >
                           <span className="cursor-grab text-rl_muted" title="Drag to reorder">⋮⋮</span>
-                          <span className="min-w-0 flex-1 truncate text-rl_text">{ref}</span>
+                          {form.mediaRefs.length > 1 && (
+                            <ContentThumbnail content={{ title: form.title, mediaRefs: [ref] }} size="compact" />
+                          )}
+                          <span className="min-w-0 flex-1 truncate text-rl_text">{mediaAttachmentLabel(ref)}</span>
                           <button
                             type="button"
                             className="text-[11px] font-semibold uppercase tracking-[0.14em] text-rl_muted hover:text-rl_danger"
@@ -588,6 +595,7 @@ export default function ComposerPage() {
                         </li>
                       ))}
                     </ul>
+                    </div>
                   )}
                   <div className="mt-3 flex gap-2">
                     <input
@@ -693,7 +701,11 @@ export default function ComposerPage() {
               {form.mediaRefs.length > 0 && (
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-rl_muted">Media notes</p>
-                  <p className="mt-2 text-sm text-rl_muted">{form.mediaRefs.length} linked</p>
+                  <ul className="mt-2 space-y-1 text-sm text-rl_muted">
+                    {form.mediaRefs.map((ref, index) => (
+                      <li key={`${index}-${mediaAttachmentLabel(ref)}`} className="truncate">{mediaAttachmentLabel(ref)}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>

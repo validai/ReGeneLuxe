@@ -3,6 +3,7 @@ import SideSheet from "./SideSheet.jsx";
 import { saveContent } from "../../data/collectionRepository.js";
 import { scheduleContent } from "../../data/publishing.js";
 import { formatStamp } from "../../utils/dates.js";
+import ContentThumbnail from "./ContentThumbnail.jsx";
 
 function defaultScheduleAt(content) {
   if (content?.scheduledAt) return content.scheduledAt;
@@ -51,6 +52,7 @@ export default function ApprovalSheet({
       )}
     >
       <div className="space-y-5">
+        <ContentThumbnail content={content} size="large" />
         <div>
           <p className="rl-label">Title</p>
           <p className="mt-1 text-sm font-medium text-rl_text">{content.title || "Untitled"}</p>

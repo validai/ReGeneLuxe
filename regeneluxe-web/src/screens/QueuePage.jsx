@@ -6,6 +6,7 @@ import StatusBadge from "../components/app/StatusBadge.jsx";
 import { useAppData } from "../hooks/useAppData.js";
 import { confirmManualPublish, failQueueJob, processQueueJob, retryQueueJob } from "../data/queueService.js";
 import { formatStamp } from "../utils/dates.js";
+import ContentThumbnail from "../components/app/ContentThumbnail.jsx";
 
 export default function QueuePage() {
   const { queue, content, accounts, campaigns } = useAppData();
@@ -32,14 +33,23 @@ export default function QueuePage() {
             const campaign = campaigns.find((entry) => entry.id === job.campaignId);
             return (
               <li key={job.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-sm font-medium">{item?.title || "Missing content"}</p>
+                <div className="flex min-w-0 items-start gap-3">
+                  {item && (
+                    <Link to={`/content/${item.id}`} className="shrink-0" aria-label={`Open ${item.title || "content"}`}>
+                      <ContentThumbnail content={item} size="compact" />
+                    </Link>
+                  )}
+                  <div className="min-w-0">
+                  <p className="text-sm font-medium">
+                    {item ? <Link to={`/content/${item.id}`} className="hover:underline">{item.title || "Untitled"}</Link> : "Missing content"}
+                  </p>
                   <p className="mt-1 text-xs text-rl_muted">
                     {account ? `${account.platform} · ${account.handle || account.displayName}` : "No account"}
                     {campaign ? ` · ${campaign.name}` : ""}
                     {` · ${formatStamp(job.scheduledAt)}`}
                   </p>
                   {job.failureReason && <p className="mt-2 text-sm text-rl_danger">{job.failureReason}</p>}
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge value={job.state} />

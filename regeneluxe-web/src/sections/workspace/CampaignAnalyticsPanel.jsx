@@ -2,6 +2,7 @@ import { Link } from "@/nav";
 import { analyzeCampaign, proposeIteration, persistProposedDecision } from "../../data/ai/campaignBrain.js";
 import { analyzeCampaignChannels } from "../../data/ai/channelIntelligence.js";
 import ResultsPanel from "./ResultsPanel.jsx";
+import ContentThumbnail from "../../components/app/ContentThumbnail.jsx";
 
 export default function CampaignAnalyticsPanel({ campaign, accounts, snapshots, content }) {
   const analysis = analyzeCampaign(campaign, accounts);
@@ -63,7 +64,10 @@ export default function CampaignAnalyticsPanel({ campaign, accounts, snapshots, 
           <ul className="mt-3 space-y-2 text-sm">
             {leaderboard.filter((entry) => entry.snapshots > 0).slice(0, 8).map((entry) => (
               <li key={entry.item.id} className="flex justify-between gap-3">
-                <Link to={`/content/${entry.item.id}`} className="hover:underline">{entry.item.title || "Untitled"}</Link>
+                <Link to={`/content/${entry.item.id}`} className="flex min-w-0 items-center gap-3 hover:underline">
+                  <ContentThumbnail content={entry.item} size="compact" />
+                  <span className="truncate">{entry.item.title || "Untitled"}</span>
+                </Link>
                 <span className="text-xs text-rl_muted">{entry.score} recorded · {entry.snapshots} snap{entry.snapshots === 1 ? "" : "s"}</span>
               </li>
             ))}

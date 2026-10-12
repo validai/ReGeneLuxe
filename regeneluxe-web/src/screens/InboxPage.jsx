@@ -11,6 +11,7 @@ import { saveInteraction, saveDecision, saveActivity } from "../data/collectionR
 import { hasCapability } from "../data/connectors/registry.js";
 import { emptyDecision } from "../data/domain.js";
 import { formatStamp } from "../utils/dates.js";
+import ContentThumbnail from "../components/app/ContentThumbnail.jsx";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -168,14 +169,17 @@ export default function InboxPage() {
             <ul className="divide-y divide-rl_border border-y border-rl_border">
               {items.map((item) => {
                 const account = accounts.find((entry) => entry.id === item.accountId);
+                const related = content.find((entry) => entry.id === item.contentId);
                 const active = item.id === selectedId;
                 return (
                   <li key={item.id}>
                     <button
                       type="button"
                       onClick={() => openItem(item)}
-                      className={`flex w-full flex-col gap-1 px-1 py-3 text-left transition-colors hover:bg-rl_surfaceSoft/40 ${active ? "bg-rl_surfaceSoft/60" : ""}`}
+                      className={`flex w-full items-start gap-3 px-1 py-3 text-left transition-colors hover:bg-rl_surfaceSoft/40 ${active ? "bg-rl_surfaceSoft/60" : ""}`}
                     >
+                      {related && <ContentThumbnail content={related} size="compact" />}
+                      <span className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[11px] uppercase tracking-[0.12em] text-rl_muted">
                           {account?.platform || item.provider || "—"}
@@ -194,6 +198,7 @@ export default function InboxPage() {
                       <p className="text-sm font-medium text-rl_text">{item.sender || "Unknown"} · {item.type}</p>
                       <p className="line-clamp-2 text-sm text-rl_textSecondary">{item.message || "No preview"}</p>
                       <p className="rl-meta">{formatStamp(item.timestamp)}</p>
+                      </span>
                     </button>
                   </li>
                 );
@@ -290,8 +295,9 @@ function InboxDetail({
       </div>
 
       {related && (
-        <Link to={`/content/${related.id}`} className="inline-block text-xs underline underline-offset-4">
-          Related content: {related.title || "Untitled"}
+        <Link to={`/content/${related.id}`} className="flex items-center gap-3 text-xs underline underline-offset-4">
+          <ContentThumbnail content={related} size="compact" />
+          <span>Related content: {related.title || "Untitled"}</span>
         </Link>
       )}
 

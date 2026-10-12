@@ -15,6 +15,7 @@ import { filterByWorkingAccount } from "../data/workingContext.js";
 import { getContentViewMode, setContentViewMode } from "../data/uiPrefs.js";
 import { formatStamp } from "../utils/dates.js";
 import { useToast } from "../components/app/useToast.js";
+import ContentThumbnail from "../components/app/ContentThumbnail.jsx";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -156,14 +157,15 @@ export default function ContentPage() {
               <button
                 type="button"
                 onClick={() => setPreviewId(item.id)}
-                className="block h-full w-full rounded-xl border border-rl_border bg-rl_surface px-4 py-4 text-left transition-colors duration-rl hover:border-rl_borderStrong"
+                className="flex h-full w-full items-start gap-3 rounded-xl border border-rl_border bg-rl_surface px-4 py-4 text-left transition-colors duration-rl hover:border-rl_borderStrong"
               >
-                <div className="mb-3 flex aspect-[4/3] items-end rounded-lg bg-rl_surfaceSoft p-3">
-                  <p className="line-clamp-3 text-xs text-rl_muted">{item.caption || item.concept || "No preview"}</p>
-                </div>
-                <div className="flex items-start justify-between gap-2">
-                  <p className="line-clamp-2 text-sm font-medium">{item.title || item.caption || "Untitled"}</p>
-                  <StatusBadge value={item.status} />
+                <ContentThumbnail content={item} size="standard" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="line-clamp-2 text-sm font-medium">{item.title || item.caption || "Untitled"}</p>
+                    <StatusBadge value={item.status} />
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-xs text-rl_muted">{item.caption || item.concept || item.format || "Post"}</p>
                 </div>
               </button>
             </li>
@@ -179,7 +181,9 @@ export default function ContentPage() {
               .join(", ");
             return (
               <li key={item.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setPreviewId(item.id)}>
+                <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => setPreviewId(item.id)}>
+                  <ContentThumbnail content={item} size="compact" />
+                  <span className="min-w-0">
                   <p className="truncate text-sm font-medium">{item.title || "Untitled"}</p>
                   <p className="mt-0.5 text-xs text-rl_muted">
                     {campaigns.find((campaign) => campaign.id === item.campaignId)?.name || "No campaign"}
@@ -191,6 +195,7 @@ export default function ContentPage() {
                         ? ` · ${formatStamp(item.publishedAt)}`
                         : ""}
                   </p>
+                  </span>
                 </button>
                 <div className="flex items-center gap-2">
                   <StatusBadge value={item.status} />
@@ -217,6 +222,7 @@ export default function ContentPage() {
       >
         {preview && (
           <div className="space-y-4 text-sm">
+            <ContentThumbnail content={preview} size="large" />
             <p className="whitespace-pre-wrap text-rl_text">{preview.caption || preview.concept || "No caption yet."}</p>
             <p className="text-xs text-rl_muted">
               {campaigns.find((c) => c.id === preview.campaignId)?.name || "No campaign"}
