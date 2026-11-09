@@ -54,6 +54,7 @@ describe("application security boundaries", () => {
     expect(isPublicPath("/api/oauth/gmail/start")).toBe(false);
     expect(isPublicPath("/api/health")).toBe(true);
     expect(isPublicPath("/api/auth/callback/google")).toBe(true);
+    expect(isPublicPath("/api/external-agent/handshake")).toBe(true);
   });
 
   it("rejects Account A reading Account B workspace records", async () => {

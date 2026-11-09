@@ -6,6 +6,8 @@ export function isPublicPath(pathname) {
   if (path.startsWith("/api/auth")) return true;
   if (path === "/api/health") return true;
   if (path === "/api/status") return true;
+  // Bridge has its own secret + session gate. Auth.js cookies are not required.
+  if (path === "/api/external-agent" || path.startsWith("/api/external-agent/")) return true;
   if (/^\/api\/oauth\/[^/]+\/callback$/.test(path)) return true;
   if (/^\/api\/connections\/google\/(gmail|youtube)\/callback$/.test(path)) return true;
   if (path === "/favicon.ico" || path === "/icon" || path === "/icon.svg" || path === "/apple-icon") return true;

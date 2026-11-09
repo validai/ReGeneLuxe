@@ -58,6 +58,7 @@ describe("route protection", () => {
   it("does not redirect public auth callback paths", () => {
     expect(isPublicPath("/api/auth/callback/google")).toBe(true);
     expect(isPublicPath("/api/auth/session")).toBe(true);
+    expect(isPublicPath("/api/external-agent/handshake")).toBe(true);
     expect(isPublicPath("/setup/profile")).toBe(false);
   });
 });

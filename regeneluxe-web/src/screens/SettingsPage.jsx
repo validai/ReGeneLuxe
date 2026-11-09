@@ -24,6 +24,7 @@ import { displayAccountEmail } from "../data/googleIdentity.js";
 import { formatDataSyncDisplay, formatSyncLine, formatWorkspaceSummary, mergeHealthWithSyncStatus } from "../data/syncHealth.js";
 import StatusBadge from "../components/app/StatusBadge.jsx";
 import { PlatformIcon } from "../components/app/Icon.jsx";
+import ExternalAgentBridgePanel from "../components/settings/ExternalAgentBridgePanel.jsx";
 
 function formatWhen(value) {
   if (!value) return "—";
@@ -182,6 +183,7 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
         {[
           ["#account", "Account"],
           ["#connections", "Connections"],
+          ["#external-agent-bridge", "External Agent"],
           ["#data", "Data & Sync"],
           ["#preferences", "Preferences"],
         ].map(([href, label]) => (
@@ -500,6 +502,8 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
         </div>
         {connectionNote ? <p className="text-xs text-rl_muted">{connectionNote}</p> : null}
       </section>
+
+      <ExternalAgentBridgePanel />
 
       <section id="preferences" className="rl-panel space-y-3 p-5">
         <h2 className="text-sm font-semibold text-rl_text">Preferences</h2>
