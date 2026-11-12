@@ -1,11 +1,11 @@
-# External Agent Bridge (V1)
+# External Agent Bridge (V1 + marketing draft import)
 
-Prepares ReGeneLuxe for a future handshake with a dedicated ReGeneLuxe GrokBot.
+Prepares ReGeneLuxe for trusted marketing-team agents (GrokBots) as analysts and draft importers.
 
 This is **not** a live Grok connection.
 This is **not** a public exposure.
 This is **not** a standing Grok pairing password.
-This is **not** permission for an external AI to operate ReGeneLuxe.
+This is **not** permission for an external AI to publish or operate ReGeneLuxe.
 
 ## Architecture
 
@@ -13,10 +13,11 @@ This is **not** permission for an external AI to operate ReGeneLuxe.
 - Disabled by default
 - Local-only (ReGeneLuxe on port `5174`)
 - Operator-initiated **one-time pairing**
-- Short-lived **15-minute** agent session
+- Short-lived **15-minute** agent session TTL (not a social-post approval window)
 - Explicit capability allowlist (no wildcards)
-- Proposal-only write surface (never auto-executed)
-- Human operator retains final control
+- Proposals remain for strategy / Next Move
+- Optional **drafts-only** import for `CONTENT_OPERATOR` sessions
+- Human operator retains final control; **APPROVED ≠ PUBLISHED**
 
 `EXTERNAL_AGENT_BRIDGE_ENABLED=1` means only:
 
@@ -66,6 +67,25 @@ Operating statement:
 Create once → intelligently distribute → efficiently network → learn → make the next move better.
 
 Human operator retains final control.
+
+Marketing team roles:
+
+- **MR ENTREPRENEUR** (`CAMPAIGN_STRATEGIST`) — campaign strategy, rollout, timing; proposals by default
+- **GOOD POST REVIEWS / MR POST** (`CONTENT_OPERATOR`) — may receive draft capabilities explicitly at pairing
+- **REGENELUXE** — authoritative campaign/account/drafts/approval/readiness/queue/results hub
+- **HUMAN OPERATOR** — final authority
+
+Draft capabilities (explicit per session; not automatic):
+
+- `CREATE_CONTENT_DRAFT`
+- `UPDATE_OWN_CONTENT_DRAFT`
+- `SUBMIT_CONTENT_FOR_APPROVAL`
+- `READ_APPROVAL_STATUS`
+- `READ_SCHEDULE_ASSIGNMENT`
+
+Still denied: publish, schedule-directly, approve, change account, provider write, bypass approval.
+
+Operator review lives in **Queue → Approval Queue**. Creative approval may be schedule-bound and durable. Provider readiness may remain blocked (`CREATIVE_APPROVED` + `PROVIDER_BLOCKED`).
 
 ## Enablement (local only)
 
@@ -123,9 +143,13 @@ All under `http://localhost:5174/api/external-agent/…`
 | GET | `/context` | session | Sanitized workspace summary |
 | GET | `/operations` | session | Operational counts |
 | GET/POST | `/proposals` | session | List / submit proposals |
+| GET/POST | `/drafts` | draft capabilities | List own drafts / create draft |
+| GET/PATCH | `/drafts/:id` | draft capabilities | Status / update own draft |
+| POST | `/drafts/:id/submit` | `SUBMIT_CONTENT_FOR_APPROVAL` | Submit for operator review |
 | GET/DELETE | `/session` | session | Inspect / end session |
 | POST | `/control` | session | Explicit deny + audit |
 | GET/POST | `/operator` | signed-in operator | Status, start/cancel pairing, revoke, review proposals |
+| GET/POST | `/api/marketing-drafts` | signed-in operator | Approval queue list / review / assign schedule |
 
 Agent headers:
 

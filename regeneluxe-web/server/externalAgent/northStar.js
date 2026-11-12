@@ -25,6 +25,31 @@ export const NORTH_STAR = Object.freeze({
   operatingStatement:
     "Create once → intelligently distribute → efficiently network → learn → make the next move better.",
   humanControl: "Human operator retains final control.",
+  marketingTeam: Object.freeze({
+    note: "Informational identity only. No role-specific elevated bridge permissions in V1.",
+    roles: Object.freeze([
+      Object.freeze({
+        id: "MR_ENTREPRENEUR",
+        name: "MR ENTREPRENEUR",
+        focus: "campaign strategy, rollout, timing, scheduling direction",
+      }),
+      Object.freeze({
+        id: "GOOD_POST_REVIEWS",
+        name: "GOOD POST REVIEWS",
+        focus: "platform-specific copy, content preparation, publishing operations",
+      }),
+      Object.freeze({
+        id: "REGENELUXE",
+        name: "REGENELUXE",
+        focus: "authoritative campaign/account/readiness/approval/queue/results hub",
+      }),
+      Object.freeze({
+        id: "HUMAN_OPERATOR",
+        name: "HUMAN OPERATOR",
+        focus: "final authority",
+      }),
+    ]),
+  }),
   behavesLike: Object.freeze([
     "campaign manager",
     "social operations assistant",

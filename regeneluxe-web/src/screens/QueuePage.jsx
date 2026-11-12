@@ -7,17 +7,26 @@ import { useAppData } from "../hooks/useAppData.js";
 import { confirmManualPublish, failQueueJob, processQueueJob, retryQueueJob } from "../data/queueService.js";
 import { formatStamp } from "../utils/dates.js";
 import ContentThumbnail from "../components/app/ContentThumbnail.jsx";
+import ApprovalQueuePanel from "./ApprovalQueuePanel.jsx";
 
 export default function QueuePage() {
   const { queue, content, accounts, campaigns } = useAppData();
 
   return (
-    <PageShell width="workspace">
+    <PageShell width="workspace" className="space-y-10">
       <PageHeader
         title="Queue"
-        description="What ReGeneLuxe will attempt to publish next."
+        description="Approval queue for marketing drafts, plus what ReGeneLuxe will attempt to publish next."
         actions={<Link to="/calendar" className="rl-btn-ghost">Calendar</Link>}
       />
+
+      <ApprovalQueuePanel />
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-rl_text">Publish Queue</h2>
+          <p className="mt-1 text-sm text-rl_muted">Provider send attempts. Separate from creative approval.</p>
+        </div>
 
       {queue.length === 0 ? (
         <EmptyState
@@ -80,6 +89,7 @@ export default function QueuePage() {
           })}
         </ul>
       )}
+      </section>
     </PageShell>
   );
 }

@@ -25,6 +25,7 @@ import {
   publicPairing,
   publicSession,
   reviewProposal,
+  SESSION_TTL_MS,
 } from "./store.js";
 import {
   bridgeEnabled,
@@ -33,6 +34,14 @@ import {
   requireAgentSession,
   requireBridgeEnabled,
 } from "./auth.js";
+import { normalizeAgentRole } from "./roles.js";
+import {
+  createMarketingDraft,
+  getMarketingDraft,
+  listMarketingDrafts,
+  submitMarketingDraft,
+  updateOwnMarketingDraft,
+} from "../marketingDrafts/service.js";
 
 export function getBridgeStatus(workspaceId = null) {
   const readiness = bridgeReadiness();
@@ -52,9 +61,10 @@ export function getBridgeStatus(workspaceId = null) {
     state,
     role: "trusted_analyst",
     protocolVersion: PROTOCOL_VERSION,
-    sessionTtlMinutes: 15,
+    sessionTtlMinutes: Math.round(SESSION_TTL_MS / 60000),
     pairingTtlMinutes: 10,
     allowedCapabilities: [...ALLOWED_CAPABILITIES],
+    note: "sessionTtlMinutes is the External Agent session TTL (15). It is not a social-post approval window.",
     pairing: snapshot.pairing,
     session: snapshot.session,
     proposals: snapshot.proposals,
@@ -128,13 +138,26 @@ export function beginHandshake(request, body = {}) {
     };
   }
 
-  const caps = validateRequestedCapabilities(body.requestedCapabilities);
+  const agentType = String(body.agentType || "").trim();
+  const displayName = String(body.displayName || "").trim();
+  const instanceId = String(body.instanceId || "").trim();
+  if (!agentType || !displayName || !instanceId) {
+    return {
+      ok: false,
+      status: 400,
+      code: "AGENT_IDENTITY_REQUIRED",
+      error: "agentType, displayName, and instanceId are required.",
+    };
+  }
+
+  const agentRole = normalizeAgentRole(body.agentRole || body.role, { agentType, displayName });
+  const caps = validateRequestedCapabilities(body.requestedCapabilities, { agentRole });
   if (!caps.ok) {
     appendAudit({
       sessionId: null,
       agentId: body?.instanceId || null,
       action: AUDIT.REQUEST_DENIED,
-      detail: { reason: caps.code, unknown: caps.unknown || [] },
+      detail: { reason: caps.code, unknown: caps.unknown || [], roleDenied: caps.roleDenied || [] },
     });
     return { ok: false, status: 403, ...caps };
   }
@@ -151,18 +174,6 @@ export function beginHandshake(request, body = {}) {
       status: 403,
       code: "ACTION_DENIED",
       error: "That action is outside the External Agent Bridge role.",
-    };
-  }
-
-  const agentType = String(body.agentType || "").trim();
-  const displayName = String(body.displayName || "").trim();
-  const instanceId = String(body.instanceId || "").trim();
-  if (!agentType || !displayName || !instanceId) {
-    return {
-      ok: false,
-      status: 400,
-      code: "AGENT_IDENTITY_REQUIRED",
-      error: "agentType, displayName, and instanceId are required.",
     };
   }
 
@@ -186,6 +197,7 @@ export function beginHandshake(request, body = {}) {
     instanceId,
     protocolVersion: PROTOCOL_VERSION,
     capabilities: caps.granted,
+    agentRole,
     workspaceId: pairing.workspaceId,
     workspaceName: pairing.workspaceName,
     operatorId: pairing.operatorId,
@@ -198,8 +210,8 @@ export function beginHandshake(request, body = {}) {
     session: created.session,
     sessionToken: created.sessionToken,
     northStar: northStarPayload(),
-    capabilities: capabilitiesPayload(caps.granted),
-    warning: "Session tokens expire in 15 minutes. Proposals are recorded only. Nothing is auto-executed. Pair again after expiry.",
+    capabilities: capabilitiesPayload(caps.granted, { agentRole }),
+    warning: "Session tokens expire in 15 minutes (agent session TTL only). Proposals and drafts are never auto-published. Pair again after expiry.",
   };
 }
 
@@ -218,7 +230,11 @@ export async function readNorthStar(request) {
 export async function readCapabilities(request) {
   const authz = requireAgentSession(request);
   if (!authz.ok) return authz;
-  return { ok: true, status: 200, ...capabilitiesPayload(authz.session.capabilities) };
+  return {
+    ok: true,
+    status: 200,
+    ...capabilitiesPayload(authz.session.capabilities, { agentRole: authz.session.agentRole }),
+  };
 }
 
 export async function readContext(request) {
@@ -350,8 +366,83 @@ export function denyControlAttempt(request, action) {
     ok: false,
     status: 403,
     code: "ACTION_DENIED",
-    error: `External agents cannot ${action}. The bridge is analyst-only.`,
+    error: `External agents cannot ${action}. The bridge is analyst/draft-import only — never publish authority.`,
   };
+}
+
+export async function agentCreateDraft(request, body = {}) {
+  const authz = requireAgentSession(request, { capability: "CREATE_CONTENT_DRAFT" });
+  if (!authz.ok) return authz;
+  if (isDeniedAction(body?.action) || isDeniedAction(body?.requestedAction)) {
+    return denyControlAttempt(request, body?.action || body?.requestedAction || "PUBLISH");
+  }
+  return createMarketingDraft(body, authz.session);
+}
+
+export async function agentUpdateDraft(request, draftId, body = {}) {
+  const authz = requireAgentSession(request, { capability: "UPDATE_OWN_CONTENT_DRAFT" });
+  if (!authz.ok) return authz;
+  return updateOwnMarketingDraft(draftId, body, authz.session);
+}
+
+export async function agentSubmitDraft(request, draftId) {
+  const authz = requireAgentSession(request, { capability: "SUBMIT_CONTENT_FOR_APPROVAL" });
+  if (!authz.ok) return authz;
+  return submitMarketingDraft(draftId, authz.session);
+}
+
+export async function agentReadDraft(request, draftId) {
+  const authz = requireAgentSession(request, { capability: "READ_APPROVAL_STATUS" });
+  if (!authz.ok) return authz;
+  const draft = await getMarketingDraft(draftId, { workspaceId: authz.session.workspaceId });
+  if (!draft) return { ok: false, status: 404, error: "Draft not found." };
+  return {
+    ok: true,
+    status: 200,
+    draft: {
+      id: draft.id,
+      status: draft.status,
+      approvalStatus: draft.approvalStatus,
+      scheduledFor: draft.scheduledFor,
+      requestedScheduledFor: draft.requestedScheduledFor,
+      approvalDeadline: draft.approvalDeadline,
+      releaseGateState: draft.releaseGateState,
+      providerReadiness: draft.providerReadiness,
+      creativeApprovalState: draft.creativeApprovalState,
+      scheduledPublishEligibility: draft.scheduledPublishEligibility,
+      blockingIssues: draft.blockingIssues,
+      updatedAt: draft.updatedAt,
+    },
+  };
+}
+
+export async function agentReadSchedule(request, draftId) {
+  const authz = requireAgentSession(request, { capability: "READ_SCHEDULE_ASSIGNMENT" });
+  if (!authz.ok) return authz;
+  const draft = await getMarketingDraft(draftId, { workspaceId: authz.session.workspaceId });
+  if (!draft) return { ok: false, status: 404, error: "Draft not found." };
+  return {
+    ok: true,
+    status: 200,
+    schedule: {
+      draftId: draft.id,
+      requestedScheduledFor: draft.requestedScheduledFor,
+      scheduledFor: draft.scheduledFor,
+      timezone: draft.timezone,
+      approvalDeadline: draft.approvalDeadline,
+      scheduleAssignedAt: draft.scheduleAssignedAt,
+      authoritative: Boolean(draft.scheduledFor),
+      note: "scheduledFor is ReGeneLuxe/operator-controlled. requestedScheduledFor is agent input only.",
+    },
+  };
+}
+
+export async function agentListOwnDrafts(request) {
+  const authz = requireAgentSession(request, { capability: "READ_APPROVAL_STATUS" });
+  if (!authz.ok) return authz;
+  const drafts = await listMarketingDrafts({ workspaceId: authz.session.workspaceId });
+  const own = drafts.filter((draft) => draft.createdByInstanceId === authz.session.instanceId);
+  return { ok: true, status: 200, drafts: own };
 }
 
 export { publicPairing, publicSession };

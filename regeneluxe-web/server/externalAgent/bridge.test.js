@@ -34,6 +34,7 @@ const {
 const { NORTH_STAR } = await import("./northStar.js");
 const {
   ALLOWED_CAPABILITIES,
+  V1_CAPABILITIES,
   DENIED_ACTIONS,
   PROTOCOL_VERSION,
   isDeniedAction,
@@ -50,7 +51,7 @@ const { readSecrets, writeSecrets } = await import("../secrets.js");
 
 const WORKSPACE_A = "prf_workspace_a";
 const WORKSPACE_B = "prf_workspace_b";
-const ALL_CAPS = [...ALLOWED_CAPABILITIES];
+const ALL_CAPS = [...V1_CAPABILITIES];
 
 function request(headers = {}) {
   return new Request("http://127.0.0.1:5174/api/external-agent/handshake", {
@@ -200,6 +201,13 @@ describe("External Agent Bridge", () => {
     expect(opened.northStar.coreLoop).toEqual(NORTH_STAR.coreLoop);
     expect(opened.northStar.operatingStatement).toContain("Create once");
     expect(opened.northStar.humanControl).toMatch(/final control/i);
+    expect(opened.northStar.marketingTeam.roles.map((row) => row.id)).toEqual([
+      "MR_ENTREPRENEUR",
+      "GOOD_POST_REVIEWS",
+      "REGENELUXE",
+      "HUMAN_OPERATOR",
+    ]);
+    expect(opened.northStar.marketingTeam.note).toMatch(/no role-specific elevated/i);
     expect(opened.capabilities.denied).toEqual(expect.arrayContaining(["PUBLISH", "RUN_SHELL"]));
     expect(JSON.stringify(readSecrets().externalAgent.sessions)).not.toContain(opened.sessionToken);
     expect(JSON.stringify(readSecrets().externalAgent.pairings)).not.toContain(opened.sessionToken);
