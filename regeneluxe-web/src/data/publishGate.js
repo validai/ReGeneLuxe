@@ -41,8 +41,9 @@ export function evaluatePublishGate({
   if (!destinationId) return block("DESTINATION_MISSING");
 
   if (provider === "youtube") {
-    if (String(content.privacyStatus || "private").toLowerCase() !== "private") {
-      return block("YOUTUBE_PILOT_PRIVATE_ONLY");
+    const privacy = String(content.privacyStatus || "private").toLowerCase();
+    if (!["private", "unlisted", "public"].includes(privacy)) {
+      return block("INVALID_PRIVACY");
     }
     if (!variant.mediaRef && !content.videoPath) return block("MEDIA_REQUIRED");
   }

@@ -77,7 +77,7 @@ describe("youtube social token refresh", () => {
     expect(fetch.mock.calls.every((call) => String(call[0]).includes("oauth2.googleapis.com/token"))).toBe(true);
   });
 
-  it("rejects a public upload before refreshing or uploading", async () => {
+  it("allows public visibility but still requires a local video file", async () => {
     setAccountTokens("youtube", "acc_yt_public", {
       accessToken: "expired-access",
       refreshToken: "stored-refresh",
@@ -86,10 +86,11 @@ describe("youtube social token refresh", () => {
     });
     const result = await youtubeConnector.publishContent(
       { id: "acc_yt_public" },
-      { videoPath: "/tmp/pilot.mp4", privacyStatus: "public" },
+      { videoPath: "https://example.com/remote.mp4", privacyStatus: "public" },
     );
-    expect(result.code).toBe("YOUTUBE_PILOT_PRIVATE_ONLY");
-    expect(fetch).not.toHaveBeenCalled();
+    expect(result.code).not.toBe("YOUTUBE_PILOT_PRIVATE_ONLY");
+    expect(result.ok).toBe(false);
+    expect(String(result.error || result.reason || "")).toMatch(/local video file/i);
   });
 
   it("does not refresh a valid access token", async () => {

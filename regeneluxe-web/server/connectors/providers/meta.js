@@ -13,6 +13,7 @@ import {
   metaGraphUrl,
   publicDestinationsFromPages,
   publishFacebookPagePost,
+  publishFacebookPageMedia,
   publishInstagramMedia,
   safeProviderError,
 } from "./metaGraph.js";
@@ -51,11 +52,17 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
       ? [
         CAPABILITY.READ_PROFILE,
         CAPABILITY.PUBLISH_TEXT,
+        CAPABILITY.PUBLISH_IMAGE,
+        CAPABILITY.PUBLISH_VIDEO,
+        CAPABILITY.PUBLISH_SHORT_VIDEO,
+        CAPABILITY.SCHEDULE,
       ]
       : [
         CAPABILITY.READ_PROFILE,
         CAPABILITY.PUBLISH_IMAGE,
         CAPABILITY.PUBLISH_VIDEO,
+        CAPABILITY.PUBLISH_SHORT_VIDEO,
+        CAPABILITY.SCHEDULE,
       ],
   });
 
@@ -193,9 +200,22 @@ export function createMetaConnector({ surface = "instagram" } = {}) {
         };
       }
       const message = payload?.caption || payload?.text || "";
-      if (!message) return unavailable("Facebook Page publishing requires text.");
+      const imageUrl = payload?.imageUrl || (!payload?.videoUrl ? (payload?.mediaUrl || "") : "");
+      const videoUrl = payload?.videoUrl || "";
       const page = (tokens.pages || []).find((item) => String(item.id) === String(account.pageId || account.providerAccountId));
       if (!page?.access_token) return unavailable("The Page token is missing. Select the Page again.");
+      if (imageUrl || videoUrl) {
+        const check = assertPublicProviderMedia(videoUrl || imageUrl);
+        if (!check.ok) return { ok: false, error: "MEDIA_PUBLIC_URL_REQUIRED", code: "MEDIA_PUBLIC_URL_REQUIRED" };
+        return publishFacebookPageMedia({
+          pageId: page.id,
+          pageAccessToken: page.access_token,
+          message,
+          imageUrl: videoUrl ? "" : imageUrl,
+          videoUrl,
+        });
+      }
+      if (!message) return unavailable("Facebook Page publishing requires text or media.");
       return publishFacebookPagePost({
         pageId: page.id,
         pageAccessToken: page.access_token,

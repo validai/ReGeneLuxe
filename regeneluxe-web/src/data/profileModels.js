@@ -13,6 +13,28 @@ export function normalizeWorkspacePurpose(value) {
   return WORKSPACE_PURPOSES.includes(raw) ? raw : "PRODUCTION";
 }
 
+/**
+ * Optional public-presence type. Non-destructive metadata only.
+ * Does not change the one-identity → one-workspace publishing model.
+ */
+export const WORKSPACE_TYPES = Object.freeze([
+  "PERSON",
+  "CREATOR",
+  "ARTIST",
+  "PUBLIC_FIGURE",
+  "BUSINESS",
+  "BRAND",
+  "ORGANIZATION",
+  "NONPROFIT",
+  "CAMPAIGN",
+  "OTHER",
+]);
+
+export function normalizeWorkspaceType(value) {
+  const raw = String(value || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+  return WORKSPACE_TYPES.includes(raw) ? raw : "";
+}
+
 export const PROFILE_CONNECTION_KINDS = {
   GOOGLE_ACCOUNT: "GOOGLE_ACCOUNT",
   GMAIL: "GMAIL",
@@ -107,6 +129,7 @@ export function emptyManagedProfile(partial = {}) {
     googleAccountEmail: partial.googleAccountEmail || "",
     googleAccountSub: partial.googleAccountSub || "",
     workspacePurpose: normalizeWorkspacePurpose(partial.workspacePurpose || partial.purpose),
+    workspaceType: normalizeWorkspaceType(partial.workspaceType || partial.profileType),
     createdAt: partial.createdAt || timestamp,
     updatedAt: partial.updatedAt || timestamp,
   };
@@ -130,6 +153,7 @@ export function publicManagedProfile(profile) {
     platforms: Array.isArray(profile.platforms) ? profile.platforms : [],
     googleAccountEmail: profile.googleAccountEmail || "",
     workspacePurpose: normalizeWorkspacePurpose(profile.workspacePurpose || profile.purpose),
+    workspaceType: normalizeWorkspaceType(profile.workspaceType || profile.profileType),
     createdAt: profile.createdAt || null,
     updatedAt: profile.updatedAt || null,
     revision: profile.revision ?? null,

@@ -207,6 +207,48 @@ export async function publishFacebookPagePost({
   };
 }
 
+/**
+ * Facebook Page photo or video post via Graph.
+ * Requires pages_manage_posts and a public HTTPS media URL.
+ */
+export async function publishFacebookPageMedia({
+  fetchImpl = fetch,
+  pageId,
+  pageAccessToken,
+  message = "",
+  imageUrl = "",
+  videoUrl = "",
+} = {}) {
+  const mediaUrl = videoUrl || imageUrl;
+  const ready = assertPublicProviderMedia(mediaUrl);
+  if (!ready.ok) return { ok: false, error: "MEDIA_PUBLIC_URL_REQUIRED", code: "MEDIA_PUBLIC_URL_REQUIRED" };
+  const isVideo = Boolean(videoUrl);
+  const endpoint = isVideo ? `/${pageId}/videos` : `/${pageId}/photos`;
+  const body = new URLSearchParams({ access_token: pageAccessToken });
+  if (isVideo) {
+    body.set("file_url", videoUrl);
+    if (message) body.set("description", message);
+  } else {
+    body.set("url", imageUrl);
+    if (message) body.set("caption", message);
+  }
+  const res = await fetchImpl(metaGraphUrl(endpoint), { method: "POST", body });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !(json.id || json.post_id)) {
+    const failure = classifyMetaPublishFailure(json, "PUBLISH_FAILED");
+    return { ok: false, error: failure.error || "Facebook Page media publish failed.", code: failure.code };
+  }
+  const providerPostId = json.post_id || json.id;
+  return {
+    ok: true,
+    providerPostId,
+    permalink: `https://www.facebook.com/${providerPostId}`,
+    providerStatus: "PUBLISHED",
+    mediaKind: isVideo ? "VIDEO" : "IMAGE",
+    mediaUrl,
+  };
+}
+
 export function selectionFromVault(pages, { surface, pageId, instagramId = "" }) {
   const match = (pages || []).find((page) => String(page.id) === String(pageId));
   if (!match) return { ok: false, error: "That Page is not part of this authorization." };

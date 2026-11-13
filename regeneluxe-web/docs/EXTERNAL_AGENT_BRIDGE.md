@@ -54,7 +54,7 @@ The agent may **not**:
 
 ## North Star (canonical)
 
-ReGeneLuxe is a private AI campaign and relationship command center for creators and artist brands.
+ReGeneLuxe is an AI campaign, publishing, relationship, and performance command center for individuals, public figures, brands, organizations, and teams managing a public presence across multiple networks.
 
 Its job is to reduce the manual work required to operate and grow one creator/artist brand across multiple social networks.
 

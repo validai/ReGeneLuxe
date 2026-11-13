@@ -9,17 +9,33 @@ function mimeFor(filePath) {
   return "video/mp4";
 }
 
+function normalizePrivacy(value) {
+  const raw = String(value || "private").trim().toLowerCase();
+  if (raw === "public" || raw === "unlisted" || raw === "private") return raw;
+  return "private";
+}
+
 /**
- * Server-side resumable upload. privacyStatus is always private.
+ * Server-side resumable upload.
+ * Default privacy is private unless caller explicitly requests unlisted/public.
  */
-export async function uploadPrivateYouTube({
+export async function uploadYouTubeVideo({
   fetchImpl = fetch,
   accessToken,
   filePath,
   title,
   description = "",
+  privacyStatus = "private",
+  publishAt = null,
 } = {}) {
   const size = statSync(filePath).size;
+  const privacy = normalizePrivacy(privacyStatus);
+  const status = { privacyStatus: privacy };
+  // YouTube only accepts publishAt for private videos scheduled to go public.
+  if (publishAt && privacy === "private") {
+    status.publishAt = new Date(publishAt).toISOString();
+    status.privacyStatus = "private";
+  }
   const init = await fetchImpl(UPLOAD_URL, {
     method: "POST",
     headers: {
@@ -29,8 +45,8 @@ export async function uploadPrivateYouTube({
       "X-Upload-Content-Type": mimeFor(filePath),
     },
     body: JSON.stringify({
-      snippet: { title: title || "ReGeneLuxe private pilot", description },
-      status: { privacyStatus: "private" },
+      snippet: { title: title || "ReGeneLuxe upload", description },
+      status,
     }),
   });
   const session = init.headers.get("location");
@@ -72,7 +88,13 @@ export async function uploadPrivateYouTube({
     ok: true,
     providerPostId: videoId,
     permalink: `https://www.youtube.com/watch?v=${videoId}`,
-    providerStatus: "private",
-    privacyStatus: "private",
+    providerStatus: privacy,
+    privacyStatus: privacy,
+    publishAt: status.publishAt || null,
   };
+}
+
+/** @deprecated use uploadYouTubeVideo — kept for existing imports */
+export async function uploadPrivateYouTube(opts = {}) {
+  return uploadYouTubeVideo({ ...opts, privacyStatus: "private" });
 }

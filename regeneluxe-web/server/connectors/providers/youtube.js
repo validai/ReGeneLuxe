@@ -7,7 +7,6 @@ import { readSecrets, writeSecrets } from "../../secrets.js";
 import { youtubeCallbackUrl } from "../../auth/origin.js";
 import { YOUTUBE_CONNECTION_SCOPE_STRING, YOUTUBE_PILOT_SCOPE_STRING } from "../../auth/googleScopes.js";
 import { friendlyGoogleApiError } from "../../auth/googleErrors.js";
-import { uploadPrivateYouTube } from "./youtubeUpload.js";
 
 export const youtubeConnector = baseConnector({
   provider: "youtube",
@@ -29,6 +28,8 @@ export const youtubeConnector = baseConnector({
     CAPABILITY.READ_ACCOUNT_METRICS,
     CAPABILITY.READ_CONTENT_METRICS,
     CAPABILITY.PUBLISH_VIDEO,
+    CAPABILITY.PUBLISH_LONG_VIDEO,
+    CAPABILITY.SCHEDULE,
   ],
 });
 
@@ -383,18 +384,22 @@ youtubeConnector._getContentMetrics = async (account, contentRef, tokens) => {
 youtubeConnector._publishContent = async (_account, payload, tokens) => {
   const filePath = payload?.videoPath || payload?.mediaUrl || "";
   if (!filePath || String(filePath).startsWith("http")) {
-    return unavailable("YouTube pilot upload requires a local video file on the server.");
+    return unavailable("YouTube upload requires a local video file on the server.");
   }
-  if (String(payload?.privacyStatus || "private").toLowerCase() !== "private") {
-    return { ok: false, error: "YOUTUBE_PILOT_PRIVATE_ONLY", code: "YOUTUBE_PILOT_PRIVATE_ONLY" };
+  const privacy = String(payload?.privacyStatus || "private").toLowerCase();
+  if (!["private", "unlisted", "public"].includes(privacy)) {
+    return { ok: false, error: "Invalid YouTube privacyStatus.", code: "INVALID_PRIVACY" };
   }
   const fresh = await freshYoutubeTokens(_account, tokens);
   if (!fresh.ok) return fresh;
-  return uploadPrivateYouTube({
+  const { uploadYouTubeVideo } = await import("./youtubeUpload.js");
+  return uploadYouTubeVideo({
     accessToken: fresh.tokens.accessToken,
     filePath,
-    title: payload?.title || payload?.caption || "ReGeneLuxe private pilot",
-    description: payload?.caption || "",
+    title: payload?.title || payload?.caption || "ReGeneLuxe upload",
+    description: payload?.caption || payload?.description || "",
+    privacyStatus: privacy,
+    publishAt: payload?.publishAt || null,
   });
 };
 

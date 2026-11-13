@@ -167,12 +167,25 @@ describe("youtube private upload", () => {
       }
       return { ok: true, status: 200, headers: { get: () => "" }, json: async () => ({ id: "video_private_1" }) };
     });
-    const blocked = evaluatePublishGate({
+    const privacyOk = evaluatePublishGate({
       account: connectedAccount({ id: "acc_yt", platform: "YouTube", providerAccountId: "channel_1" }),
       content: imageContent({ privacyStatus: "public", videoPath: filePath }),
       approval: null,
     });
-    expect(blocked.code).toBe("YOUTUBE_PILOT_PRIVATE_ONLY");
+    // Public/unlisted/private are allowed; pilot providers still need fresh approval separately.
+    expect(privacyOk.code).not.toBe("YOUTUBE_PILOT_PRIVATE_ONLY");
+    expect(privacyOk.code).not.toBe("INVALID_PRIVACY");
+    const { uploadYouTubeVideo } = await import("./providers/youtubeUpload.js");
+    const publicUpload = await uploadYouTubeVideo({
+      fetchImpl,
+      accessToken: "yt-secret",
+      filePath,
+      title: "Public episode",
+      privacyStatus: "public",
+    });
+    expect(publicUpload.providerPostId).toBe("video_private_1");
+    expect(publicUpload.privacyStatus).toBe("public");
+    expect(bodies[0]).toContain('"privacyStatus":"public"');
     const result = await uploadPrivateYouTube({
       fetchImpl,
       accessToken: "yt-secret",
@@ -181,7 +194,6 @@ describe("youtube private upload", () => {
     });
     expect(result.providerPostId).toBe("video_private_1");
     expect(result.privacyStatus).toBe("private");
-    expect(bodies[0]).toContain('"privacyStatus":"private"');
     expect(JSON.stringify(result)).not.toContain("yt-secret");
     delete globalThis.__ytRetry;
   });

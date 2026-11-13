@@ -6,11 +6,11 @@
 export const NORTH_STAR = Object.freeze({
   product: "ReGeneLuxe",
   statement:
-    "ReGeneLuxe is a private AI campaign and relationship command center for creators and artist brands.",
+    "ReGeneLuxe is an AI campaign, publishing, relationship, and performance command center for individuals, public figures, brands, organizations, and teams managing a public presence across multiple networks.",
   purpose:
-    "Reduce the manual work required to operate and grow one creator/artist brand across multiple social networks.",
+    "Reduce the manual work required to operate and grow one public presence across multiple social networks.",
   job:
-    "Its job is to reduce the manual work required to operate and grow one creator/artist brand across multiple social networks.",
+    "Its job is to reduce the manual work required to operate and grow one public presence across multiple social networks.",
   coreLoop: Object.freeze([
     "SOURCE",
     "PLAN",
@@ -36,7 +36,7 @@ export const NORTH_STAR = Object.freeze({
       Object.freeze({
         id: "GOOD_POST_REVIEWS",
         name: "GOOD POST REVIEWS",
-        focus: "platform-specific copy, content preparation, publishing operations",
+        focus: "network-specific copy, content preparation, publishing operations",
       }),
       Object.freeze({
         id: "REGENELUXE",
@@ -56,7 +56,7 @@ export const NORTH_STAR = Object.freeze({
     "analyst",
     "networking assistant",
   ]),
-  scope: "ONE brand",
+  scope: "ONE public presence / workspace",
   notMerely: Object.freeze([
     "a scheduler",
     "a caption generator",
@@ -66,6 +66,8 @@ export const NORTH_STAR = Object.freeze({
   ]),
   agentRole: "trusted analyst / product collaborator",
   agentRoleNot: "autonomous administrator",
+  verticalNote:
+    "Music, album, song, artist, and fan concepts belong to campaign templates and vertical metadata — not universal product assumptions.",
 });
 
 export function northStarPayload() {
