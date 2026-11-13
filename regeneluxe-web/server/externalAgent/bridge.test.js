@@ -79,12 +79,15 @@ function agentIdentity(overrides = {}) {
   };
 }
 
-function startPairing(workspaceId = WORKSPACE_A) {
+function startPairing(workspaceId = WORKSPACE_A, overrides = {}) {
   enableBridge();
   return startOperatorPairing({
     operatorId: "op_test",
     workspaceId,
     workspaceName: "Test Brand",
+    agentKey: "other",
+    connectionMode: "LOCAL_TEST_CLIENT",
+    ...overrides,
   });
 }
 
@@ -120,8 +123,10 @@ describe("External Agent Bridge", () => {
     process.env.EXTERNAL_AGENT_BRIDGE_ENABLED = "1";
     const ready = getBridgeStatus(WORKSPACE_A);
     expect(ready.enabled).toBe(true);
-    expect(ready.state).toBe("READY_FOR_PAIRING");
+    expect(ready.state).toBe("READY");
+    expect(ready.legacyState).toBe("READY_FOR_PAIRING");
     expect(ready.code).toBe("READY");
+    expect(ready.transport.remoteAgentCanConnect).toBe(false);
     expect(JSON.stringify(ready)).not.toMatch(/EXTERNAL_AGENT_BRIDGE_SECRET|standing/i);
   });
 
@@ -145,7 +150,7 @@ describe("External Agent Bridge", () => {
     const stored = JSON.stringify(readSecrets().externalAgent);
     expect(stored).not.toContain(created.pairingCredential);
     expect(stored).toContain(hashToken(created.pairingCredential));
-    expect(getBridgeStatus(WORKSPACE_A).state).toBe("PAIRING_ACTIVE");
+    expect(getBridgeStatus(WORKSPACE_A).state).toBe("WAITING_FOR_AGENT");
   });
 
   it("expires and cancels pairings; rejects replay after consume", () => {
@@ -541,5 +546,82 @@ describe("External Agent Bridge", () => {
     expect(handshake).toContain("rateLimit");
     expect(proposals).toContain("rateLimit");
     expect(handshake).not.toContain("EXTERNAL_AGENT_BRIDGE_SECRET");
+  });
+
+  it("refuses remote-agent pairing until a secure transport exists", () => {
+    enableBridge();
+    const remote = startOperatorPairing({
+      operatorId: "op_test",
+      workspaceId: WORKSPACE_A,
+      workspaceName: "Test Brand",
+      agentKey: "mr_post",
+      connectionMode: "REMOTE_AGENT",
+    });
+    expect(remote.ok).toBe(false);
+    expect(remote.code).toBe("REMOTE_TRANSPORT_REQUIRED");
+    expect(remote.pairingCredential).toBeUndefined();
+    expect(getBridgeStatus(WORKSPACE_A).state).toBe("READY");
+  });
+
+  it("requires agent + local mode before creating a credential", () => {
+    enableBridge();
+    const missingMode = startOperatorPairing({
+      operatorId: "op_test",
+      workspaceId: WORKSPACE_A,
+      workspaceName: "Test Brand",
+      agentKey: "mr_post",
+    });
+    expect(missingMode.ok).toBe(false);
+    expect(missingMode.code).toBe("CONNECTION_MODE_REQUIRED");
+
+    const missingAgent = startOperatorPairing({
+      operatorId: "op_test",
+      workspaceId: WORKSPACE_A,
+      workspaceName: "Test Brand",
+      connectionMode: "LOCAL_TEST_CLIENT",
+    });
+    expect(missingAgent.ok).toBe(false);
+    expect(missingAgent.code).toBe("AGENT_REQUIRED");
+  });
+
+  it("rejects the wrong agent using a named pairing credential", () => {
+    const created = startPairing(WORKSPACE_A, { agentKey: "mr_post" });
+    expect(created.ok).toBe(true);
+    const wrong = beginHandshake(request(), {
+      ...agentIdentity({
+        agentType: "mr_entrepreneur",
+        displayName: "MR ENTREPRENEUR",
+        instanceId: "wrong-1",
+        agentRole: "CAMPAIGN_STRATEGIST",
+        requestedCapabilities: ["READ_PRODUCT_CONTEXT", "SUBMIT_PROPOSAL"],
+      }),
+      pairingCredential: created.pairingCredential,
+    });
+    expect(wrong.ok).toBe(false);
+    expect(wrong.code).toBe("WRONG_AGENT");
+
+    const right = beginHandshake(request(), {
+      ...agentIdentity({
+        agentType: "mr_post",
+        displayName: "MR POST",
+        instanceId: "mr-post-1",
+        agentRole: "CONTENT_OPERATOR",
+        requestedCapabilities: [
+          "READ_PRODUCT_CONTEXT",
+          "READ_CAMPAIGN_SUMMARY",
+          "READ_CONTENT_METADATA",
+          "READ_OPERATIONAL_HEALTH",
+          "CREATE_CONTENT_DRAFT",
+          "UPDATE_OWN_CONTENT_DRAFT",
+          "SUBMIT_CONTENT_FOR_APPROVAL",
+          "READ_APPROVAL_STATUS",
+          "SUBMIT_PROPOSAL",
+        ],
+      }),
+      pairingCredential: created.pairingCredential,
+    });
+    expect(right.ok).toBe(true);
+    expect(getBridgeStatus(WORKSPACE_A).state).toBe("CONNECTED");
+    expect(getBridgeStatus(WORKSPACE_A).roster.find((row) => row.key === "mr_post").status).toBe("CONNECTED");
   });
 });

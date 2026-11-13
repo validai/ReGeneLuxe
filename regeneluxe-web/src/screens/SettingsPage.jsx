@@ -196,7 +196,7 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
           ["#account", "Account"],
           ["#connections", "Connections"],
           ["#certification", "Certification"],
-          ["#external-agent-bridge", "External Agent"],
+          ["#external-agent-bridge", "Agents"],
           ["#data", "Data & Sync"],
           ["#preferences", "Preferences"],
         ].map(([href, label]) => (

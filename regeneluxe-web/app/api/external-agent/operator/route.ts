@@ -36,7 +36,13 @@ export async function POST(request: Request) {
   const action = String(body.action || "").trim();
 
   if (action === "start_pairing") {
-    return bridgeJson(startOperatorPairing({ operatorId, workspaceId, workspaceName }));
+    return bridgeJson(startOperatorPairing({
+      operatorId,
+      workspaceId,
+      workspaceName,
+      agentKey: body.agentKey || body.agent || null,
+      connectionMode: body.connectionMode || body.mode || null,
+    }));
   }
   if (action === "cancel_pairing") {
     return bridgeJson(cancelOperatorPairing({ workspaceId }));

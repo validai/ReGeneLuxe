@@ -122,12 +122,18 @@ export function generatePairingCredential() {
 
 export function publicPairing(row) {
   if (!row) return null;
+  const used = row.status === "consumed" || Boolean(row.consumedAt);
   return {
     id: row.id,
     status: row.status,
     workspaceId: row.workspaceId,
     workspaceName: row.workspaceName,
     operatorId: row.operatorId,
+    agentKey: row.agentKey || null,
+    agentLabel: row.agentLabel || null,
+    agentRole: row.agentRole || null,
+    connectionMode: row.connectionMode || null,
+    used,
     createdAt: row.createdAt,
     expiresAt: row.expiresAt,
     consumedAt: row.consumedAt || null,
@@ -139,6 +145,10 @@ export function createPairingRecord({
   operatorId,
   workspaceId,
   workspaceName = "",
+  agentKey = null,
+  agentLabel = null,
+  agentRole = null,
+  connectionMode = null,
 } = {}) {
   const secrets = bucket();
   const now = Date.now();
@@ -149,6 +159,7 @@ export function createPairingRecord({
   for (const row of superseded) {
     row.status = "cancelled";
     row.cancelledAt = new Date(now).toISOString();
+    row.credentialHash = hashToken(`cancelled:${row.id}:${randomBytes(8).toString("hex")}`);
   }
   const pairingCredential = generatePairingCredential();
   const id = `eapair_${randomBytes(10).toString("hex")}`;
@@ -159,6 +170,10 @@ export function createPairingRecord({
     operatorId: operatorId || null,
     workspaceId: workspaceId || null,
     workspaceName: String(workspaceName || "").slice(0, 160),
+    agentKey: agentKey || null,
+    agentLabel: agentLabel ? String(agentLabel).slice(0, 80) : null,
+    agentRole: agentRole ? String(agentRole).slice(0, 64) : null,
+    connectionMode: connectionMode ? String(connectionMode).slice(0, 40) : null,
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + PAIRING_TTL_MS).toISOString(),
   };
@@ -179,10 +194,42 @@ export function createPairingRecord({
     sessionId: null,
     agentId: null,
     action: AUDIT.PAIRING_CREATED,
-    detail: sanitizeDetail({ pairingId: id, workspaceId }),
+    detail: sanitizeDetail({
+      pairingId: id,
+      workspaceId,
+      agentKey,
+      agentRole,
+      connectionMode,
+    }),
   });
   writeSecrets(secrets);
   return { pairing: publicPairing(row), pairingCredential };
+}
+
+/** Invalidate every active pairing (security rotation). Does not log plaintext. */
+export function cancelAllActivePairings({ reason = "security_rotation" } = {}) {
+  const secrets = bucket();
+  const now = Date.now();
+  prune(secrets.externalAgent, now);
+  let count = 0;
+  for (const row of Object.values(secrets.externalAgent.pairings || {})) {
+    if (row.status !== "active") continue;
+    row.status = "cancelled";
+    row.cancelledAt = new Date(now).toISOString();
+    row.cancelReason = String(reason).slice(0, 80);
+    row.credentialHash = hashToken(`invalidated:${row.id}:${randomBytes(8).toString("hex")}`);
+    secrets.externalAgent.audit.push({
+      id: `eaa_${randomBytes(8).toString("hex")}`,
+      at: new Date(now).toISOString(),
+      sessionId: null,
+      agentId: null,
+      action: AUDIT.PAIRING_CANCELLED,
+      detail: sanitizeDetail({ pairingId: row.id, reason }),
+    });
+    count += 1;
+  }
+  if (count) writeSecrets(secrets);
+  return { ok: true, cancelled: count };
 }
 
 export function findActivePairingByCredential(credential) {
@@ -212,6 +259,7 @@ export function cancelPairing(pairingId, { workspaceId } = {}) {
   if (row.status !== "active") return publicPairing(row);
   row.status = "cancelled";
   row.cancelledAt = new Date().toISOString();
+  row.credentialHash = hashToken(`cancelled:${row.id}:${randomBytes(8).toString("hex")}`);
   writeSecrets(secrets);
   appendAudit({
     sessionId: null,

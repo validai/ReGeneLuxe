@@ -64,10 +64,12 @@ async function openContentOperator(instanceId = "good-post-reviews-1") {
     operatorId: "op_1",
     workspaceId: WORKSPACE,
     workspaceName: "DJ Coast",
+    agentKey: "mr_post",
+    connectionMode: "LOCAL_TEST_CLIENT",
   });
   return beginHandshake(request(), {
-    agentType: "grokbot",
-    displayName: "Good Post Reviews",
+    agentType: "mr_post",
+    displayName: "MR POST",
     instanceId,
     agentRole: "CONTENT_OPERATOR",
     protocolVersion: "1",
@@ -81,9 +83,11 @@ async function openStrategist() {
     operatorId: "op_1",
     workspaceId: WORKSPACE,
     workspaceName: "DJ Coast",
+    agentKey: "mr_entrepreneur",
+    connectionMode: "LOCAL_TEST_CLIENT",
   });
   return beginHandshake(request(), {
-    agentType: "grokbot",
+    agentType: "mr_entrepreneur",
     displayName: "MR ENTREPRENEUR",
     instanceId: "mr-entrepreneur-1",
     agentRole: "CAMPAIGN_STRATEGIST",
@@ -187,10 +191,16 @@ describe("Marketing draft approval workflow", () => {
     const owner = request({ "x-regeneluxe-agent-session": again.sessionToken });
     const foreign = await agentUpdateDraft(otherAuthed, created.draft.id, { caption: "hijack" });
     // other session may fail due to workspace single-session revoke; recreate foreign agent after owner
-    const foreignPair = startOperatorPairing({ operatorId: "op_1", workspaceId: WORKSPACE, workspaceName: "DJ Coast" });
+    const foreignPair = startOperatorPairing({
+      operatorId: "op_1",
+      workspaceId: WORKSPACE,
+      workspaceName: "DJ Coast",
+      agentKey: "other",
+      connectionMode: "LOCAL_TEST_CLIENT",
+    });
     // Actually startOperatorPairing then handshake as other while owner holds session - handshake revokes owner.
     const foreignOpen = beginHandshake(request(), {
-      agentType: "grokbot",
+      agentType: "trusted_agent",
       displayName: "Other Bot",
       instanceId: "other-agent-2",
       agentRole: "CONTENT_OPERATOR",
@@ -204,10 +214,16 @@ describe("Marketing draft approval workflow", () => {
     expect(deniedUpdate.code).toBe("OWNERSHIP_DENIED");
 
     // Restore owner session
-    const restorePair = startOperatorPairing({ operatorId: "op_1", workspaceId: WORKSPACE, workspaceName: "DJ Coast" });
+    const restorePair = startOperatorPairing({
+      operatorId: "op_1",
+      workspaceId: WORKSPACE,
+      workspaceName: "DJ Coast",
+      agentKey: "mr_post",
+      connectionMode: "LOCAL_TEST_CLIENT",
+    });
     const restore = beginHandshake(request(), {
-      agentType: "grokbot",
-      displayName: "Good Post Reviews",
+      agentType: "mr_post",
+      displayName: "MR POST",
       instanceId: "good-post-reviews-1",
       agentRole: "CONTENT_OPERATOR",
       protocolVersion: "1",
@@ -278,10 +294,16 @@ describe("Marketing draft approval workflow", () => {
     });
     expect(changes.draft.status).toBe("CHANGES_REQUESTED");
 
-    const pair = startOperatorPairing({ operatorId: "op_1", workspaceId: WORKSPACE, workspaceName: "DJ Coast" });
+    const pair = startOperatorPairing({
+      operatorId: "op_1",
+      workspaceId: WORKSPACE,
+      workspaceName: "DJ Coast",
+      agentKey: "mr_post",
+      connectionMode: "LOCAL_TEST_CLIENT",
+    });
     const reopen = beginHandshake(request(), {
-      agentType: "grokbot",
-      displayName: "Good Post Reviews",
+      agentType: "mr_post",
+      displayName: "MR POST",
       instanceId: "good-post-reviews-1",
       agentRole: "CONTENT_OPERATOR",
       protocolVersion: "1",

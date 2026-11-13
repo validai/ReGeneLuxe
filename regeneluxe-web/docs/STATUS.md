@@ -18,17 +18,20 @@ Update this file at the end of substantial sprints. Prefer certification state o
 | Independent profile onboarding | **CERTIFIED** | `REGENELUXE_INDEPENDENT_PROFILE_FLOW_CERTIFIED` — E2E ×3 at `b266489` |
 | Break/Harden/Certify process | Adopted | `docs/BREAK_HARDEN_CERTIFY.md` |
 | Agent continuity protocol | Adopted | `docs/AGENT_CONTINUITY.md` |
+| External agent pairing UX / transport truth | **CERTIFIED (local)** | Wizard + WAITING_FOR_AGENT + remote refuse; E2E×3 `test:e2e-agent-pairing`. Remote Grok **cannot** connect. |
 
 ## Active priorities / remains
 
 1. Operator creates real alternate-artist **TEST** profile via signed-out Google flow (Cursor does not create it).
 2. Provider **connection certification** in that TEST workspace (no provider writes until TEST cert path).
 3. Layer 2 publishing stack: **IMPLEMENTED — AWAITING REAL CERTIFICATION** (`docs/LAYERED_BUILD.md`). Do not rebuild unless cert finds defects.
+4. External Agent Bridge: local pairing UX/transport truth certified — **remote Grok cannot connect** until a secure outbound rendezvous/relay is approved and built (not in this sprint).
 
 ## Blockers
 
 - Real Google OAuth for the alternate artist identity is operator-owned (allowlist / local access mode as configured).
 - Provider GREEN requires controlled TEST-workspace certification — not unit tests alone.
+- Remote external agents (Grok) blocked by local-only transport — do not tunnel 5174.
 
 ## Do not touch
 

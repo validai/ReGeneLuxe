@@ -12,6 +12,7 @@ import {
   appendAudit,
   appendProposal,
   bridgeOperatorSnapshot,
+  cancelAllActivePairings,
   cancelPairing,
   consumePairing,
   createPairingRecord,
@@ -36,6 +37,13 @@ import {
 } from "./auth.js";
 import { normalizeAgentRole } from "./roles.js";
 import {
+  agentCatalogPublic,
+  getAgentPreset,
+  matchHandshakeToPreset,
+  rosterFromSession,
+} from "./agentCatalog.js";
+import { resolveTransport, transportPublicTruth, CONNECTION_MODES } from "./transport.js";
+import {
   createMarketingDraft,
   getMarketingDraft,
   listMarketingDrafts,
@@ -43,15 +51,18 @@ import {
   updateOwnMarketingDraft,
 } from "../marketingDrafts/service.js";
 
+function deriveUiState({ readiness, snapshot }) {
+  if (!readiness.ok) return "DISABLED";
+  if (snapshot.session) return "CONNECTED";
+  if (snapshot.pairing?.status === "active") return "WAITING_FOR_AGENT";
+  return "READY";
+}
+
 export function getBridgeStatus(workspaceId = null) {
   const readiness = bridgeReadiness();
   const snapshot = workspaceId ? bridgeOperatorSnapshot(workspaceId) : { pairing: null, session: null, proposals: [] };
-  let state = "DISABLED";
-  if (readiness.ok) {
-    if (snapshot.session) state = "PAIRED";
-    else if (snapshot.pairing?.status === "active") state = "PAIRING_ACTIVE";
-    else state = "READY_FOR_PAIRING";
-  }
+  const state = deriveUiState({ readiness, snapshot });
+  const transport = transportPublicTruth();
   return {
     ok: true,
     enabled: bridgeEnabled(),
@@ -59,32 +70,113 @@ export function getBridgeStatus(workspaceId = null) {
     code: readiness.code || "READY",
     error: readiness.error || null,
     state,
+    /** @deprecated aliases kept for older clients during transition */
+    legacyState: state === "CONNECTED"
+      ? "PAIRED"
+      : state === "WAITING_FOR_AGENT"
+        ? "PAIRING_ACTIVE"
+        : state === "READY"
+          ? "READY_FOR_PAIRING"
+          : state,
     role: "trusted_analyst",
     protocolVersion: PROTOCOL_VERSION,
     sessionTtlMinutes: Math.round(SESSION_TTL_MS / 60000),
     pairingTtlMinutes: 10,
     allowedCapabilities: [...ALLOWED_CAPABILITIES],
     note: "sessionTtlMinutes is the External Agent session TTL (15). It is not a social-post approval window.",
+    transport,
+    connectionModes: Object.values(CONNECTION_MODES),
+    agents: agentCatalogPublic(),
+    roster: rosterFromSession(snapshot.session),
     pairing: snapshot.pairing,
     session: snapshot.session,
     proposals: snapshot.proposals,
-    version: 1,
+    version: 2,
   };
 }
 
-export function startOperatorPairing({ operatorId, workspaceId, workspaceName = "" }) {
+/**
+ * @param {{
+ *   operatorId?: string | null,
+ *   workspaceId?: string | null,
+ *   workspaceName?: string,
+ *   agentKey?: string | null,
+ *   connectionMode?: string | null,
+ * }} [opts]
+ */
+export function startOperatorPairing({
+  operatorId,
+  workspaceId,
+  workspaceName = "",
+  agentKey = null,
+  connectionMode = null,
+} = {}) {
   const readiness = bridgeReadiness();
   if (!readiness.ok) return { ok: false, status: 503, ...readiness };
   if (!operatorId || !workspaceId) {
     return { ok: false, status: 400, code: "WORKSPACE_REQUIRED", error: "A signed-in workspace is required to start pairing." };
   }
-  const created = createPairingRecord({ operatorId, workspaceId, workspaceName });
+
+  const transport = resolveTransport({ connectionMode });
+  if (!transport.ok) {
+    return {
+      ok: false,
+      status: transport.status,
+      code: transport.code,
+      error: transport.error,
+      operatorMessage: transport.operatorMessage,
+      transport,
+      state: transport.code === "REMOTE_TRANSPORT_REQUIRED" ? "REMOTE_TRANSPORT_REQUIRED" : "ERROR",
+    };
+  }
+
+  const preset = getAgentPreset(agentKey);
+  if (!preset) {
+    return {
+      ok: false,
+      status: 400,
+      code: "AGENT_REQUIRED",
+      error: "Choose which agent you are connecting before creating a pairing credential.",
+      state: "ERROR",
+    };
+  }
+
+  const created = createPairingRecord({
+    operatorId,
+    workspaceId,
+    workspaceName,
+    agentKey: preset.key,
+    agentLabel: preset.label,
+    agentRole: preset.role,
+    connectionMode: transport.connectionMode,
+  });
   return {
     ok: true,
     status: 200,
+    state: "WAITING_FOR_AGENT",
     pairing: created.pairing,
     pairingCredential: created.pairingCredential,
-    warning: "Copy this one-time pairing credential now. It is shown once, expires in about 10 minutes, and is never stored in plaintext.",
+    agent: {
+      key: preset.key,
+      label: preset.label,
+      role: preset.role,
+      roleLabel: preset.roleLabel,
+    },
+    connectionMode: transport.connectionMode,
+    transport,
+    instructions: {
+      title: "Temporary certification pairing",
+      steps: [
+        "Open the intended local test client (or local agent process) on this machine.",
+        "Put the credential into the secure Secrets field — never into normal chat.",
+        "Paste it as REGENELUXE_PAIRING_CREDENTIAL (or the client equivalent).",
+        "Return here. ReGeneLuxe shows WAITING FOR AGENT until handshake succeeds.",
+        "When handshake succeeds, this credential disappears and the agent shows as CONNECTED.",
+      ],
+      secretName: "REGENELUXE_PAIRING_CREDENTIAL",
+      doNotPasteIntoChat: true,
+    },
+    warning: "This one-time pairing credential is shown once, expires in about 10 minutes, and is never stored in plaintext. It works only for a local client that can reach localhost:5174.",
   };
 }
 
@@ -92,8 +184,17 @@ export function cancelOperatorPairing({ workspaceId }) {
   const readiness = bridgeReadiness();
   if (!readiness.ok) return { ok: false, status: 503, ...readiness };
   const active = getActivePairingForWorkspace(workspaceId);
-  if (!active) return { ok: false, status: 404, error: "No active pairing to cancel." };
-  return { ok: true, status: 200, pairing: cancelPairing(active.id, { workspaceId }) };
+  if (!active) return { ok: false, status: 404, error: "No active pairing to cancel.", state: "CANCELLED" };
+  return {
+    ok: true,
+    status: 200,
+    state: "CANCELLED",
+    pairing: cancelPairing(active.id, { workspaceId }),
+  };
+}
+
+export function invalidateExposedPairings({ reason = "security_exposed_credential_rotation" } = {}) {
+  return cancelAllActivePairings({ reason });
 }
 
 export function revokeOperatorSession({ workspaceId }) {
@@ -150,7 +251,39 @@ export function beginHandshake(request, body = {}) {
     };
   }
 
-  const agentRole = normalizeAgentRole(body.agentRole || body.role, { agentType, displayName });
+  const preset = getAgentPreset(pairing.agentKey);
+  if (preset) {
+    const matched = matchHandshakeToPreset(preset, { agentType, displayName });
+    if (!matched.ok) {
+      appendAudit({
+        sessionId: null,
+        agentId: body?.instanceId || null,
+        action: AUDIT.REQUEST_DENIED,
+        detail: { reason: matched.code, expectedAgent: preset.key },
+      });
+      return { ok: false, status: 403, ...matched };
+    }
+  }
+
+  const agentRole = normalizeAgentRole(
+    body.agentRole || body.role || pairing.agentRole,
+    { agentType, displayName },
+  );
+  if (pairing.agentRole && agentRole !== pairing.agentRole && preset?.key !== "other") {
+    appendAudit({
+      sessionId: null,
+      agentId: body?.instanceId || null,
+      action: AUDIT.REQUEST_DENIED,
+      detail: { reason: "WRONG_ROLE", expected: pairing.agentRole, got: agentRole },
+    });
+    return {
+      ok: false,
+      status: 403,
+      code: "WRONG_ROLE",
+      error: `This pairing requires role ${pairing.agentRole}.`,
+    };
+  }
+
   const caps = validateRequestedCapabilities(body.requestedCapabilities, { agentRole });
   if (!caps.ok) {
     appendAudit({
