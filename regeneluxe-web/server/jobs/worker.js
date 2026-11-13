@@ -6,6 +6,7 @@ import {
   failJob,
   enqueueJob,
   releaseJob,
+  deferJob,
   JOB_TYPES,
   list,
   upsert,
@@ -157,6 +158,16 @@ async function consumeApproval(id) {
   return Number(result.rowsAffected || 0) === 1;
 }
 
+async function markDraftSkipped(content, reason) {
+  await upsert(COLLECTIONS.content, {
+    ...content,
+    status: "SKIPPED",
+    dispatchState: "SKIPPED",
+    skipReason: reason,
+    updatedAt: nowIso(),
+  });
+}
+
 async function handlePublishContent(payload = {}) {
   const account = await loadAccount(payload.accountId);
   if (!account) throw new Error("Account not found.");
@@ -169,7 +180,7 @@ async function handlePublishContent(payload = {}) {
     || publicationIdempotencyKey({
       contentId: content.id,
       accountId: account.id,
-      scheduledAt: payload.scheduledAt || content.scheduledAt,
+      scheduledAt: payload.scheduledAt || content.scheduledAt || content.scheduledFor,
     });
 
   const attempts = await list(COLLECTIONS.publication_attempts).catch(() => []);
@@ -187,10 +198,57 @@ async function handlePublishContent(payload = {}) {
     return { ok: true, deduped: true, code: "DUPLICATE_SUPPRESSED", attempt: ambiguous };
   }
 
+  // Marketing scheduled authority: shared eligibility, durable approval, no 15-minute session.
+  if (payload.marketingAuthority) {
+    const { prepareScheduledDispatch, DISPATCH_SKIP_REASONS } = await import("../marketingDrafts/dispatchPipeline.js");
+    const prepared = await prepareScheduledDispatch(content, account, {
+      dryRun: Boolean(payload.dryRun),
+      priorAttemptExists: false,
+      expectedFingerprint: payload.marketingFingerprint || null,
+    });
+    if (prepared.blocker === DISPATCH_SKIP_REASONS.PAUSED) {
+      const err = new Error("PAUSED");
+      err.code = "PAUSED";
+      throw err;
+    }
+    if (!prepared.ok) {
+      const reason = prepared.blocker || "NOT_ELIGIBLE";
+      await upsert(COLLECTIONS.publication_attempts, blockedAttempt({
+        content,
+        account,
+        provider,
+        idempotencyKey,
+        approvalId: payload.marketingApprovalId || "",
+        error: reason,
+      }));
+      await markDraftSkipped(content, reason);
+      return {
+        ok: true,
+        skipped: true,
+        code: reason,
+        dryRun: false,
+        providerWrite: false,
+        reasons: prepared.reasons,
+      };
+    }
+    if (payload.dryRun) {
+      return {
+        ok: true,
+        DRY_RUN: true,
+        providerWrite: false,
+        simulatedProviderResult: prepared.simulatedProviderResult,
+      };
+    }
+  }
+
   const connectorForGate = getConnector(account.platform);
   const publishCapabilities = connectorForGate.capabilities || [];
   const canPublish = publishCapabilities.some((capability) => (
-    capability === "PUBLISH_TEXT" || capability === "PUBLISH_IMAGE" || capability === "PUBLISH_VIDEO"
+    capability === "PUBLISH_TEXT"
+    || capability === "PUBLISH_IMAGE"
+    || capability === "PUBLISH_VIDEO"
+    || capability === "PUBLISH_SHORT_VIDEO"
+    || capability === "PUBLISH_LONG_VIDEO"
   ));
   if (!canPublish) {
     await upsert(COLLECTIONS.publication_attempts, blockedAttempt({
@@ -203,7 +261,12 @@ async function handlePublishContent(payload = {}) {
 
   const variant = variantForAccount(content, account);
   let approval = null;
-  if (isPilotProvider(provider)) {
+  if (payload.marketingAuthority) {
+    // Durable marketing approval already rechecked above.
+    approval = payload.marketingApprovalId
+      ? await get(COLLECTIONS.approvals, payload.marketingApprovalId)
+      : null;
+  } else if (isPilotProvider(provider)) {
     approval = payload.approvalId ? await get(COLLECTIONS.approvals, payload.approvalId) : null;
     const gate = evaluatePublishGate({
       account,
@@ -228,15 +291,23 @@ async function handlePublishContent(payload = {}) {
     }
   }
 
+  const wantsVideo = Boolean(
+    content.contentType === "REEL"
+    || content.contentType === "VIDEO"
+    || content.mediaKind === "VIDEO"
+    || content.videoPath
+    || /\.(mp4|mov|webm)(\?|$)/i.test(String(variant.mediaRef || "")),
+  );
   let imageUrl = variant.mediaRef;
+  let videoUrl = "";
   let delivery = null;
-  if (provider === "instagram" && variant.mediaId) {
+  if ((provider === "instagram" || provider === "facebook") && variant.mediaId) {
     delivery = await preparePublicationMedia({
       workspaceId: payload.managedProfileId || account.managedProfileId || "",
       accountId: account.id,
       contentId: content.id,
       mediaId: variant.mediaId,
-      purpose: "instagram_image",
+      purpose: wantsVideo ? `${provider}_video` : `${provider}_image`,
       idempotencyKey,
     });
     if (!delivery.ok || classifyMediaUrl(delivery.publicUrl) !== "PUBLIC_PROVIDER_MEDIA") {
@@ -245,33 +316,43 @@ async function handlePublishContent(payload = {}) {
       }));
       throw new Error("MEDIA_NOT_PUBLIC");
     }
-    imageUrl = delivery.publicUrl;
+    if (wantsVideo) videoUrl = delivery.publicUrl;
+    else imageUrl = delivery.publicUrl;
+  } else if (provider === "instagram" && wantsVideo && classifyMediaUrl(variant.mediaRef) === "PUBLIC_PROVIDER_MEDIA") {
+    videoUrl = variant.mediaRef;
   }
 
-  if (approval) {
+  if (approval && !payload.marketingAuthority) {
     const consumed = await consumeApproval(approval.id);
     if (!consumed) throw new Error("APPROVAL_CONSUMED");
   }
 
   const attempt = {
     ...blockedAttempt({
-      content, account, provider, idempotencyKey, approvalId: approval?.id || "", error: "",
+      content, account, provider, idempotencyKey, approvalId: approval?.id || payload.marketingApprovalId || "", error: "",
     }),
     state: "ATTEMPTED",
     error: null,
     deliveryId: delivery?.deliveryId || "",
+    dryRun: false,
+    campaignId: payload.campaignId || content.campaignId || "",
+    requestedSchedule: payload.scheduledAt || content.scheduledFor || content.scheduledAt || null,
   };
   await upsert(COLLECTIONS.publication_attempts, attempt);
 
+  const privacyStatus = String(content.privacyStatus || payload.privacyStatus || "private").toLowerCase();
   const connector = getConnector(account.platform);
   const result = await connector.publishContent(account, {
     text: variant.caption || variant.title,
     caption: variant.caption,
     title: variant.title,
-    mediaUrl: imageUrl,
-    imageUrl,
-    videoPath: provider === "instagram" ? "" : (content.videoPath || variant.mediaRef),
-    privacyStatus: "private",
+    mediaUrl: videoUrl || imageUrl,
+    imageUrl: videoUrl ? "" : imageUrl,
+    videoUrl,
+    videoPath: provider === "youtube"
+      ? (content.videoPath || variant.mediaRef)
+      : "",
+    privacyStatus: ["private", "unlisted", "public"].includes(privacyStatus) ? privacyStatus : "private",
   });
   const safeResult = stripSecretFields(result || {});
 
@@ -309,16 +390,19 @@ async function handlePublishContent(payload = {}) {
     throw new Error(failed.error);
   }
 
+  const publishedAt = nowIso();
   const published = {
     ...attempt,
     state: "PUBLISHED",
     providerPostId: result.providerPostId || "",
     externalUrl: result.permalink || "",
-    providerStatus: provider === "youtube" ? "private" : (result.providerStatus || "PUBLISHED"),
+    providerStatus: result.privacyStatus || result.providerStatus || "PUBLISHED",
     providerResult: safeResult,
+    dryRun: false,
+    actualPublishedAt: publishedAt,
     error: null,
-    completedAt: nowIso(),
-    updatedAt: nowIso(),
+    completedAt: publishedAt,
+    updatedAt: publishedAt,
   };
   await upsert(COLLECTIONS.publication_attempts, published);
   if (delivery?.deliveryId) {
@@ -338,14 +422,15 @@ async function handlePublishContent(payload = {}) {
   await upsert(COLLECTIONS.content, {
     ...content,
     status: "PUBLISHED",
-    publishedAt: nowIso(),
+    dispatchState: "PUBLISHED",
+    publishedAt,
     providerPostIds: {
       ...(content.providerPostIds || {}),
       [account.id]: result.providerPostId,
     },
-    updatedAt: nowIso(),
+    updatedAt: publishedAt,
   });
-  return { ok: true, attempt: published, providerPostId: result.providerPostId };
+  return { ok: true, attempt: published, providerPostId: result.providerPostId, dryRun: false };
 }
 
 function blockedAttempt({ content, account, provider, idempotencyKey, approvalId, error }) {
@@ -469,6 +554,17 @@ export async function processJobQueue(options = {}) {
       await completeJob(job.id);
       results.push({ id: job.id, type: job.type, ok: true, result });
     } catch (error) {
+      if (error?.code === "PAUSED" || error?.code === "DEFER_PUBLISH") {
+        await deferJob(job.id, 60_000);
+        results.push({
+          id: job.id,
+          type: job.type,
+          ok: true,
+          deferred: true,
+          code: error.code,
+        });
+        continue;
+      }
       await failJob(job.id, error, {
         maxAttempts: error?.code === "RATE_LIMITED" ? 12 : error?.code === "PUBLISH_NOT_SUPPORTED" ? 1 : 8,
       });
@@ -477,6 +573,8 @@ export async function processJobQueue(options = {}) {
         type: job.type,
         ok: false,
         error: error?.message || String(error),
+        code: error?.code || "",
+        retryable: error?.code === "RATE_LIMITED" || error?.code === "PROVIDER_UNAVAILABLE",
       });
     }
   }

@@ -72,7 +72,7 @@ export default function ApprovalQueuePanel() {
       } else {
         setNote(
           action === "APPROVE"
-            ? (body.note || "Creative approved. Nothing was published.")
+            ? (body.note || "Creative approved. Scheduled dispatch will run at the assigned time.")
             : action === "SKIP"
               ? "Draft skipped."
               : "Changes requested.",
@@ -91,7 +91,7 @@ export default function ApprovalQueuePanel() {
       <div>
         <h2 className="text-sm font-semibold text-rl_text">Approval Queue</h2>
         <p className="mt-1 text-sm text-rl_muted">
-          Marketing-team drafts awaiting operator review. Approve means creative agreement for the assigned schedule — not publish.
+          Marketing-team drafts awaiting operator review. Approve binds creative authority to the schedule; provider write happens later via the scheduled dispatch worker.
         </p>
       </div>
 

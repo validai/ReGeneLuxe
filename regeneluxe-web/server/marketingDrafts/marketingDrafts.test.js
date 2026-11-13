@@ -305,8 +305,10 @@ describe("Marketing draft approval workflow", () => {
       action: "APPROVE",
     });
     expect(approved.ok).toBe(true);
-    expect(approved.execution).toBe("never_auto_published");
-    expect(approved.draft.status).toBe("APPROVED");
+    expect(approved.execution).toBe("scheduled_for_provider_dispatch");
+    expect(approved.publishJob?.type).toBe("PUBLISH_CONTENT");
+    expect(approved.publishJob?.payload?.marketingAuthority).toBe(true);
+    expect(["APPROVED", "SCHEDULED"]).toContain(approved.draft.status);
     expect(approved.draft.scheduledFor).toContain("2026-11-20");
     expect(approved.approval.contentFingerprint).toBe(draftApprovalFingerprint(approved.draft));
 

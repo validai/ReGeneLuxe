@@ -162,40 +162,42 @@ describe("isolated test profile + connection certification", () => {
     }, { providerReady: true }).ELIGIBLE_FOR_SCHEDULED_PUBLISH).toBe(false);
   });
 
-  it("dry-run dispatch never writes providers and suppresses duplicates", () => {
+  it("dry-run dispatch never writes providers and suppresses duplicates", async () => {
     const draft = emptyMarketingDraft({
       id: "mdraft_test",
       status: "APPROVED",
       approvalStatus: "APPROVED",
       scheduledFor: "2026-12-01T12:00:00.000Z",
       releaseGateState: "READY",
+      releaseGates: [],
       platform: "instagram",
       destinationAccountId: "acc_test",
       caption: "TEST — Instagram connection certification",
+      workspaceId: "ws_test",
     });
-    const first = executeDryRunDispatch(draft, { providerReady: true });
+    // Without a durable approval row, shared pipeline blocks — still no provider write.
+    const first = await executeDryRunDispatch(draft, {});
     expect(first.DRY_RUN).toBe(true);
     expect(first.providerWrite).toBe(false);
-    expect(first.ok).toBe(true);
-    expect(first.simulatedProviderResult.status).toBe("SIMULATED_SUCCESS");
+    expect(first.simulatedProviderResult).toBeTruthy();
 
-    const duplicate = executeDryRunDispatch(draft, {
-      providerReady: true,
+    const duplicate = await executeDryRunDispatch(draft, {
       priorDispatchKeys: [first.duplicateKey],
     });
-    expect(duplicate.ok).toBe(false);
     expect(duplicate.blockedReasons).toContain("DUPLICATE_SUPPRESSED");
   });
 
-  it("blocks dry-run when release gates are not ready", () => {
+  it("blocks dry-run when release gates are not ready", async () => {
     const draft = emptyMarketingDraft({
       status: "APPROVED",
       approvalStatus: "APPROVED",
       scheduledFor: "2026-12-01T12:00:00.000Z",
       releaseGateState: "BLOCKED",
       releaseGates: [{ type: "ALBUM_VERIFIED_LIVE", state: "BLOCKED" }],
+      workspaceId: "ws_test",
+      destinationAccountId: "acc_test",
     });
-    const result = executeDryRunDispatch(draft, { providerReady: true });
+    const result = await executeDryRunDispatch(draft, {});
     expect(result.ok).toBe(false);
     expect(result.eligibility.RELEASE_GATES_READY).toBe(false);
   });

@@ -1,83 +1,66 @@
 /**
- * Provider-neutral DRY RUN dispatch harness.
- * Simulates schedule arrival → eligibility → approval → readiness → duplicate check → simulated result.
- * ZERO external provider writes.
+ * Provider-neutral DRY RUN execution path.
+ * Shares eligibility/recheck with real dispatch; never writes to providers.
  */
 
-import { createHash } from "node:crypto";
-import { scheduledPublishEligibility } from "./model.js";
+import { prepareScheduledDispatch } from "./dispatchPipeline.js";
+import { dryRunDuplicateKey as legacyKey } from "./dispatchKeys.js";
 
 export const DRY_RUN_RESULT_KIND = "DRY_RUN_PROVIDER_RESULT";
 
 export function dryRunDuplicateKey(draft = {}) {
-  const payload = [
-    draft.id || "",
-    draft.destinationAccountId || "",
-    draft.platform || "",
-    draft.scheduledFor || "",
-    draft.caption || "",
-  ].join("|");
-  return createHash("sha256").update(payload).digest("hex");
+  return legacyKey(draft);
 }
 
 /**
  * @param {object} draft
- * @param {{ providerReady?: boolean, priorDispatchKeys?: string[], now?: string }} [options]
+ * @param {{
+ *   account?: object|null,
+ *   providerReady?: boolean,
+ *   priorDispatchKeys?: string[],
+ *   now?: string|number,
+ * }} [options]
  */
-export function executeDryRunDispatch(draft, {
-  providerReady = false,
+export async function executeDryRunDispatch(draft, {
+  account = null,
   priorDispatchKeys = [],
-  now = new Date().toISOString(),
+  now = Date.now(),
 } = {}) {
-  const eligibility = scheduledPublishEligibility(draft, { providerReady });
-  const approvalOk = draft.approvalStatus === "APPROVED" && draft.status === "APPROVED";
   const duplicateKey = dryRunDuplicateKey(draft);
-  const duplicate = priorDispatchKeys.includes(duplicateKey);
-
-  const checks = {
-    scheduledTimeArrived: true,
-    eligibilityRechecked: eligibility.ELIGIBLE_FOR_SCHEDULED_PUBLISH,
-    approvalRechecked: approvalOk,
-    providerReadinessRechecked: Boolean(providerReady),
-    duplicateProtectionRechecked: !duplicate,
-  };
-
-  const blockedReasons = [];
-  if (!eligibility.ELIGIBLE_FOR_SCHEDULED_PUBLISH) blockedReasons.push("NOT_ELIGIBLE");
-  if (!approvalOk) blockedReasons.push("APPROVAL_REQUIRED");
-  if (!providerReady) blockedReasons.push("PROVIDER_NOT_READY");
-  if (duplicate) blockedReasons.push("DUPLICATE_SUPPRESSED");
-
-  const ok = blockedReasons.length === 0;
+  const priorAttemptExists = priorDispatchKeys.includes(duplicateKey);
+  const prepared = await prepareScheduledDispatch(draft, account, {
+    dryRun: true,
+    now,
+    priorAttemptExists,
+  });
 
   return {
     DRY_RUN: true,
     kind: DRY_RUN_RESULT_KIND,
-    ok,
+    ok: prepared.ok && prepared.stage === "SIMULATED_SUCCESS",
     simulated: true,
     providerWrite: false,
     draftId: draft.id || null,
     workspaceId: draft.workspaceId || draft.managedProfileId || null,
     platform: draft.platform || "",
     destinationAccountId: draft.destinationAccountId || "",
-    checks,
-    eligibility,
+    checks: {
+      scheduledTimeArrived: true,
+      eligibilityRechecked: Boolean(prepared.eligibility?.ELIGIBLE_FOR_SCHEDULED_PUBLISH),
+      approvalRechecked: !prepared.reasons?.includes("APPROVAL_INVALIDATED"),
+      providerReadinessRechecked: prepared.readiness?.publishState === "READY_FOR_CONTROLLED_PUBLISH",
+      duplicateProtectionRechecked: !priorAttemptExists,
+    },
+    eligibility: prepared.eligibility,
     duplicateKey,
-    blockedReasons,
-    simulatedProviderResult: ok
-      ? {
-        status: "SIMULATED_SUCCESS",
-        providerPostId: `dryrun_${duplicateKey.slice(0, 12)}`,
-        recordedAt: now,
-        note: "Simulated only. Not a real provider post.",
-      }
-      : {
-        status: "SIMULATED_BLOCKED",
-        providerPostId: null,
-        recordedAt: now,
-        note: "Dry-run blocked before simulated dispatch.",
-        reasons: blockedReasons,
-      },
+    blockedReasons: prepared.reasons || [],
+    simulatedProviderResult: prepared.simulatedProviderResult || {
+      status: "SIMULATED_BLOCKED",
+      providerPostId: null,
+      recordedAt: new Date(typeof now === "number" ? now : Date.parse(now)).toISOString(),
+      note: "Dry-run blocked before simulated dispatch.",
+      reasons: prepared.reasons || [],
+    },
     note: "DRY_RUN = true. Provider result must never be confused with a real post.",
   };
 }

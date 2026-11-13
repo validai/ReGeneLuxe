@@ -27,7 +27,7 @@ export const DRAFT_AUDIT = Object.freeze({
   SCHEDULE_ASSIGNED: "SCHEDULE_ASSIGNED",
 });
 
-function isMarketingDraft(row) {
+export function isMarketingDraft(row) {
   return row && (row.kind === DRAFT_KIND || row.provenance === "MARKETING_AGENT");
 }
 
@@ -456,6 +456,15 @@ export async function operatorReviewDraft(draftId, {
     detail: { approvalId: approval.id, scheduledFor: next.scheduledFor },
   });
 
+  let scheduledJob = null;
+  if (next.scheduledFor && next.destinationAccountId) {
+    const { ensureMarketingPublishJob } = await import("./scheduleBridge.js");
+    scheduledJob = await ensureMarketingPublishJob(next.id);
+    if (scheduledJob.ok && scheduledJob.draft) {
+      Object.assign(next, scheduledJob.draft);
+    }
+  }
+
   const enriched = await enrichDraft(next);
   return {
     ok: true,
@@ -467,10 +476,13 @@ export async function operatorReviewDraft(draftId, {
       scheduledFor: approval.scheduledFor,
       approvedAt: approval.approvedAt,
     },
-    execution: "never_auto_published",
-    note: enriched.publishReady
-      ? "Creative approved and provider appears ready. Automatic publish is still disabled."
-      : "Creative approved. Provider remains blocked — not publish-ready.",
+    execution: scheduledJob?.ok ? "scheduled_for_provider_dispatch" : "approved_awaiting_schedule",
+    publishJob: scheduledJob?.job || null,
+    note: scheduledJob?.ok
+      ? "Creative approved and queued for scheduled provider dispatch. No provider write until schedule time."
+      : (enriched.publishReady
+        ? "Creative approved. Assign a schedule to enqueue provider dispatch."
+        : "Creative approved. Provider remains blocked — not publish-ready."),
   };
 }
 
@@ -518,7 +530,23 @@ export async function assignDraftSchedule(draftId, {
     actorId: operatorId,
     detail: { scheduledFor },
   });
-  return { ok: true, status: 200, draft: await enrichDraft(next) };
+
+  let publishJob = null;
+  if (next.approvalStatus === "APPROVED" && next.destinationAccountId) {
+    const { ensureMarketingPublishJob } = await import("./scheduleBridge.js");
+    const bridged = await ensureMarketingPublishJob(next.id);
+    if (bridged.ok) {
+      publishJob = bridged.job;
+      if (bridged.draft) Object.assign(next, bridged.draft);
+    }
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    draft: await enrichDraft(next),
+    publishJob,
+  };
 }
 
 export async function assertApprovalStillValid(draftId) {
