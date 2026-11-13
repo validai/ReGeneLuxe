@@ -18,7 +18,7 @@ import { downloadBackupFile, importBackup, validateBackup } from "../data/backup
 import { getRuntimeStatus, getRuntimeHealth, listedConnectionProviders, saveRuntimeSecret } from "../data/runtimeClient.js";
 import { fetchDbHealth, reconcileCloud } from "../data/durableBootstrap.js";
 import { useProfileSession } from "../components/app/ProfileSession.jsx";
-import { beginCreateAnotherProfile, signOutOperator } from "../../app/actions/auth";
+import { signOutOperator } from "../../app/actions/auth";
 import { displayConnectionState, displayProfileConnection, formatHandle } from "../data/connectionStatus.js";
 import { displayAccountEmail } from "../data/googleIdentity.js";
 import { formatDataSyncDisplay, formatSyncLine, formatWorkspaceSummary, mergeHealthWithSyncStatus } from "../data/syncHealth.js";
@@ -26,7 +26,7 @@ import StatusBadge from "../components/app/StatusBadge.jsx";
 import { PlatformIcon } from "../components/app/Icon.jsx";
 import ExternalAgentBridgePanel from "../components/settings/ExternalAgentBridgePanel.jsx";
 import ConnectionCertificationPanel from "../components/settings/ConnectionCertificationPanel.jsx";
-import { CREATE_ANOTHER_PROFILE_HINT } from "../data/profileModels.js";
+import CreateAnotherProfileForm from "../components/app/CreateAnotherProfileForm.jsx";
 
 function formatWhen(value) {
   if (!value) return "—";
@@ -247,19 +247,12 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
         </ul>
         {operator ? (
           <div className="space-y-3 border-t border-rl_border pt-3">
-            <p className="text-xs text-rl_muted">{CREATE_ANOTHER_PROFILE_HINT}</p>
-            <div className="flex flex-wrap gap-2">
-              <form action={beginCreateAnotherProfile}>
-                <button type="submit" className="rl-btn-ghost px-3 py-1.5 text-xs">
-                  Create another profile
-                </button>
-              </form>
-              <form action={signOutOperator}>
-                <button type="submit" className="rl-btn-ghost px-3 py-1.5 text-xs">
-                  Sign out / Switch account
-                </button>
-              </form>
-            </div>
+            <CreateAnotherProfileForm layout="settings" />
+            <form action={signOutOperator}>
+              <button type="submit" className="rl-btn-ghost px-3 py-1.5 text-xs">
+                Sign out / Switch account
+              </button>
+            </form>
           </div>
         ) : null}
       </section>

@@ -14,6 +14,9 @@ vi.mock("../../app/actions/auth", () => ({
   signInWithGoogle: () => {},
   signOutOperator: () => {},
   beginCreateAnotherProfile: () => {},
+  authorizeCreateAnotherProfile: () => {},
+  chooseAnotherGoogleAccount: () => {},
+  cancelProfileInvite: () => {},
 }));
 
 vi.mock("next/navigation", () => ({
@@ -78,10 +81,19 @@ describe("auth and profile chrome", () => {
     expect(screen.queryByText(/sign-in could not be completed/i)).not.toBeInTheDocument();
   });
 
-  it("renders an access-not-authorized screen", () => {
+  it("renders an access-not-authorized screen with chooser escape", () => {
     render(<AccessNotAuthorizedPage />);
     expect(screen.getByRole("heading", { name: /access not authorized/i })).toBeInTheDocument();
     expect(screen.getByText(/sign in with an approved google account/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /choose another google account/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^back$/i })).toHaveAttribute("href", "/signin");
+  });
+
+  it("explains invite mismatch without looping to silent reuse", () => {
+    render(<AccessNotAuthorizedPage reason="invite_mismatch" createProfilePending />);
+    expect(screen.getByRole("heading", { name: /does not match/i })).toBeInTheDocument();
+    expect(screen.getByText(/does not match the profile invitation/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /choose another google account/i })).toBeInTheDocument();
   });
 
   it("shows the brand identity without a profile switcher", () => {
@@ -227,10 +239,16 @@ describe("profile setup image and field diagnostics", () => {
     expect(screen.getByRole("button", { name: /create profile/i })).toBeInTheDocument();
   });
 
-  it("create-another sign-in routes Google callback to profile setup", () => {
-    render(<SignInPage createProfile />);
+  it("create-another sign-in with active invite routes to profile setup", () => {
+    render(
+      <SignInPage
+        createProfile
+        inviteSummary={{ active: true, emailMasked: "ar***@gmail.com", expiresAt: new Date(Date.now() + 60_000).toISOString() }}
+      />,
+    );
     expect(screen.getByRole("heading", { name: /create another profile/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /continue with a different google account/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /continue with the authorized google account/i })).toBeInTheDocument();
+    expect(screen.getByText(/ar\*\*\*@gmail\.com/i)).toBeInTheDocument();
     const callback = document.querySelector('input[name="callbackUrl"]');
     expect(callback).toHaveAttribute("value", "/setup/profile");
   });

@@ -15,11 +15,20 @@ function GoogleMark() {
   );
 }
 
+/**
+ * @param {{
+ *   errorMessage?: string,
+ *   signedOut?: boolean,
+ *   createProfile?: boolean,
+ *   inviteSummary?: { active?: boolean, emailMasked?: string, expiresAt?: string | null } | null,
+ * }} [props]
+ */
 export default function SignInPage({
   errorMessage = "",
   signedOut = false,
   createProfile = false,
-}) {
+  inviteSummary = null,
+} = {}) {
   const [csrfToken, setCsrfToken] = useState("");
 
   useEffect(() => {
@@ -28,6 +37,9 @@ export default function SignInPage({
       .then((data) => setCsrfToken(String(data?.csrfToken || "")))
       .catch(() => setCsrfToken(""));
   }, []);
+
+  const inviteActive = Boolean(inviteSummary?.active);
+  const showCreate = createProfile || inviteActive;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-rl_bg px-4 text-rl_text">
@@ -38,7 +50,7 @@ export default function SignInPage({
         </div>
 
         <div className="rl-panel space-y-5 p-8 text-left">
-          {createProfile ? (
+          {showCreate ? (
             <div
               className="space-y-2 rounded-lg border border-rl_border bg-rl_surfaceHover/30 px-4 py-4"
               role="status"
@@ -46,15 +58,29 @@ export default function SignInPage({
               <h1 className="font-display text-lg font-semibold tracking-tight text-rl_text">
                 Create another profile
               </h1>
-              <p className="text-sm leading-6 text-rl_textSecondary">
-                {CREATE_ANOTHER_PROFILE_HINT}
-              </p>
-              <p className="text-sm leading-6 text-rl_textSecondary">
-                Choose a different Google account. If that identity has no ReGeneLuxe profile yet, you will create one next.
-              </p>
-              <p className="text-xs leading-5 text-rl_muted">
-                The second Google email must be listed in APP_ALLOWED_GOOGLE_EMAILS before sign-in will succeed.
-              </p>
+              {inviteActive ? (
+                <>
+                  <p className="text-sm leading-6 text-rl_textSecondary">
+                    Choose the Google account authorized for this profile
+                    {inviteSummary?.emailMasked ? ` (${inviteSummary.emailMasked})` : ""}.
+                  </p>
+                  <p className="text-xs leading-5 text-rl_muted">
+                    Invitation expires {inviteSummary?.expiresAt
+                      ? new Date(inviteSummary.expiresAt).toLocaleString("en-US")
+                      : "soon"}
+                    . A different Google account will be denied.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm leading-6 text-rl_textSecondary">
+                    {CREATE_ANOTHER_PROFILE_HINT}
+                  </p>
+                  <p className="text-sm leading-6 text-rl_textSecondary">
+                    An existing ReGeneLuxe operator must authorize the new Google email before sign-in can continue.
+                  </p>
+                </>
+              )}
             </div>
           ) : signedOut ? (
             <div
@@ -79,32 +105,31 @@ export default function SignInPage({
               Sign in to your ReGeneLuxe account.
             </p>
           )}
-          {signedOut && !createProfile ? (
+          {signedOut && !showCreate ? (
             <p className="text-center text-xs text-rl_muted">
               Use the Google account that owns this ReGeneLuxe workspace.
             </p>
           ) : null}
-          {errorMessage && !signedOut && !createProfile ? (
+          {errorMessage && !signedOut && !showCreate ? (
             <p className="rounded-lg border border-rl_danger/30 bg-rl_danger/10 px-3 py-2 text-sm text-rl_danger" role="alert">
               {errorMessage}
             </p>
           ) : null}
-          {errorMessage && createProfile ? (
+          {errorMessage && showCreate ? (
             <p className="rounded-lg border border-rl_danger/30 bg-rl_danger/10 px-3 py-2 text-sm text-rl_danger" role="alert">
               {errorMessage}
             </p>
           ) : null}
           <form action="/api/auth/signin/google" method="post">
             <input type="hidden" name="csrfToken" value={csrfToken} />
-            {/* New identity → setup; existing workspace identity → /setup/profile redirects home. */}
-            <input type="hidden" name="callbackUrl" value={createProfile ? "/setup/profile" : "/"} />
+            <input type="hidden" name="callbackUrl" value={showCreate && inviteActive ? "/setup/profile" : "/"} />
             <button
               type="submit"
               disabled={!csrfToken}
               className="flex w-full items-center justify-center gap-3 rounded-lg border border-rl_border bg-white px-4 py-3 text-sm font-semibold text-[#1f1f1f] shadow-sm transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/50 disabled:cursor-wait disabled:opacity-70"
             >
               <GoogleMark />
-              {createProfile ? "Continue with a different Google account" : "Continue with Google"}
+              {showCreate ? "Continue with the authorized Google account" : "Continue with Google"}
             </button>
           </form>
         </div>

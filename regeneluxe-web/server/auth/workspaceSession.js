@@ -3,10 +3,10 @@ import { initDb, setMeta } from "../db/index.js";
 import { getOperator } from "../db/operatorRepository.js";
 import { getWorkspaceForAccount, listProfileConnections } from "../db/managedProfileRepository.js";
 import { publicOperator, publicManagedProfile, publicProfileConnection, PROFILE_CONNECTION_STATES } from "../../src/data/profileModels.js";
-import { isEmailAllowed } from "./allowlist.js";
 import { displayAccountEmail } from "../../src/data/googleIdentity.js";
 import { publicGmailForProfile } from "../connectors/gmailConnection.js";
 import { publicYoutubeForProfile } from "../connectors/youtubeConnection.js";
+import { operatorHasPilotAccess } from "./profileInvite.js";
 
 export async function requireOperator() {
   const session = await auth();
@@ -22,7 +22,7 @@ export async function requireOperator() {
   if (!operator || operator.status === "INACTIVE") {
     return { ok: false, status: 401, error: "Please sign in to continue." };
   }
-  if (!isEmailAllowed(operator.email)) {
+  if (!(await operatorHasPilotAccess(operator))) {
     return {
       ok: false,
       status: 401,

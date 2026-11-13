@@ -2,8 +2,8 @@ import NextAuth from "next-auth";
 import type { NextAuthConfig } from "next-auth";
 import { authConfig } from "./auth.config";
 import { authorizeGoogleSignIn } from "./server/auth/authorizeGoogle.js";
-import { findOperatorByGoogleSub } from "./server/db/operatorRepository.js";
-import { isEmailAllowed } from "./server/auth/allowlist.js";
+import { findOperatorByGoogleSub, getOperator } from "./server/db/operatorRepository.js";
+import { operatorHasPilotAccess } from "./server/auth/profileInvite.js";
 
 function logAuthError(error: unknown) {
   const err = error as {
@@ -30,8 +30,9 @@ export const authOptions = {
     async signIn({ account, profile }: { account?: { provider?: string; providerAccountId?: string } | null; profile?: { sub?: string; email?: string; name?: string; picture?: string } | null }) {
       const result = await authorizeGoogleSignIn({ account, profile });
       if (result.ok) return true;
-      if (result.reason === "not_allowlisted") return "/access-not-authorized";
-      if (result.reason === "identity_mismatch") return "/access-not-authorized";
+      if (result.reason === "invite_mismatch") return "/access-not-authorized?reason=invite_mismatch";
+      if (result.reason === "not_allowlisted") return "/access-not-authorized?reason=not_allowlisted";
+      if (result.reason === "identity_mismatch") return "/access-not-authorized?reason=identity_mismatch";
       if (result.reason === "database_unavailable") return "/signin?error=database";
       return false;
     },
@@ -52,9 +53,11 @@ export const authOptions = {
         token.name = operator?.name || profile.name || token.name;
         token.picture = operator?.avatarUrl || profile.picture || token.picture;
       }
-      const sessionEmail = typeof token.email === "string" ? token.email : "";
-      if (sessionEmail && !isEmailAllowed(sessionEmail)) {
-        token.operatorId = null;
+      if (typeof token.operatorId === "string") {
+        const operator = await getOperator(token.operatorId);
+        if (!(operator && await operatorHasPilotAccess(operator))) {
+          token.operatorId = null;
+        }
       }
       return token;
     },

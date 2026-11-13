@@ -6,7 +6,7 @@ import { getWorkspaceForAccount } from "../../server/db/managedProfileRepository
 import SignInScreen from "../../src/screens/SignInPage";
 import { authErrorMessage } from "../../server/auth/errors.js";
 import { isSignedOutParam } from "../../server/auth/signedOut.js";
-import { isEmailAllowed } from "../../server/auth/allowlist.js";
+import { operatorHasPilotAccess, getActiveProfileInvite, publicInvite } from "../../server/auth/profileInvite.js";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +14,7 @@ type Search = {
   error?: string;
   signedOut?: string | string[];
   createProfile?: string | string[];
+  selectAccount?: string | string[];
 };
 
 function truthyParam(value?: string | string[]) {
@@ -31,12 +32,21 @@ export default async function SignInPage({
   const createProfile = truthyParam(params.createProfile);
   let destination: string | null = null;
   let dbFailed = false;
+  let inviteSummary = null;
 
+  try {
+    await initDb();
+    const invite = await getActiveProfileInvite();
+    inviteSummary = publicInvite(invite);
+  } catch {
+    dbFailed = true;
+  }
+
+  // createProfile URL alone is not authorization — require an active invite for that path.
   if (session?.operatorId && !createProfile) {
     try {
-      await initDb();
       const operator = await getOperator(session.operatorId);
-      const allowed = operator && operator.status !== "INACTIVE" && isEmailAllowed(operator.email);
+      const allowed = operator && operator.status !== "INACTIVE" && await operatorHasPilotAccess(operator);
       if (allowed) {
         const workspace = await getWorkspaceForAccount(operator.id);
         destination = workspace ? "/" : "/setup/profile";
@@ -55,11 +65,11 @@ export default async function SignInPage({
       ? ""
       : authErrorMessage(params.error);
 
-  return (
-    <SignInScreen
-      errorMessage={message}
-      signedOut={signedOut && !createProfile}
-      createProfile={createProfile}
-    />
-  );
+  const screenProps = {
+    errorMessage: message,
+    signedOut: signedOut && !createProfile,
+    createProfile,
+    inviteSummary,
+  };
+  return <SignInScreen {...screenProps} />;
 }

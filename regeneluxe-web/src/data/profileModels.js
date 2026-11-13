@@ -74,6 +74,8 @@ export function emptyOperator(partial = {}) {
     name: partial.name || "",
     avatarUrl: partial.avatarUrl || "",
     activeProfileId: partial.activeProfileId || null,
+    /** ALLOWLIST | PROFILE_INVITE — durable pilot access after invite-based creation. */
+    pilotAccessGrant: partial.pilotAccessGrant || "",
     status: partial.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     createdAt: partial.createdAt || timestamp,
     updatedAt: partial.updatedAt || timestamp,
@@ -85,7 +87,7 @@ export const SECOND_WORKSPACE_MESSAGE =
   "This ReGeneLuxe account already has a brand workspace. Use a different Google account to create another ReGeneLuxe profile.";
 
 export const CREATE_ANOTHER_PROFILE_HINT =
-  "Another ReGeneLuxe profile requires a different Google identity. You will sign out, choose another Google account, then create that profile.";
+  "ReGeneLuxe uses one Google identity per profile. Enter the Google email for the new profile, then you’ll choose that account with Google.";
 
 export function publicOperator(operator) {
   if (!operator) return null;

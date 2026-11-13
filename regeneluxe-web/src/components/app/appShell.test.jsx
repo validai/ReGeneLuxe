@@ -10,6 +10,9 @@ vi.mock("../../../app/actions/auth", () => ({
   signInWithGoogle: () => {},
   signOutOperator: () => {},
   beginCreateAnotherProfile: () => {},
+  authorizeCreateAnotherProfile: () => {},
+  chooseAnotherGoogleAccount: () => {},
+  cancelProfileInvite: () => {},
 }));
 
 vi.mock("next/navigation", () => ({

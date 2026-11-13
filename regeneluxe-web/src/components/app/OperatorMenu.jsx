@@ -5,8 +5,8 @@ import Link from "next/link";
 import { GearSix, PlugsConnected, SignOut, UserPlus } from "@phosphor-icons/react";
 import { useProfileSession } from "./ProfileSession.jsx";
 import { displayAccountEmail } from "../../data/googleIdentity.js";
-import { beginCreateAnotherProfile, signOutOperator } from "../../../app/actions/auth";
-import { CREATE_ANOTHER_PROFILE_HINT } from "../../data/profileModels.js";
+import { signOutOperator } from "../../../app/actions/auth";
+import CreateAnotherProfileForm from "./CreateAnotherProfileForm.jsx";
 
 export default function OperatorMenu({ collapsed = false, layout = "stack", showDetail = true }) {
   const { operator } = useProfileSession();
@@ -68,23 +68,7 @@ export default function OperatorMenu({ collapsed = false, layout = "stack", show
         Connections
       </Link>
       {confirmCreate ? (
-        <div className="space-y-2 border-t border-rl_border px-3 py-3">
-          <p className="text-xs leading-5 text-rl_muted">{CREATE_ANOTHER_PROFILE_HINT}</p>
-          <div className="flex gap-2">
-            <form action={beginCreateAnotherProfile} className="flex-1">
-              <button type="submit" className="rl-btn w-full px-2 py-1.5 text-xs">
-                Continue
-              </button>
-            </form>
-            <button
-              type="button"
-              className="rl-btn-ghost flex-1 px-2 py-1.5 text-xs"
-              onClick={() => setConfirmCreate(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+        <CreateAnotherProfileForm layout="menu" onCancel={() => setConfirmCreate(false)} />
       ) : (
         <button
           type="button"

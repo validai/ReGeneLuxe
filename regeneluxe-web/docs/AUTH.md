@@ -32,6 +32,21 @@ Durable persistence still uses the `operators` collection for the account row so
 | `AUTH_TRUST_HOST` | Required for local HTTP |
 | `APP_ALLOWED_GOOGLE_EMAILS` | Runtime account allowlist. Comma-separated. Fail closed if empty. Pilot: `djcoast239@gmail.com`. |
 
+### Create Another Profile (one-time invite)
+
+Ordinary unsolicited sign-in still requires `APP_ALLOWED_GOOGLE_EMAILS`.
+
+An authenticated operator may authorize **one additional Google email** for its own isolated profile:
+
+1. Enter the intended Google email (server-normalized)
+2. Store a short-lived (15m), one-time invite in local meta
+3. Sign out → Google account chooser for that identity
+4. Callback accepts **allowlist OR matching active invite** (`createProfile=1` alone is not authorization)
+5. Consume the invite after successful profile creation (or if that identity already owns a workspace)
+6. Persist `pilotAccessGrant: PROFILE_INVITE` so the new owner can return without a permanent env edit
+
+Denied accounts get **Choose another Google account** (not a silent reuse loop).
+
 Local Google authorization and token exchange use one callback URI:
 
 `http://localhost:5174/api/auth/callback/google`
