@@ -38,3 +38,9 @@ Do **not** improvise `nohup npm start &`, bare `next start`, or silent backgroun
 ## Browser readiness
 
 Do not announce “up” until: port listening, `/api/health` 200 with ReGeneLuxe identity, a **second** health probe succeeds, and root UI responds. Then instruct a browser refresh.
+
+## Frozen
+
+Lifecycle layer certified at `db7db9c` is FROZEN unless new evidence exposes a defect. Do not polish-refactor the launcher/ticker.
+
+Optional AI not configured is **not** a core DEGRADED failure — see `docs/RUNTIME.md`.

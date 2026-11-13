@@ -35,3 +35,16 @@ npm run start:stop
 ## Scheduler isolation
 
 The in-process job ticker (`instrumentation.ts`) catches per-tick failures, skips overlaps, bounds work, and exposes heartbeat fields on `/api/health` → `scheduler`. Job/provider failures must not kill the Next process.
+
+## Health: core vs optional AI
+
+`/api/health` `status` reflects **core** runtime only (`OK` / `DEGRADED` / `UNHEALTHY`).
+
+- Missing AI configuration is an **optional** component (`optionalComponents: ["ai_not_configured"]`).
+- It must **not** alone set `status: DEGRADED` or look like a release-blocking failure.
+- Operator copy distinguishes **Core system operational** from **Optional AI not configured**.
+- Core publishing, scheduling, and workspace isolation do not require AI.
+
+## Frozen lifecycle layer
+
+Runtime lifecycle certified at `db7db9c` is **FROZEN** unless new evidence exposes an actual defect. Do not refactor the launcher/ticker for polish alone.

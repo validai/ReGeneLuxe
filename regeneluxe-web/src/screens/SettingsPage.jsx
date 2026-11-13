@@ -36,8 +36,11 @@ function formatWhen(value) {
 
 function explainRuntime(runtime) {
   if (!runtime.running) return runtime.error || "Local runtime is unavailable.";
-  if (runtime.aiConfigured) return "Local runtime is running with an AI provider configured.";
-  return "Local runtime is running. AI is not configured yet.";
+  if (runtime.operator?.summary) return runtime.operator.summary;
+  if (runtime.aiConfigured) {
+    return "Core ReGeneLuxe is operational. Optional AI is configured.";
+  }
+  return "Core ReGeneLuxe is operational. Optional AI is not configured — this does not block publishing or scheduling.";
 }
 
 /**
@@ -122,7 +125,15 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
     ])
       .then(([status, nextHealth, connectionBody]) => {
         if (cancelled) return;
-        setRuntime(status);
+        setRuntime({
+          ...status,
+          status: nextHealth?.status || status.status,
+          coreOperational: nextHealth?.coreOperational ?? status.coreOperational,
+          aiOptional: true,
+          optionalComponents: nextHealth?.optionalComponents || [],
+          degradedComponents: nextHealth?.degradedComponents || [],
+          operator: nextHealth?.operator || null,
+        });
         setHealth(nextHealth);
         if (Array.isArray(connectionBody?.providers)) setProviders(connectionBody.providers);
       })
@@ -555,14 +566,18 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
             <ul className="space-y-2 text-sm text-rl_muted">
               <li>UI · running in this browser</li>
               <li>
-                Local runtime ·{" "}
+                Core system ·{" "}
                 {runtime.running
-                  ? (runtime.aiConfigured ? "running" : "running · AI not configured")
+                  ? (runtime.operator?.coreLabel || (runtime.status === "DEGRADED"
+                    ? "operational (degraded)"
+                    : "operational"))
                   : (runtime.error || "unavailable")}
               </li>
               <li>
-                AI provider ·{" "}
-                {runtime.aiConfigured ? (runtime.provider || health?.provider || "configured") : "not configured"}
+                Optional AI ·{" "}
+                {runtime.aiConfigured
+                  ? (runtime.provider || health?.provider || "configured")
+                  : "not configured (optional — does not block publishing)"}
               </li>
               <li>
                 Social connections ·{" "}
@@ -572,7 +587,7 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
             </ul>
             {runtime.state === "UNAVAILABLE" && (
               <p className="text-xs text-rl_danger">
-                {runtime.error || "ReGeneLuxe's local service is unavailable."} Start with `npm run dev` from regeneluxe-web.
+                {runtime.error || "ReGeneLuxe's local service is unavailable."} Start with `npm run start:canonical` from regeneluxe-web.
               </p>
             )}
           </>
@@ -584,6 +599,11 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
         <p className="text-sm text-rl_muted">
           {explainRuntime(runtime)}
         </p>
+        {!runtime.aiConfigured && runtime.running ? (
+          <p className="text-xs text-rl_muted">
+            Campaign Brain is optional. Core publishing, scheduling, and workspace isolation work without it.
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           {AI_MODES.map((id) => (
             <ChoiceChip

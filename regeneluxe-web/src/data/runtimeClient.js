@@ -27,14 +27,28 @@ export async function getRuntimeHealth() {
   try {
     const response = await fetch(`${DEFAULT_URL}/health`);
     if (!response.ok) {
-      return { ok: false, state: "UNAVAILABLE", running: false, aiConfigured: false };
+      return {
+        ok: false,
+        state: "UNAVAILABLE",
+        running: false,
+        coreOperational: false,
+        aiConfigured: false,
+        status: "UNHEALTHY",
+      };
     }
     const body = await response.json();
+    const coreOperational = body.coreOperational !== false && Boolean(body.ok !== false);
     return {
       ok: true,
-      state: body.state || (body.aiConfigured ? "RUNNING" : "AI_NOT_CONFIGURED"),
+      state: body.state || (coreOperational ? "RUNNING" : "UNAVAILABLE"),
+      status: body.status || (coreOperational ? "OK" : "UNHEALTHY"),
       running: true,
+      coreOperational,
       aiConfigured: Boolean(body.aiConfigured),
+      aiOptional: body.aiOptional !== false,
+      optionalComponents: body.optionalComponents || [],
+      degradedComponents: body.degradedComponents || [],
+      operator: body.operator || null,
       provider: body.provider || null,
       connectedProviders: body.connectedProviders || [],
       service: body.service || null,
@@ -44,7 +58,9 @@ export async function getRuntimeHealth() {
     return {
       ok: false,
       state: "UNAVAILABLE",
+      status: "UNHEALTHY",
       running: false,
+      coreOperational: false,
       aiConfigured: false,
       error: friendly.user,
       detail: friendly.detail,
@@ -63,7 +79,9 @@ export async function getRuntimeStatus() {
     return {
       ...body,
       running: true,
-      state: body.aiConfigured ? "RUNNING" : "AI_NOT_CONFIGURED",
+      coreOperational: body.coreOperational !== false,
+      aiOptional: true,
+      state: body.aiConfigured || body.coreOperational !== false ? "RUNNING" : "UNAVAILABLE",
     };
   } catch (error) {
     const friendly = friendlyNetworkError(error);

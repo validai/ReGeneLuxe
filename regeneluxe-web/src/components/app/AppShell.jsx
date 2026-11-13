@@ -48,7 +48,7 @@ export default function AppShell({ children, onOpenCommand }) {
 
   const runtimeLabel = useMemo(() => {
     if (!runtime.running) return "Offline";
-    if (!runtime.aiConfigured) return "Local";
+    // Core runtime is Ready without optional AI; do not imply a release failure.
     return "Ready";
   }, [runtime]);
 

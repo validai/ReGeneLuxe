@@ -96,7 +96,8 @@ export default function SignInPage({
           ) : null}
           <form action="/api/auth/signin/google" method="post">
             <input type="hidden" name="csrfToken" value={csrfToken} />
-            <input type="hidden" name="callbackUrl" value="/" />
+            {/* New identity → setup; existing workspace identity → /setup/profile redirects home. */}
+            <input type="hidden" name="callbackUrl" value={createProfile ? "/setup/profile" : "/"} />
             <button
               type="submit"
               disabled={!csrfToken}

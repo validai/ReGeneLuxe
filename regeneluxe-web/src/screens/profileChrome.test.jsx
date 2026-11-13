@@ -220,10 +220,19 @@ describe("profile setup image and field diagnostics", () => {
     expect(screen.getAllByText(/signed in as/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText("lab@example.com").length).toBeGreaterThan(0);
     expect(screen.queryByLabelText(/primary email/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/TEST workspaces stay isolated/i)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/profile \/ brand name|brand name/i), {
       target: { value: "ReGeneLuxe Test Lab" },
     });
     expect(screen.getByRole("button", { name: /create profile/i })).toBeInTheDocument();
+  });
+
+  it("create-another sign-in routes Google callback to profile setup", () => {
+    render(<SignInPage createProfile />);
+    expect(screen.getByRole("heading", { name: /create another profile/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /continue with a different google account/i })).toBeInTheDocument();
+    const callback = document.querySelector('input[name="callbackUrl"]');
+    expect(callback).toHaveAttribute("value", "/setup/profile");
   });
 
   it("clears a field error as soon as the value is corrected", () => {

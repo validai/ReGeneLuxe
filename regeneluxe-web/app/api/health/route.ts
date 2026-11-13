@@ -4,6 +4,10 @@ import { SERVICE_NAME, APP_NAME, uiPort, runtimeIdentity } from "../../../server
 import { getCanonicalOrigin } from "../../../server/auth/origin.js";
 import { getDbHealth, initDb, getMeta } from "../../../server/db/index.js";
 import { getTickerHealth } from "../../../server/runtime/jobTickerState.js";
+import {
+  classifyHealthComponents,
+  describeHealthForOperator,
+} from "../../../server/runtime/healthClassification.js";
 import { PUBLISHING_PAUSE_META_KEY } from "../../../server/marketingDrafts/dispatchPipeline.js";
 
 export const runtime = "nodejs";
@@ -21,7 +25,6 @@ export async function GET() {
   let syncState = "UNKNOWN";
   let cloudConfigured = false;
   let publishingPaused = false;
-  const degraded: string[] = [];
 
   try {
     await initDb();
@@ -37,29 +40,27 @@ export async function GET() {
   }
 
   const ticker = getTickerHealth();
-  if (!localHealthy) degraded.push("database");
-  if (!status.aiConfigured) degraded.push("ai_not_configured");
-  if (process.env.RL_DISABLE_JOB_TICKER === "1") {
-    degraded.push("scheduler_disabled");
-  } else if (ticker.enabled && ticker.lastTickOk === false) {
-    degraded.push("scheduler_last_tick_failed");
-  } else if (ticker.enabled && !ticker.lastTickAt) {
-    // Boot window — not yet degraded.
-  } else if (!ticker.enabled && process.env.NODE_ENV === "production") {
-    degraded.push("scheduler_not_started");
-  }
-  if (syncState === "ERROR" || syncState === "CONFLICT") degraded.push(`sync_${syncState.toLowerCase()}`);
+  const classified = classifyHealthComponents({
+    localHealthy,
+    aiConfigured: Boolean(status.aiConfigured),
+    syncState,
+    schedulerDisabled: process.env.RL_DISABLE_JOB_TICKER === "1",
+    schedulerEnabled: Boolean(ticker.enabled),
+    schedulerLastTickOk: ticker.lastTickOk,
+    productionRuntime: process.env.NODE_ENV === "production",
+  });
 
-  let healthStatus: "OK" | "DEGRADED" | "UNHEALTHY" = "OK";
-  if (!localHealthy) healthStatus = "UNHEALTHY";
-  else if (degraded.length > 0) healthStatus = "DEGRADED";
+  const operatorView = describeHealthForOperator({
+    status: classified.status,
+    aiConfigured: Boolean(status.aiConfigured),
+    coreOperational: classified.coreOperational,
+  });
 
-  const ok = healthStatus !== "UNHEALTHY";
-  const httpStatus = ok ? 200 : 503;
+  const httpStatus = classified.ok ? 200 : 503;
 
   return NextResponse.json({
-    ok,
-    status: healthStatus,
+    ok: classified.ok,
+    status: classified.status,
     app: APP_NAME,
     service: SERVICE_NAME,
     framework: "next",
@@ -69,9 +70,13 @@ export async function GET() {
     uiPort: uiPort(),
     canonicalUiUrl: getCanonicalOrigin(),
     authoritativeOrigin: "http://localhost:5174",
-    state: status.aiConfigured ? "RUNNING" : "AI_NOT_CONFIGURED",
-    running: ok,
+    /** Informational AI vault flag — not a core runtime state. */
+    state: classified.coreOperational ? "RUNNING" : "UNAVAILABLE",
+    aiState: status.aiConfigured ? "CONFIGURED" : "NOT_CONFIGURED",
+    running: classified.ok,
+    coreOperational: classified.coreOperational,
     aiConfigured: Boolean(status.aiConfigured),
+    aiOptional: true,
     database: {
       localHealthy,
       sync: { state: syncState, cloudConfigured },
@@ -80,7 +85,9 @@ export async function GET() {
       ...ticker,
       publishingPaused,
     },
-    degradedComponents: degraded,
+    degradedComponents: classified.degradedComponents,
+    optionalComponents: classified.optionalComponents,
+    operator: operatorView,
     timestamp: new Date().toISOString(),
   }, { status: httpStatus, headers: PUBLIC_HEADERS });
 }
