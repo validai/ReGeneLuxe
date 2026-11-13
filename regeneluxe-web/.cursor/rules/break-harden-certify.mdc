@@ -1,0 +1,31 @@
+---
+description: Permanent BUILD→BREAK→HARDEN→POLISH→CERTIFY reliability standard for every meaningful sprint.
+alwaysApply: true
+---
+
+# Break / Harden / Certify
+
+Feature completion alone is **not** enough. Every meaningful sprint:
+
+**BUILD → BREAK → HARDEN → POLISH → CERTIFY**
+
+Full matrix: `docs/BREAK_HARDEN_CERTIFY.md` (with `docs/LAYERED_BUILD.md`).
+
+## Do not stop at
+
+UI renders · API 200 · unit test pass · happy path only.
+
+## Before calling GREEN
+
+Happy + negative paths · concurrency/retry where relevant · restart recovery · workspace isolation · security boundaries · UX confusion check · full regression · TEST-workspace cert when provider-facing.
+
+## Always ask
+
+How can this fail? · operator misuse? · other subsystem break it? · process dies? · provider lies/times out? · happens twice? · wrong workspace?
+
+## Bug labels
+
+Severity: `CRITICAL|HIGH|MEDIUM|LOW|COSMETIC`  
+Type: `AUTH|WORKSPACE|DATA|RUNTIME|PROVIDER|SCHEDULER|AGENT|UI|CACHE|CONCURRENCY|RECOVERY|CONFIG|OTHER`
+
+No uncontrolled duplicate publishes. Do not blame the operator when the UI can prevent the mistake.

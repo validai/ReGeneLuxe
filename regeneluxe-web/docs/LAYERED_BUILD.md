@@ -2,6 +2,8 @@
 
 Permanent architecture and engineering rule. Takes precedence over feature-count goals.
 
+**Reliability process:** every meaningful sprint also follows `docs/BREAK_HARDEN_CERTIFY.md` (BUILD → BREAK → HARDEN → POLISH → CERTIFY).
+
 ## Layers
 
 ### Layer 1 — Foundation / Trust

@@ -42,3 +42,5 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+Release-critical work also follows **BUILD → BREAK → HARDEN → POLISH → CERTIFY** (`docs/BREAK_HARDEN_CERTIFY.md`) and the layered promotion rules (`docs/LAYERED_BUILD.md`).
