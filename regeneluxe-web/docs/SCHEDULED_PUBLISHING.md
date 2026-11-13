@@ -23,9 +23,18 @@ No browser, operator, or external-agent session is required for scheduled author
 
 When paused, claimed marketing publishes defer without writing. Drafts/approvals/schedules remain.
 
-## Missed window
+## Missed window (lateness tolerance — not agent session TTL)
 
-If a job cannot validly execute within 15 minutes after `scheduledFor`, it is marked `SKIPPED` (no late send).
+`SCHEDULE_WINDOW_MS` (15 minutes after `scheduledFor`) is a **scheduled-publishing lateness / tolerance rule**.
+
+If a job cannot validly execute inside that window, it is marked `SKIPPED` (no late send).
+
+This is **independent** of:
+
+- External Agent session TTL (15 minutes) — agent handshake lifetime only
+- Ephemeral pilot `publishApproval` TTL (15 minutes) — manual pilot publish token only
+
+Marketing durable schedule-bound approval is not tied to either session TTL.
 
 ## Restart recovery
 
