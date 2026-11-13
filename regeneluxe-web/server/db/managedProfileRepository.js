@@ -84,9 +84,9 @@ export async function createManagedProfile(ownerOperatorId, partial = {}) {
 
   const saved = await upsert(COLLECTIONS.managed_profiles, record);
   await seedDefaultProfileConnections(saved);
-  // Only the first profile on this database inherits legacy unscoped rows.
-  // Later TEST/PRODUCTION profiles must start clean.
-  if (firstProfileEver) {
+  // Legacy attach is opt-in only. A new Google identity must never silently
+  // inherit another workspace's unscoped history (default: disabled).
+  if (firstProfileEver && process.env.REGENELUXE_ALLOW_LEGACY_ATTACH === "1") {
     await attachUnscopedRecordsToProfile(saved.id);
   }
   await updateOperator(owner, { activeProfileId: saved.id });

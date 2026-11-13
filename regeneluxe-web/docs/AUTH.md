@@ -32,18 +32,22 @@ Durable persistence still uses the `operators` collection for the account row so
 | `AUTH_TRUST_HOST` | Required for local HTTP |
 | `APP_ALLOWED_GOOGLE_EMAILS` | Runtime account allowlist. Comma-separated. Fail closed if empty. Pilot: `djcoast239@gmail.com`. |
 
-### Create Another Profile (one-time invite)
+### Independent profiles (canonical)
 
-Ordinary unsolicited sign-in still requires `APP_ALLOWED_GOOGLE_EMAILS`.
+**One Google identity = one ReGeneLuxe profile = one workspace.**
 
-An authenticated operator may authorize **one additional Google email** for its own isolated profile:
+Profiles do not invite, authorize, parent, or create other profiles.
 
-1. Enter the intended Google email (server-normalized)
-2. Store a short-lived (15m), one-time invite in local meta
-3. Sign out → Google account chooser for that identity
-4. Callback accepts **allowlist OR matching active invite** (`createProfile=1` alone is not authorization)
-5. Consume the invite after successful profile creation (or if that identity already owns a workspace)
-6. Persist `pilotAccessGrant: PROFILE_INVITE` so the new owner can return without a permanent env edit
+Canonical entrance is signed-out `/signin` → Continue with Google:
+
+- existing profile → open its workspace
+- no profile → `/setup/profile` → create isolated workspace
+
+Application access (`REGENELUXE_ACCESS_MODE`) is separate from profile ownership:
+
+- `local` — local owner runtime; verified Google identities may onboard
+- `private_pilot` — `APP_ALLOWED_GOOGLE_EMAILS` required
+- `public` — reserved
 
 Denied accounts get **Choose another Google account** (not a silent reuse loop).
 

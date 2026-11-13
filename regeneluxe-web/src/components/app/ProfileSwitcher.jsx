@@ -5,7 +5,6 @@ import { Link } from "@/nav";
 import { useProfileSession } from "./ProfileSession.jsx";
 import { signOutOperator } from "../../../app/actions/auth";
 import { normalizeWorkspacePurpose } from "../../data/profileModels.js";
-import CreateAnotherProfileForm from "./CreateAnotherProfileForm.jsx";
 
 const MENU = [
   { href: "/settings#account", label: "Account" },
@@ -30,7 +29,6 @@ function TestBadge({ compact = false }) {
 export default function ProfileSwitcher({ collapsed = false, layout = "stack", showDetail = true }) {
   const { activeProfile } = useProfileSession();
   const [open, setOpen] = useState(false);
-  const [confirmCreate, setConfirmCreate] = useState(false);
   const rootRef = useRef(null);
   const purpose = normalizeWorkspacePurpose(activeProfile?.workspacePurpose);
   const isTest = purpose === "TEST";
@@ -38,16 +36,10 @@ export default function ProfileSwitcher({ collapsed = false, layout = "stack", s
   useEffect(() => {
     if (!open) return undefined;
     const onDoc = (event) => {
-      if (!rootRef.current?.contains(event.target)) {
-        setOpen(false);
-        setConfirmCreate(false);
-      }
+      if (!rootRef.current?.contains(event.target)) setOpen(false);
     };
     const onKey = (event) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-        setConfirmCreate(false);
-      }
+      if (event.key === "Escape") setOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
     window.addEventListener("keydown", onKey);
@@ -83,18 +75,6 @@ export default function ProfileSwitcher({ collapsed = false, layout = "stack", s
           {item.label}
         </Link>
       ))}
-      {confirmCreate ? (
-        <CreateAnotherProfileForm layout="menu" onCancel={() => setConfirmCreate(false)} />
-      ) : (
-        <button
-          type="button"
-          role="menuitem"
-          className="block w-full px-3 py-2.5 text-left text-sm text-rl_text hover:bg-rl_surfaceHover"
-          onClick={() => setConfirmCreate(true)}
-        >
-          Create another profile
-        </button>
-      )}
       <form action={signOutOperator} className="border-t border-rl_border">
         <button
           type="submit"

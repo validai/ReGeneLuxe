@@ -187,3 +187,7 @@ Ask:
 Try to break ReGeneLuxe before the operator does.
 
 The goal is not a large test count. The goal is **fewer surprises in real use**.
+
+## Operator handoff
+
+Do not give the operator click-path instructions for a newly built workflow until Cursor has completed the equivalent E2E-certified path. A green build or unit suite alone is not certification.

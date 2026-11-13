@@ -1,5 +1,4 @@
 import AccessNotAuthorizedPage from "../../src/screens/AccessNotAuthorizedPage";
-import { getActiveProfileInvite, publicInvite } from "../../server/auth/profileInvite.js";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +13,5 @@ export default async function Page({
 }) {
   const params = await searchParams;
   const reason = Array.isArray(params.reason) ? params.reason[0] : (params.reason || "");
-  const invite = await getActiveProfileInvite();
-  return (
-    <AccessNotAuthorizedPage
-      reason={reason}
-      createProfilePending={Boolean(invite && publicInvite(invite)?.active)}
-    />
-  );
+  return <AccessNotAuthorizedPage reason={reason} />;
 }

@@ -2,31 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { GearSix, PlugsConnected, SignOut, UserPlus } from "@phosphor-icons/react";
+import { GearSix, PlugsConnected, SignOut } from "@phosphor-icons/react";
 import { useProfileSession } from "./ProfileSession.jsx";
 import { displayAccountEmail } from "../../data/googleIdentity.js";
 import { signOutOperator } from "../../../app/actions/auth";
-import CreateAnotherProfileForm from "./CreateAnotherProfileForm.jsx";
 
 export default function OperatorMenu({ collapsed = false, layout = "stack", showDetail = true }) {
   const { operator } = useProfileSession();
   const [open, setOpen] = useState(false);
-  const [confirmCreate, setConfirmCreate] = useState(false);
   const rootRef = useRef(null);
 
   useEffect(() => {
     if (!open) return undefined;
     const onDoc = (event) => {
-      if (!rootRef.current?.contains(event.target)) {
-        setOpen(false);
-        setConfirmCreate(false);
-      }
+      if (!rootRef.current?.contains(event.target)) setOpen(false);
     };
     const onKey = (event) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-        setConfirmCreate(false);
-      }
+      if (event.key === "Escape") setOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
     window.addEventListener("keydown", onKey);
@@ -67,19 +59,6 @@ export default function OperatorMenu({ collapsed = false, layout = "stack", show
         <PlugsConnected size={16} />
         Connections
       </Link>
-      {confirmCreate ? (
-        <CreateAnotherProfileForm layout="menu" onCancel={() => setConfirmCreate(false)} />
-      ) : (
-        <button
-          type="button"
-          role="menuitem"
-          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-rl_text hover:bg-rl_surfaceHover"
-          onClick={() => setConfirmCreate(true)}
-        >
-          <UserPlus size={16} />
-          Create another profile
-        </button>
-      )}
       <form action={signOutOperator} className="border-t border-rl_border">
         <button
           type="submit"

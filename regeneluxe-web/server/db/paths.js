@@ -14,6 +14,8 @@ export function regeneluxeDir() {
 }
 
 export function dbPath() {
+  const override = String(process.env.REGENELUXE_DB_PATH || "").trim();
+  if (override) return override;
   return join(regeneluxeDir(), "local.db");
 }
 

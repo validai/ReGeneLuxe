@@ -6,21 +6,15 @@ import { getWorkspaceForAccount } from "../../server/db/managedProfileRepository
 import SignInScreen from "../../src/screens/SignInPage";
 import { authErrorMessage } from "../../server/auth/errors.js";
 import { isSignedOutParam } from "../../server/auth/signedOut.js";
-import { operatorHasPilotAccess, getActiveProfileInvite, publicInvite } from "../../server/auth/profileInvite.js";
+import { operatorHasAppAccess } from "../../server/auth/accessPolicy.js";
 
 export const dynamic = "force-dynamic";
 
 type Search = {
   error?: string;
   signedOut?: string | string[];
-  createProfile?: string | string[];
   selectAccount?: string | string[];
 };
-
-function truthyParam(value?: string | string[]) {
-  const raw = Array.isArray(value) ? value[0] : value;
-  return raw === "1" || raw === "true";
-}
 
 export default async function SignInPage({
   searchParams,
@@ -29,24 +23,14 @@ export default async function SignInPage({
 }) {
   const session = await auth();
   const params = await searchParams;
-  const createProfile = truthyParam(params.createProfile);
   let destination: string | null = null;
   let dbFailed = false;
-  let inviteSummary = null;
 
-  try {
-    await initDb();
-    const invite = await getActiveProfileInvite();
-    inviteSummary = publicInvite(invite);
-  } catch {
-    dbFailed = true;
-  }
-
-  // createProfile URL alone is not authorization — require an active invite for that path.
-  if (session?.operatorId && !createProfile) {
+  if (session?.operatorId) {
     try {
+      await initDb();
       const operator = await getOperator(session.operatorId);
-      const allowed = operator && operator.status !== "INACTIVE" && await operatorHasPilotAccess(operator);
+      const allowed = operator && operator.status !== "INACTIVE" && operatorHasAppAccess(operator);
       if (allowed) {
         const workspace = await getWorkspaceForAccount(operator.id);
         destination = workspace ? "/" : "/setup/profile";
@@ -58,18 +42,17 @@ export default async function SignInPage({
 
   if (destination) redirect(destination);
 
-  const signedOut = isSignedOutParam(params.signedOut) || createProfile;
+  const signedOut = isSignedOutParam(params.signedOut);
   const message = dbFailed
     ? authErrorMessage("database")
-    : (signedOut && !createProfile)
+    : signedOut
       ? ""
       : authErrorMessage(params.error);
 
-  const screenProps = {
-    errorMessage: message,
-    signedOut: signedOut && !createProfile,
-    createProfile,
-    inviteSummary,
-  };
-  return <SignInScreen {...screenProps} />;
+  return (
+    <SignInScreen
+      errorMessage={message}
+      signedOut={signedOut}
+    />
+  );
 }

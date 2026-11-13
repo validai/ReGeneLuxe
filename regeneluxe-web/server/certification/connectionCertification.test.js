@@ -78,6 +78,7 @@ describe("isolated test profile + connection certification", () => {
   });
 
   it("does not attach legacy unscoped rows to a later TEST profile", async () => {
+    process.env.REGENELUXE_ALLOW_LEGACY_ATTACH = "1";
     const coast = await upsertOperatorFromGoogle({
       googleSub: "coast-first",
       email: "djcoast239@gmail.com",
@@ -95,6 +96,7 @@ describe("isolated test profile + connection certification", () => {
       workspacePurpose: "TEST",
     });
     expect(await listForProfile(COLLECTIONS.campaigns, testLab.id)).toEqual([]);
+    process.env.REGENELUXE_ALLOW_LEGACY_ATTACH = "0";
   });
 
   it("duplicate create is idempotent for the same account", async () => {

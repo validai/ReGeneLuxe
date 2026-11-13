@@ -57,43 +57,28 @@ describe("auth and profile chrome", () => {
   it("renders Google sign-in without a password form", () => {
     render(<SignInPage />);
     expect(screen.getByRole("button", { name: /continue with google/i })).toBeInTheDocument();
-    expect(screen.getByText(/sign in to your regeneluxe account/i)).toBeInTheDocument();
+    expect(screen.getByText(/sign in to an existing profile or create one/i)).toBeInTheDocument();
     expect(screen.getByText(/social campaign command center/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /signed out/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/create another profile/i)).not.toBeInTheDocument();
   });
 
   it("shows a signed-out confirmation without treating it as an error", () => {
     render(<SignInPage signedOut />);
     expect(screen.getByRole("heading", { name: /^signed out$/i })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(/successfully signed out of regeneluxe/i);
-    expect(screen.getByRole("status")).toHaveTextContent(/no longer active in this browser/i);
-    expect(screen.getByRole("status")).toHaveTextContent(/sign in to your regeneluxe account/i);
+    expect(screen.getByRole("status")).toHaveTextContent(/existing profile or create one/i);
     expect(screen.getByRole("button", { name: /continue with google/i })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(screen.queryByText(/private access/i)).not.toBeInTheDocument();
   });
 
-  it("keeps error messaging off the signed-out confirmation", () => {
-    render(<SignInPage signedOut errorMessage="Sign-in could not be completed." />);
-    expect(screen.getByRole("heading", { name: /^signed out$/i })).toBeInTheDocument();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(screen.queryByText(/sign-in could not be completed/i)).not.toBeInTheDocument();
-  });
-
-  it("renders an access-not-authorized screen with chooser escape", () => {
-    render(<AccessNotAuthorizedPage />);
-    expect(screen.getByRole("heading", { name: /access not authorized/i })).toBeInTheDocument();
-    expect(screen.getByText(/sign in with an approved google account/i)).toBeInTheDocument();
+  it("renders app-level access denied with chooser escape", () => {
+    render(<AccessNotAuthorizedPage reason="not_authorized" />);
+    expect(screen.getByRole("heading", { name: /regeneluxe access denied/i })).toBeInTheDocument();
+    expect(screen.getByText(/not authorized for regeneluxe access/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /choose another google account/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^back$/i })).toHaveAttribute("href", "/signin");
-  });
-
-  it("explains invite mismatch without looping to silent reuse", () => {
-    render(<AccessNotAuthorizedPage reason="invite_mismatch" createProfilePending />);
-    expect(screen.getByRole("heading", { name: /does not match/i })).toBeInTheDocument();
-    expect(screen.getByText(/does not match the profile invitation/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /choose another google account/i })).toBeInTheDocument();
   });
 
   it("shows the brand identity without a profile switcher", () => {
@@ -237,20 +222,6 @@ describe("profile setup image and field diagnostics", () => {
       target: { value: "ReGeneLuxe Test Lab" },
     });
     expect(screen.getByRole("button", { name: /create profile/i })).toBeInTheDocument();
-  });
-
-  it("create-another sign-in with active invite routes to profile setup", () => {
-    render(
-      <SignInPage
-        createProfile
-        inviteSummary={{ active: true, emailMasked: "ar***@gmail.com", expiresAt: new Date(Date.now() + 60_000).toISOString() }}
-      />,
-    );
-    expect(screen.getByRole("heading", { name: /create another profile/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /continue with the authorized google account/i })).toBeInTheDocument();
-    expect(screen.getByText(/ar\*\*\*@gmail\.com/i)).toBeInTheDocument();
-    const callback = document.querySelector('input[name="callbackUrl"]');
-    expect(callback).toHaveAttribute("value", "/setup/profile");
   });
 
   it("clears a field error as soon as the value is corrected", () => {

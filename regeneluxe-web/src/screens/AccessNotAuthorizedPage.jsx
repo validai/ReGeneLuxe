@@ -4,25 +4,25 @@ import BrandTitle from "../components/BrandTitle.jsx";
 import { chooseAnotherGoogleAccount } from "../../app/actions/auth";
 
 const COPY = {
-  invite_mismatch: {
-    title: "Google account does not match",
-    body: "This Google account does not match the profile invitation. Choose the Google account that was authorized for the new profile.",
+  not_authorized: {
+    title: "ReGeneLuxe access denied",
+    body: "This Google account is not authorized for ReGeneLuxe access. Choose another Google account, or ask the ReGeneLuxe operator to grant application access.",
   },
   not_allowlisted: {
-    title: "Access not authorized",
-    body: "This Google account is not approved for the ReGeneLuxe private pilot. Sign in with an approved Google account, or ask an existing operator to authorize Create Another Profile for your email.",
+    title: "ReGeneLuxe access denied",
+    body: "This Google account is not authorized for ReGeneLuxe access. Choose another Google account, or ask the ReGeneLuxe operator to grant application access.",
   },
   identity_mismatch: {
     title: "Access not authorized",
     body: "This Google account cannot be used for this ReGeneLuxe identity.",
   },
   default: {
-    title: "Access not authorized",
-    body: "This Google account is not approved for the ReGeneLuxe private pilot. Sign in with an approved Google account.",
+    title: "ReGeneLuxe access denied",
+    body: "This Google account is not authorized for ReGeneLuxe access.",
   },
 };
 
-export default function AccessNotAuthorizedPage({ reason = "", createProfilePending = false } = {}) {
+export default function AccessNotAuthorizedPage({ reason = "" } = {}) {
   const copy = COPY[reason] || COPY.default;
 
   return (
@@ -34,9 +34,6 @@ export default function AccessNotAuthorizedPage({ reason = "", createProfilePend
           <p className="text-sm leading-6 text-rl_muted">{copy.body}</p>
           <div className="flex flex-wrap gap-2">
             <form action={chooseAnotherGoogleAccount}>
-              {createProfilePending || reason === "invite_mismatch" ? (
-                <input type="hidden" name="createProfile" value="1" />
-              ) : null}
               <button type="submit" className="rl-btn px-3 py-2 text-sm">
                 Choose another Google account
               </button>

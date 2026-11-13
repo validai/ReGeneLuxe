@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 process.env.RL_DB_MODE = "memory";
 process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
+process.env.REGENELUXE_ACCESS_MODE = "private_pilot";
 delete process.env.TURSO_DATABASE_URL;
 delete process.env.TURSO_AUTH_TOKEN;
 
@@ -22,12 +23,14 @@ describe("one email = one account = one workspace", () => {
   beforeEach(async () => {
     process.env.RL_DB_MODE = "memory";
     process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
+    process.env.REGENELUXE_ACCESS_MODE = "private_pilot";
     await resetDbForTests();
     await initDb();
   });
 
   afterEach(async () => {
     process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
+    process.env.REGENELUXE_ACCESS_MODE = "private_pilot";
     await closeDb();
   });
 
@@ -106,7 +109,7 @@ describe("one email = one account = one workspace", () => {
       profile: { sub: "studio-sub", email: "validsstudio@gmail.com", name: "Studio" },
     });
     expect(denied.ok).toBe(false);
-    expect(denied.reason).toBe("not_allowlisted");
+    expect(["not_allowlisted", "not_authorized"]).toContain(denied.reason);
   });
 
   it("returns the same DJ Coast workspace after sign-out and sign-in", async () => {

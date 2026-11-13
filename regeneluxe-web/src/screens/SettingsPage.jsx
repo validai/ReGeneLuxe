@@ -26,7 +26,6 @@ import StatusBadge from "../components/app/StatusBadge.jsx";
 import { PlatformIcon } from "../components/app/Icon.jsx";
 import ExternalAgentBridgePanel from "../components/settings/ExternalAgentBridgePanel.jsx";
 import ConnectionCertificationPanel from "../components/settings/ConnectionCertificationPanel.jsx";
-import CreateAnotherProfileForm from "../components/app/CreateAnotherProfileForm.jsx";
 
 function formatWhen(value) {
   if (!value) return "—";
@@ -247,7 +246,9 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
         </ul>
         {operator ? (
           <div className="space-y-3 border-t border-rl_border pt-3">
-            <CreateAnotherProfileForm layout="settings" />
+            <p className="text-xs text-rl_muted">
+              This Google identity owns this profile only. To use a different Google account, sign out and continue from the sign-in page.
+            </p>
             <form action={signOutOperator}>
               <button type="submit" className="rl-btn-ghost px-3 py-1.5 text-xs">
                 Sign out / Switch account

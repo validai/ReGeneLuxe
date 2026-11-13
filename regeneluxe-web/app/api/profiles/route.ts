@@ -3,11 +3,6 @@ import { createManagedProfile, toPublicProfile } from "../../../server/db/manage
 import { setMeta } from "../../../server/db/index.js";
 import { saveProfileImageBuffer } from "../../../server/media/store.js";
 import { readProfileInput } from "../../../server/profiles/readProfileInput.js";
-import {
-  findValidInviteForEmail,
-  consumeProfileInvite,
-} from "../../../server/auth/profileInvite.js";
-
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -63,10 +58,6 @@ export async function POST(request: Request) {
     });
     await setMeta("active_profile_id", profile.id);
     await setMeta("workspace_id", profile.id);
-    const invite = await findValidInviteForEmail(result.operator.email);
-    if (invite?.id) {
-      await consumeProfileInvite(invite.id, result.operator.id, "profile_created");
-    }
     return jsonPrivate({ ok: true, profile: toPublicProfile(profile) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not create account.";

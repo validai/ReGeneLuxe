@@ -17,7 +17,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:runtime": "vitest run server"
+    "test:runtime": "vitest run server",
+    "test:e2e-profiles": "node scripts/e2e-independent-profiles.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

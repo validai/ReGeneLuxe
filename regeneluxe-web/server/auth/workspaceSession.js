@@ -6,7 +6,7 @@ import { publicOperator, publicManagedProfile, publicProfileConnection, PROFILE_
 import { displayAccountEmail } from "../../src/data/googleIdentity.js";
 import { publicGmailForProfile } from "../connectors/gmailConnection.js";
 import { publicYoutubeForProfile } from "../connectors/youtubeConnection.js";
-import { operatorHasPilotAccess } from "./profileInvite.js";
+import { operatorHasAppAccess } from "./accessPolicy.js";
 
 export async function requireOperator() {
   const session = await auth();
@@ -22,11 +22,11 @@ export async function requireOperator() {
   if (!operator || operator.status === "INACTIVE") {
     return { ok: false, status: 401, error: "Please sign in to continue." };
   }
-  if (!(await operatorHasPilotAccess(operator))) {
+  if (!operatorHasAppAccess(operator)) {
     return {
       ok: false,
       status: 401,
-      error: "This Google account is not approved for the ReGeneLuxe private pilot.",
+      error: "This Google account is not authorized for ReGeneLuxe access.",
     };
   }
   const workspace = await getWorkspaceForAccount(operator.id);

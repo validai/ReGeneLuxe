@@ -6,6 +6,9 @@ export function isPublicPath(pathname) {
   if (path.startsWith("/api/auth")) return true;
   if (path === "/api/health") return true;
   if (path === "/api/status") return true;
+  // E2E probes must be reachable unauthenticated so disabled runtimes can 404
+  // (never enables the harness; handlers still gate on REGENELUXE_E2E_*).
+  if (path === "/api/e2e" || path.startsWith("/api/e2e/")) return true;
   // Bridge has its own secret + session gate. Auth.js cookies are not required.
   if (path === "/api/external-agent" || path.startsWith("/api/external-agent/")) return true;
   if (/^\/api\/oauth\/[^/]+\/callback$/.test(path)) return true;

@@ -1,9 +1,18 @@
 import NextAuth from "next-auth";
 import type { NextAuthConfig } from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "./auth.config";
-import { authorizeGoogleSignIn } from "./server/auth/authorizeGoogle.js";
+import {
+  authorizeGoogleSignIn,
+  authorizeVerifiedIdentity,
+} from "./server/auth/authorizeVerifiedIdentity.js";
 import { findOperatorByGoogleSub, getOperator } from "./server/db/operatorRepository.js";
-import { operatorHasPilotAccess } from "./server/auth/profileInvite.js";
+import { operatorHasAppAccess } from "./server/auth/accessPolicy.js";
+import {
+  assertE2eSecret,
+  isE2eAuthEnabled,
+  isE2eDisposableEmail,
+} from "./server/auth/e2eAuthGate.js";
 
 function logAuthError(error: unknown) {
   const err = error as {
@@ -18,8 +27,52 @@ function logAuthError(error: unknown) {
   console.error("[auth]", name, message, cause);
 }
 
+function buildProviders(): NextAuthConfig["providers"] {
+  const providers: NextAuthConfig["providers"] = [...(authConfig.providers || [])];
+  if (!isE2eAuthEnabled()) return providers;
+
+  providers.push(
+    Credentials({
+      id: "e2e-verified",
+      name: "E2E Verified Identity",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        sub: { label: "Sub", type: "text" },
+        name: { label: "Name", type: "text" },
+        secret: { label: "Secret", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!isE2eAuthEnabled()) return null;
+        const secret = String(credentials?.secret || "");
+        const email = String(credentials?.email || "");
+        const sub = String(credentials?.sub || "");
+        if (!assertE2eSecret(secret)) return null;
+        if (!isE2eDisposableEmail(email)) return null;
+        if (!sub.startsWith("e2e_")) return null;
+
+        const result = await authorizeVerifiedIdentity({
+          email,
+          sub,
+          emailVerified: true,
+          name: String(credentials?.name || "E2E Profile"),
+          avatarUrl: "",
+        });
+        if (!result.ok || !result.operator) return null;
+        return {
+          id: result.operator.id,
+          email: result.operator.email,
+          name: result.operator.name || "E2E Profile",
+          image: result.operator.avatarUrl || null,
+        };
+      },
+    }) as never,
+  );
+  return providers;
+}
+
 export const authOptions = {
   ...authConfig,
+  providers: buildProviders(),
   logger: {
     error(error: Error) {
       logAuthError(error);
@@ -27,11 +80,23 @@ export const authOptions = {
   },
   callbacks: {
     ...authConfig.callbacks,
-    async signIn({ account, profile }: { account?: { provider?: string; providerAccountId?: string } | null; profile?: { sub?: string; email?: string; name?: string; picture?: string } | null }) {
+    async signIn({
+      account,
+      profile,
+      user,
+    }: {
+      account?: { provider?: string; providerAccountId?: string } | null;
+      profile?: { sub?: string; email?: string; name?: string; picture?: string } | null;
+      user?: { id?: string } | null;
+    }) {
+      if (account?.provider === "e2e-verified") {
+        return Boolean(user?.id) && isE2eAuthEnabled();
+      }
       const result = await authorizeGoogleSignIn({ account, profile });
       if (result.ok) return true;
-      if (result.reason === "invite_mismatch") return "/access-not-authorized?reason=invite_mismatch";
-      if (result.reason === "not_allowlisted") return "/access-not-authorized?reason=not_allowlisted";
+      if (result.reason === "not_authorized" || result.reason === "not_allowlisted") {
+        return "/access-not-authorized?reason=not_authorized";
+      }
       if (result.reason === "identity_mismatch") return "/access-not-authorized?reason=identity_mismatch";
       if (result.reason === "database_unavailable") return "/signin?error=database";
       return false;
@@ -40,12 +105,19 @@ export const authOptions = {
       token,
       account,
       profile,
+      user,
     }: {
       token: { operatorId?: string | null; email?: unknown; name?: unknown; picture?: unknown };
-      account?: { providerAccountId?: string } | null;
+      account?: { provider?: string; providerAccountId?: string } | null;
       profile?: { sub?: string; email?: string; name?: string; picture?: string } | null;
+      user?: { id?: string; email?: string | null; name?: string | null; image?: string | null } | null;
     }) {
-      if (account && profile) {
+      if (account?.provider === "e2e-verified" && user?.id) {
+        token.operatorId = user.id;
+        token.email = user.email || token.email;
+        token.name = user.name || token.name;
+        token.picture = user.image || token.picture;
+      } else if (account && profile) {
         const sub = String(profile.sub || account.providerAccountId || "");
         const operator = sub ? await findOperatorByGoogleSub(sub) : null;
         token.operatorId = operator?.id || null;
@@ -55,7 +127,7 @@ export const authOptions = {
       }
       if (typeof token.operatorId === "string") {
         const operator = await getOperator(token.operatorId);
-        if (!(operator && await operatorHasPilotAccess(operator))) {
+        if (!(operator && operatorHasAppAccess(operator))) {
           token.operatorId = null;
         }
       }

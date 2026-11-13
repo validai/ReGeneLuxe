@@ -1,0 +1,14 @@
+---
+description: Do not give operator click-path instructions until Cursor has E2E-certified the equivalent flow.
+alwaysApply: true
+---
+
+# Certified operator handoff
+
+Do **not** tell the operator “click X → Y → Z” for a newly built workflow unless Cursor has already completed the equivalent E2E path.
+
+Not proof: route exists · unit test · button renders · build succeeds.
+
+Operator instructions require a certified path (see `docs/BREAK_HARDEN_CERTIFY.md`).
+
+Independent profiles: one Google identity = one profile = one workspace. No profile-to-profile create/invite.

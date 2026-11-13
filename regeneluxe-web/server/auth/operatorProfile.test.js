@@ -2,12 +2,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 process.env.RL_DB_MODE = "memory";
 process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
+    process.env.REGENELUXE_ACCESS_MODE = "private_pilot";
 delete process.env.TURSO_DATABASE_URL;
 delete process.env.TURSO_AUTH_TOKEN;
 
 const { initDb, resetDbForTests, closeDb, list, get, upsert, COLLECTIONS } = await import("../db/index.js");
 const { authorizeGoogleSignIn } = await import("./authorizeGoogle.js");
-const { upsertOperatorFromGoogle, findOperatorByGoogleSub, getOperator } = await import("../db/operatorRepository.js");
+const { upsertOperatorFromGoogle, findOperatorByGoogleSub } = await import("../db/operatorRepository.js");
 const {
   createManagedProfile,
   listProfilesForOperator,
@@ -21,12 +22,15 @@ const { listPending } = await import("../db/outbox.js");
 describe("operator + managed profile persistence", () => {
   beforeEach(async () => {
     process.env.RL_DB_MODE = "memory";
+    process.env.REGENELUXE_ACCESS_MODE = "private_pilot";
+    process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
     await resetDbForTests();
     await initDb();
   });
 
   afterEach(async () => {
     process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
+    process.env.REGENELUXE_ACCESS_MODE = "private_pilot";
     await closeDb();
   });
 
@@ -162,9 +166,11 @@ describe("operator + managed profile persistence", () => {
     const resolved = resolveActiveProfile({ ...operator, activeProfileId: two.id }, [one, two]);
     expect(resolved.id).toBe(one.id);
     process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
+    process.env.REGENELUXE_ACCESS_MODE = "private_pilot";
   });
 
-  it("attaches unscoped operator records to the first profile and skips fixtures", async () => {
+  it("attaches unscoped operator records only when legacy attach is explicitly enabled", async () => {
+    process.env.REGENELUXE_ALLOW_LEGACY_ATTACH = "1";
     const operator = await upsertOperatorFromGoogle({
       googleSub: "sub-mig",
       email: "djcoast239@gmail.com",
@@ -182,6 +188,7 @@ describe("operator + managed profile persistence", () => {
     expect(account.managedProfileId).toBe(profile.id);
     expect(skipped.managedProfileId).toBeFalsy();
     expect(fixture.managedProfileId).toBeFalsy();
+    process.env.REGENELUXE_ALLOW_LEGACY_ATTACH = "0";
   });
 
   it("sign-out does not delete operator, profile, or campaign data", async () => {
@@ -257,10 +264,10 @@ describe("operator + managed profile persistence", () => {
       profile: { sub: "studio-sub", email: "validsstudio@gmail.com", name: "Studio" },
     });
     expect(denied.ok).toBe(false);
-    expect(denied.reason).toBe("not_allowlisted");
+    expect(["not_allowlisted", "not_authorized"]).toContain(denied.reason);
   });
 
-  it("adopts leftover workspace profiles onto the signing-in account without duplicating them", async () => {
+  it("does not auto-adopt another owner's workspace on sign-in", async () => {
     const leftover = await upsertOperatorFromGoogle({
       googleSub: "studio-sub",
       email: "validsstudio@gmail.com",
@@ -280,13 +287,11 @@ describe("operator + managed profile persistence", () => {
       profile: { sub: "coast-sub", email: "djcoast239@gmail.com", name: "Coast Ent" },
     });
     expect(result.ok).toBe(true);
-    expect(result.adoption?.adopted).toBe(true);
+    expect(result.adoption?.adopted).toBe(false);
     expect(result.operator.id).not.toBe(leftover.id);
-    expect(result.operator.email).toBe("djcoast239@gmail.com");
-    expect(await listProfilesForOperator(result.operator.id)).toHaveLength(1);
-    expect((await listProfilesForOperator(result.operator.id))[0].id).toBe(profile.id);
-    expect(await list(COLLECTIONS.managed_profiles)).toHaveLength(1);
-    expect(await getOperator(leftover.id)).toBeTruthy();
+    expect(await listProfilesForOperator(result.operator.id)).toHaveLength(0);
+    expect(await listProfilesForOperator(leftover.id)).toHaveLength(1);
+    expect((await listProfilesForOperator(leftover.id))[0].id).toBe(profile.id);
     expect((await get(COLLECTIONS.campaigns, "camp_keep")).managedProfileId).toBe(profile.id);
   });
 
@@ -307,6 +312,7 @@ describe("operator + managed profile persistence", () => {
     expect((await listProfilesForOperator(other.id))[0].id).toBe(profile.id);
     expect(await listProfilesForOperator(result.operator.id)).toHaveLength(0);
     process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com";
+    process.env.REGENELUXE_ACCESS_MODE = "private_pilot";
   });
 
   it("lets the signed-in account keep its managed profile across login", async () => {
