@@ -3,8 +3,9 @@
  *
  * Canonical (cutover complete):
  *   One Next.js process. One port. Never 5175.
+ *   npm run start:canonical → managed production runtime on 127.0.0.1:5174
  *   npm run dev → reuse or start Next.js UI + API at http://localhost:5174/
- *   npm run dev:status → report who owns 5174
+ *   npm run start:status / dev:status → report who owns 5174
  *   /api is served by Next Route Handlers on the same origin.
  *
  * Vite is not a product runtime. Vitest may still use Vite as a test runner only.

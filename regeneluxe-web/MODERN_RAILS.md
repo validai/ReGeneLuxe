@@ -12,7 +12,10 @@ See `DATA_ARCHITECTURE.md` and `DATA_MIGRATION_PLAN.md`.
 |--------|---------|
 | `npm run dev` | Next UI + API on `localhost:5174` |
 | `npm run build` | `next build` |
-| `npm start` | production Next; origin comes from `AUTH_URL` |
+| `npm run start:canonical` | **Canonical** managed production runtime (detached, owner-aware) |
+| `npm start` | alias of `start:canonical` |
+| `npm run start:status` / `start:stop` | inspect / owner-verified stop |
+| `npm run start:next` | raw `next start` (escape hatch only; prefer canonical) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | eslint |
 | `npm test` | vitest |

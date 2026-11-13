@@ -1,0 +1,40 @@
+---
+description: ReGeneLuxe port 5174 ownership — diagnose before restart; never broad-kill Node.
+alwaysApply: true
+---
+
+# ReGeneLuxe runtime (5174)
+
+ReGeneLuxe owns **127.0.0.1:5174**. Authoritative browser origin: **http://localhost:5174**.
+
+Protected Investools ports (never touch): **5173**, **3001**, **3010**.
+
+## Before touching 5174
+
+1. Identify PID: `lsof -nP -iTCP:5174 -sTCP:LISTEN`
+2. Verify cwd belongs to `…/regeneluxe-web`
+3. Verify command is Next (`next-server` / `next start`)
+4. Verify `/api/health` returns `app=ReGeneLuxe`
+
+Only then act on that PID.
+
+## Canonical commands
+
+| Intent | Command |
+|--------|---------|
+| Production (managed, detached) | `npm run start:canonical` |
+| Status | `npm run start:status` |
+| Owner-verified stop | `npm run start:stop` |
+| Dev | `npm run dev` |
+
+Do **not** improvise `nohup npm start &`, bare `next start`, or silent background restarts from agent shells.
+
+## Forbidden
+
+- `killall node` / `pkill node` / `pkill npm`
+- Broad `lsof \| xargs kill` or loops over 5173–5177
+- Restarting solely because one browser tab shows `ERR_CONNECTION_REFUSED`
+
+## Browser readiness
+
+Do not announce “up” until: port listening, `/api/health` 200 with ReGeneLuxe identity, a **second** health probe succeeds, and root UI responds. Then instruct a browser refresh.
