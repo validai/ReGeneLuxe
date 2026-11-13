@@ -176,6 +176,22 @@ async function handlePublishContent(payload = {}) {
   const content = contentRows.find((row) => row.id === payload.contentId);
   if (!content) throw new Error("Content not found.");
 
+  const { getManagedProfile } = await import("../db/managedProfileRepository.js");
+  const { assertProviderWriteAllowed } = await import("../certification/productionWriteGuard.js");
+  const workspaceId = payload.managedProfileId || account.managedProfileId || content.managedProfileId || "";
+  const workspace = workspaceId ? await getManagedProfile(workspaceId) : null;
+  const writeGate = assertProviderWriteAllowed({
+    workspace,
+    account,
+    dryRun: Boolean(payload.dryRun),
+  });
+  if (!writeGate.ok) {
+    const err = new Error(writeGate.code || "PROVIDER_WRITE_BLOCKED");
+    err.code = writeGate.code || "PROVIDER_WRITE_BLOCKED";
+    err.detail = writeGate.error;
+    throw err;
+  }
+
   const idempotencyKey = payload.idempotencyKey
     || publicationIdempotencyKey({
       contentId: content.id,

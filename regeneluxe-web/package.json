@@ -19,7 +19,8 @@
     "test": "vitest run",
     "test:runtime": "vitest run server",
     "test:e2e-profiles": "node scripts/e2e-independent-profiles.mjs",
-    "test:e2e-agent-pairing": "node scripts/e2e-external-agent-pairing.mjs"
+    "test:e2e-agent-pairing": "node scripts/e2e-external-agent-pairing.mjs",
+    "cert:mission": "node scripts/certification-mission.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

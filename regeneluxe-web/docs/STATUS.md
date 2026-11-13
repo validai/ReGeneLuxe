@@ -19,19 +19,23 @@ Update this file at the end of substantial sprints. Prefer certification state o
 | Break/Harden/Certify process | Adopted | `docs/BREAK_HARDEN_CERTIFY.md` |
 | Agent continuity protocol | Adopted | `docs/AGENT_CONTINUITY.md` |
 | External agent pairing UX / transport truth | **CERTIFIED (local)** | Wizard + WAITING_FOR_AGENT + remote refuse; E2E×3 `test:e2e-agent-pairing`. Remote Grok **cannot** connect. |
+| DJ Coast / non-TEST provider write guard | **IN PLACE** | `productionWriteGuard.js` — DJ Coast always blocked; non-TEST blocked unless `REGENELUXE_ALLOW_PRODUCTION_PROVIDER_WRITES=1`. |
+| Provider live certification (Layer 2) | **BLOCKED** | Awaiting Six D TEST OAuth connects. Dry-run mission: `npm run cert:mission`. |
 
 ## Active priorities / remains
 
-1. Operator creates real alternate-artist **TEST** profile via signed-out Google flow (Cursor does not create it).
-2. Provider **connection certification** in that TEST workspace (no provider writes until TEST cert path).
-3. Layer 2 publishing stack: **IMPLEMENTED — AWAITING REAL CERTIFICATION** (`docs/LAYERED_BUILD.md`). Do not rebuild unless cert finds defects.
-4. External Agent Bridge: local pairing UX/transport truth certified — **remote Grok cannot connect** until a secure outbound rendezvous/relay is approved and built (not in this sprint).
+1. **S!xd9** (`de5d366a-…`) designated **TEST** workspace for alternate artist (`sixd9music@gmail.com`). DJ Coast writes hard-blocked.
+2. Operator must OAuth-connect Six D TEST social accounts (Meta/Google/etc browser security — Cursor cannot automate).
+3. After TEST accounts connect: Cursor runs one harmless `[REGENELUXE CERT]` live post per publish-capable provider + verify/readback.
+4. Layer 2 publishing stack: **IMPLEMENTED — AWAITING REAL PROVIDER CERT** (`docs/LAYERED_BUILD.md`).
+5. External Agent Bridge: local pairing UX certified; remote Grok cannot connect until rendezvous/relay exists.
 
 ## Blockers
 
-- Real Google OAuth for the alternate artist identity is operator-owned (allowlist / local access mode as configured).
-- Provider GREEN requires controlled TEST-workspace certification — not unit tests alone.
+- **S!xd9 TEST has zero connected social accounts** → live provider cert blocked (`REGENELUXE_PROVIDER_CERT_BLOCKED_AWAITING_TEST_OAUTH`).
+- Provider GREEN requires controlled real test evidence in TEST — not unit tests alone.
 - Remote external agents (Grok) blocked by local-only transport — do not tunnel 5174.
+- Provider post delete teardown not implemented (archive/manual where needed).
 
 ## Do not touch
 

@@ -46,6 +46,20 @@ export async function POST(request: Request) {
       }, 409);
     }
 
+    const { assertProviderWriteAllowed } = await import("../../../server/certification/productionWriteGuard.js");
+    const writeGate = assertProviderWriteAllowed({
+      workspace: authz.workspace || authz.activeProfile,
+      account,
+      dryRun: false,
+    });
+    if (!writeGate.ok) {
+      return jsonPrivate({
+        ok: false,
+        error: writeGate.error,
+        code: writeGate.code,
+      }, writeGate.status || 403);
+    }
+
     if (isPilotProvider(provider)) {
       const approval = approvalId ? await get(COLLECTIONS.approvals, approvalId) : null;
       const variant = variantForAccount(content, account);
@@ -91,6 +105,19 @@ export async function PUT(request: Request) {
     const provider = normalizeProviderId(account.platform);
     if (!isPilotProvider(provider)) {
       return jsonPrivate({ ok: false, error: "Fresh approval is only required for the live platform pilot." }, 400);
+    }
+    const { assertProviderWriteAllowed } = await import("../../../server/certification/productionWriteGuard.js");
+    const writeGate = assertProviderWriteAllowed({
+      workspace: authz.workspace || authz.activeProfile,
+      account,
+      dryRun: false,
+    });
+    if (!writeGate.ok) {
+      return jsonPrivate({
+        ok: false,
+        error: writeGate.error,
+        code: writeGate.code,
+      }, writeGate.status || 403);
     }
     if (account.connectionState !== "CONNECTED" || !account.providerAccountId) {
       return jsonPrivate({ ok: false, error: "Select a verified destination before approving a post." }, 409);
