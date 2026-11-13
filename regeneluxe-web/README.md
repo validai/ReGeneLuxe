@@ -44,3 +44,5 @@ npm run build
 ```
 
 Release-critical work also follows **BUILD → BREAK → HARDEN → POLISH → CERTIFY** (`docs/BREAK_HARDEN_CERTIFY.md`) and the layered promotion rules (`docs/LAYERED_BUILD.md`).
+
+**New agents** must follow `docs/AGENT_CONTINUITY.md` and check `docs/STATUS.md` before editing.

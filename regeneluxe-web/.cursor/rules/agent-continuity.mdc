@@ -1,0 +1,18 @@
+---
+description: New agents must inherit ReGeneLuxe workflow before editing — no blank-slate starts.
+alwaysApply: true
+---
+
+# Agent continuity
+
+Before editing: read `AGENTS.md`, `docs/LAYERED_BUILD.md`, `docs/BREAK_HARDEN_CERTIFY.md`, `docs/AGENT_CONTINUITY.md`, `docs/STATUS.md`, relevant `.cursor/rules/*`, and subsystem docs. Inspect HEAD, `origin/main`, tree, 5174 health/ownership, and recent commits.
+
+First reply: confirm docs read · HEAD · tree · runtime · existing implementation · task · boundaries. Then implement.
+
+**BUILD → BREAK → HARDEN → POLISH → CERTIFY.** Happy path alone is not GREEN.
+
+Operator is not the first tester. Classify before rebuild: implemented / partial / uncertified / blocked / missing.
+
+Preserve: one Google = one profile = one workspace; ReGeneLuxe as system of record; 5174 canonical runtime; Investools untouched; fail closed on identity/workspace/approval ambiguity.
+
+End substantial sprints by updating `docs/STATUS.md` (and architecture docs when the model changes).

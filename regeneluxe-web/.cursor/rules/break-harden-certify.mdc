@@ -9,7 +9,7 @@ Feature completion alone is **not** enough. Every meaningful sprint:
 
 **BUILD → BREAK → HARDEN → POLISH → CERTIFY**
 
-Full matrix: `docs/BREAK_HARDEN_CERTIFY.md` (with `docs/LAYERED_BUILD.md`).
+Full matrix: `docs/BREAK_HARDEN_CERTIFY.md` (with `docs/LAYERED_BUILD.md`). New agents: `docs/AGENT_CONTINUITY.md` + `docs/STATUS.md`.
 
 ## Do not stop at
 

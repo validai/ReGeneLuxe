@@ -1,3 +1,11 @@
+# ReGeneLuxe agent entry
+
+**New agents:** do not start blank-slate. Follow `docs/AGENT_CONTINUITY.md` before editing.
+
+Required reads: `docs/LAYERED_BUILD.md` · `docs/BREAK_HARDEN_CERTIFY.md` · `docs/STATUS.md` · `.cursor/rules/*` · README.
+
+Workflow: **BUILD → BREAK → HARDEN → POLISH → CERTIFY**.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

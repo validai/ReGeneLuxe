@@ -6,7 +6,7 @@ Every meaningful feature or sprint must use:
 
 **BUILD → BREAK → HARDEN → POLISH → CERTIFY**
 
-This standard complements `docs/LAYERED_BUILD.md` (architecture / promotion layers) and `docs/RUNTIME.md` (process lifecycle).
+This standard complements `docs/LAYERED_BUILD.md` (architecture / promotion layers), `docs/RUNTIME.md` (process lifecycle), and `docs/AGENT_CONTINUITY.md` (new-agent inheritance).
 
 ---
 

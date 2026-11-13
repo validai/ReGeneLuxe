@@ -4,6 +4,8 @@ Permanent architecture and engineering rule. Takes precedence over feature-count
 
 **Reliability process:** every meaningful sprint also follows `docs/BREAK_HARDEN_CERTIFY.md` (BUILD → BREAK → HARDEN → POLISH → CERTIFY).
 
+**New agents:** inherit the team workflow via `docs/AGENT_CONTINUITY.md` and living status in `docs/STATUS.md` before editing.
+
 ## Layers
 
 ### Layer 1 — Foundation / Trust

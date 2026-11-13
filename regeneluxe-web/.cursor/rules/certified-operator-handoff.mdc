@@ -9,6 +9,6 @@ Do **not** tell the operator “click X → Y → Z” for a newly built workflo
 
 Not proof: route exists · unit test · button renders · build succeeds.
 
-Operator instructions require a certified path (see `docs/BREAK_HARDEN_CERTIFY.md`).
+Operator instructions require a certified path (see `docs/BREAK_HARDEN_CERTIFY.md` and `docs/AGENT_CONTINUITY.md`).
 
 Independent profiles: one Google identity = one profile = one workspace. No profile-to-profile create/invite.
