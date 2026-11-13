@@ -28,6 +28,8 @@ export const META_WRITE_ALLOWLIST = new Set([
   "active_campaign_id",
   "working_account_id",
   "active_profile_id",
+  "workspace_id",
+  "scheduled_publishing_paused",
 ]);
 
 export const FORBIDDEN_WRITE_FIELDS = [

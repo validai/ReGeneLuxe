@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Link } from "@/nav";
 import PageShell from "../components/app/PageShell.jsx";
 import PageHeader from "../components/app/PageHeader.jsx";
@@ -11,14 +14,61 @@ import ApprovalQueuePanel from "./ApprovalQueuePanel.jsx";
 
 export default function QueuePage() {
   const { queue, content, accounts, campaigns } = useAppData();
+  const [paused, setPaused] = useState(false);
+  const [pauseBusy, setPauseBusy] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/publishing/pause", { credentials: "same-origin" })
+      .then((res) => res.json())
+      .then((body) => setPaused(Boolean(body.paused)))
+      .catch(() => {});
+  }, []);
+
+  async function togglePause() {
+    setPauseBusy(true);
+    try {
+      const res = await fetch("/api/publishing/pause", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paused: !paused }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && body.ok !== false) setPaused(Boolean(body.paused));
+    } finally {
+      setPauseBusy(false);
+    }
+  }
 
   return (
     <PageShell width="workspace" className="space-y-10">
       <PageHeader
         title="Queue"
-        description="Approval queue for marketing drafts, plus what ReGeneLuxe will attempt to publish next."
+        description="Approval queue for marketing drafts, plus scheduled provider dispatch."
         actions={<Link to="/calendar" className="rl-btn-ghost">Calendar</Link>}
       />
+
+      <div className={`rounded-lg border px-4 py-3 text-sm ${
+        paused
+          ? "border-amber-500/40 bg-amber-500/10 text-amber-800"
+          : "border-rl_border text-rl_muted"
+      }`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p>
+            {paused
+              ? "PAUSED — scheduled provider writes will not begin. Drafts, approvals, and connections remain."
+              : "Scheduled publishing is active."}
+          </p>
+          <button
+            type="button"
+            className="rl-btn-ghost px-3 py-1.5 text-xs"
+            disabled={pauseBusy}
+            onClick={togglePause}
+          >
+            {paused ? "Resume scheduled publishing" : "Pause scheduled publishing"}
+          </button>
+        </div>
+      </div>
 
       <ApprovalQueuePanel />
 

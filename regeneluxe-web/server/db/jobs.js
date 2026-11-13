@@ -97,12 +97,17 @@ export async function claimNextJob(owner, types = null, client = null, { exclude
   const db = clientOr(client);
   const now = nowIso();
 
+  // PENDING/ERROR always claimable. RUNNING reclaimable only after lease expiry
+  // (crash/restart recovery) so stranded work cannot send twice under a live lease.
   let sql = `SELECT * FROM jobs
-    WHERE state IN (?, ?)
+    WHERE (
+        state IN (?, ?)
+        OR (state = ? AND lease_until IS NOT NULL AND lease_until < ?)
+      )
       AND scheduled_at <= ?
       AND (lease_until IS NULL OR lease_until < ?)
     `;
-  const args = [JOB_STATES.PENDING, JOB_STATES.ERROR, now, now];
+  const args = [JOB_STATES.PENDING, JOB_STATES.ERROR, JOB_STATES.RUNNING, now, now, now];
 
   if (Array.isArray(types) && types.length) {
     sql += ` AND type IN (${types.map(() => "?").join(",")})`;
@@ -126,9 +131,23 @@ export async function claimNextJob(owner, types = null, client = null, { exclude
       sql: `UPDATE jobs SET state = ?, started_at = ?, lease_owner = ?, lease_until = ?,
         attempt_count = attempt_count + 1
         WHERE id = ?
-          AND state IN (?, ?)
+          AND (
+            state IN (?, ?)
+            OR (state = ? AND lease_until IS NOT NULL AND lease_until < ?)
+          )
           AND (lease_until IS NULL OR lease_until < ?)`,
-      args: [JOB_STATES.RUNNING, now, owner, leaseUntil, row.id, JOB_STATES.PENDING, JOB_STATES.ERROR, now],
+      args: [
+        JOB_STATES.RUNNING,
+        now,
+        owner,
+        leaseUntil,
+        row.id,
+        JOB_STATES.PENDING,
+        JOB_STATES.ERROR,
+        JOB_STATES.RUNNING,
+        now,
+        now,
+      ],
     });
     if (Number(claimed.rowsAffected || 0) !== 1) continue;
 
@@ -147,6 +166,18 @@ export async function releaseJob(id, client = null) {
     sql: `UPDATE jobs SET state = ?, lease_owner = NULL, lease_until = NULL,
       attempt_count = MAX(attempt_count - 1, 0) WHERE id = ? AND state = ?`,
     args: [JOB_STATES.PENDING, id, JOB_STATES.RUNNING],
+  });
+}
+
+/** Soft defer: keep PENDING, push schedule forward, do not burn attempts. */
+export async function deferJob(id, delayMs = 60_000, client = null) {
+  const db = clientOr(client);
+  const next = new Date(Date.now() + delayMs).toISOString();
+  await db.execute({
+    sql: `UPDATE jobs SET state = ?, scheduled_at = ?, lease_owner = NULL, lease_until = NULL,
+      attempt_count = MAX(attempt_count - 1, 0), last_error = ?
+      WHERE id = ? AND state = ?`,
+    args: [JOB_STATES.PENDING, next, "PAUSED", id, JOB_STATES.RUNNING],
   });
 }
 
