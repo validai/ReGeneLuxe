@@ -13,6 +13,7 @@ import SettingsPage from "./SettingsPage.jsx";
 vi.mock("../../app/actions/auth", () => ({
   signInWithGoogle: () => {},
   signOutOperator: () => {},
+  beginCreateAnotherProfile: () => {},
 }));
 
 vi.mock("next/navigation", () => ({
@@ -207,10 +208,22 @@ describe("profile setup image and field diagnostics", () => {
 
   it("focuses the first invalid field on save", () => {
     render(<ProfileSetupPage />);
-    fireEvent.click(screen.getByRole("button", { name: /save account/i }));
+    fireEvent.click(screen.getByRole("button", { name: /create profile/i }));
     expect(screen.getByText("Please fix 5 fields before saving.")).toBeInTheDocument();
-    expect(screen.getByLabelText(/brand name/i)).toHaveFocus();
+    expect(screen.getByLabelText(/profile \/ brand name|brand name/i)).toHaveFocus();
     expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
+  });
+
+  it("offers TEST purpose with a lightweight create path", () => {
+    render(<ProfileSetupPage operator={{ email: "lab@example.com" }} />);
+    fireEvent.click(screen.getByRole("radio", { name: /^test$/i }));
+    expect(screen.getAllByText(/signed in as/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("lab@example.com").length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText(/primary email/i)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/profile \/ brand name|brand name/i), {
+      target: { value: "ReGeneLuxe Test Lab" },
+    });
+    expect(screen.getByRole("button", { name: /create profile/i })).toBeInTheDocument();
   });
 
   it("clears a field error as soon as the value is corrected", () => {

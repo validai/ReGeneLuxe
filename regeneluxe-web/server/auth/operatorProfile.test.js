@@ -139,15 +139,16 @@ describe("operator + managed profile persistence", () => {
     await expect(setActiveProfileForOperator(operator.id, operator.id)).rejects.toThrow(/must not equal operator ID/);
   });
 
-  it("scopes repository reads to the owning workspace and rejects a second brand", async () => {
+  it("scopes repository reads to the owning workspace and returns existing on duplicate create", async () => {
     process.env.APP_ALLOWED_GOOGLE_EMAILS = "djcoast239@gmail.com,other-pilot@gmail.com";
     const operator = await upsertOperatorFromGoogle({
       googleSub: "sub-scope",
       email: "djcoast239@gmail.com",
     });
     const one = await createManagedProfile(operator.id, { displayName: "DJ Coast", slug: "dj-coast" });
-    await expect(createManagedProfile(operator.id, { displayName: "Future Brand", slug: "future-brand" }))
-      .rejects.toThrow(/already has a brand workspace/i);
+    const again = await createManagedProfile(operator.id, { displayName: "Future Brand", slug: "future-brand" });
+    expect(again.id).toBe(one.id);
+    expect(await listProfilesForOperator(operator.id)).toHaveLength(1);
     const other = await upsertOperatorFromGoogle({
       googleSub: "sub-other-brand",
       email: "other-pilot@gmail.com",

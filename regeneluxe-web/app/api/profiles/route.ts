@@ -36,20 +36,29 @@ export async function POST(request: Request) {
       avatarUrl = saved.url;
       avatarMediaId = saved.id;
     }
+    const purpose = String(input.workspacePurpose || "PRODUCTION").toUpperCase() === "TEST"
+      ? "TEST"
+      : "PRODUCTION";
     const profile = await createManagedProfile(result.operator.id, {
       displayName: input.displayName,
       slug: input.slug,
-      primaryEmail: input.primaryEmail,
+      primaryEmail: input.primaryEmail || result.operator.email || "",
       website: input.website,
-      primaryPublicUrl: input.primaryPublicUrl,
+      primaryPublicUrl: input.primaryPublicUrl || "",
       timezone: input.timezone,
       shortDescription: input.shortDescription,
       avatarUrl,
       avatarMediaId,
-      platforms: input.platforms,
+      platforms: Array.isArray(input.platforms) && input.platforms.length
+        ? input.platforms
+        : (purpose === "TEST" ? ["Other"] : input.platforms),
+      workspacePurpose: purpose,
+      googleAccountEmail: result.operator.email || "",
+      googleAccountSub: result.operator.googleSub || "",
       status: "ACTIVE",
     });
     await setMeta("active_profile_id", profile.id);
+    await setMeta("workspace_id", profile.id);
     return jsonPrivate({ ok: true, profile: toPublicProfile(profile) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not create account.";

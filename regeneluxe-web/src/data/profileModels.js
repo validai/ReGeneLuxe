@@ -5,6 +5,14 @@ import { PROVIDER_CONNECTION_STATES } from "./statusContracts.js";
 
 export const PROFILE_STATUSES = ["ACTIVE", "INACTIVE"];
 
+/** Workspace environment purpose. Not a second brand under one email. */
+export const WORKSPACE_PURPOSES = Object.freeze(["PRODUCTION", "TEST"]);
+
+export function normalizeWorkspacePurpose(value) {
+  const raw = String(value || "").trim().toUpperCase();
+  return WORKSPACE_PURPOSES.includes(raw) ? raw : "PRODUCTION";
+}
+
 export const PROFILE_CONNECTION_KINDS = {
   GOOGLE_ACCOUNT: "GOOGLE_ACCOUNT",
   GMAIL: "GMAIL",
@@ -52,7 +60,10 @@ export function emptyOperator(partial = {}) {
 }
 
 export const SECOND_WORKSPACE_MESSAGE =
-  "This ReGeneLuxe account already has a brand workspace. Use a different email to create another brand account.";
+  "This ReGeneLuxe account already has a brand workspace. Use a different Google account to create another ReGeneLuxe profile.";
+
+export const CREATE_ANOTHER_PROFILE_HINT =
+  "Another ReGeneLuxe profile requires a different Google identity. You will sign out, choose another Google account, then create that profile.";
 
 export function publicOperator(operator) {
   if (!operator) return null;
@@ -95,6 +106,7 @@ export function emptyManagedProfile(partial = {}) {
       : [],
     googleAccountEmail: partial.googleAccountEmail || "",
     googleAccountSub: partial.googleAccountSub || "",
+    workspacePurpose: normalizeWorkspacePurpose(partial.workspacePurpose || partial.purpose),
     createdAt: partial.createdAt || timestamp,
     updatedAt: partial.updatedAt || timestamp,
   };
@@ -117,6 +129,7 @@ export function publicManagedProfile(profile) {
     shortDescription: profile.shortDescription || "",
     platforms: Array.isArray(profile.platforms) ? profile.platforms : [],
     googleAccountEmail: profile.googleAccountEmail || "",
+    workspacePurpose: normalizeWorkspacePurpose(profile.workspacePurpose || profile.purpose),
     createdAt: profile.createdAt || null,
     updatedAt: profile.updatedAt || null,
     revision: profile.revision ?? null,

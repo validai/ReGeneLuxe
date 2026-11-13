@@ -10,7 +10,16 @@ import { isEmailAllowed } from "../../server/auth/allowlist.js";
 
 export const dynamic = "force-dynamic";
 
-type Search = { error?: string; signedOut?: string | string[] };
+type Search = {
+  error?: string;
+  signedOut?: string | string[];
+  createProfile?: string | string[];
+};
+
+function truthyParam(value?: string | string[]) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw === "1" || raw === "true";
+}
 
 export default async function SignInPage({
   searchParams,
@@ -19,10 +28,11 @@ export default async function SignInPage({
 }) {
   const session = await auth();
   const params = await searchParams;
+  const createProfile = truthyParam(params.createProfile);
   let destination: string | null = null;
   let dbFailed = false;
 
-  if (session?.operatorId) {
+  if (session?.operatorId && !createProfile) {
     try {
       await initDb();
       const operator = await getOperator(session.operatorId);
@@ -38,12 +48,18 @@ export default async function SignInPage({
 
   if (destination) redirect(destination);
 
-  const signedOut = isSignedOutParam(params.signedOut);
+  const signedOut = isSignedOutParam(params.signedOut) || createProfile;
   const message = dbFailed
     ? authErrorMessage("database")
-    : signedOut
+    : (signedOut && !createProfile)
       ? ""
       : authErrorMessage(params.error);
 
-  return <SignInScreen errorMessage={message} signedOut={signedOut} />;
+  return (
+    <SignInScreen
+      errorMessage={message}
+      signedOut={signedOut && !createProfile}
+      createProfile={createProfile}
+    />
+  );
 }

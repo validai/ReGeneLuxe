@@ -9,6 +9,7 @@ import { getSidebarCollapsed, setSidebarCollapsed } from "../../data/uiPrefs.js"
 vi.mock("../../../app/actions/auth", () => ({
   signInWithGoogle: () => {},
   signOutOperator: () => {},
+  beginCreateAnotherProfile: () => {},
 }));
 
 vi.mock("next/navigation", () => ({

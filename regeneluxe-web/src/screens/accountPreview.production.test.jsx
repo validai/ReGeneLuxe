@@ -13,6 +13,7 @@ vi.mock("../data/accountPreview.js", () => ({
 vi.mock("../../app/actions/auth", () => ({
   signInWithGoogle: () => {},
   signOutOperator: () => {},
+  beginCreateAnotherProfile: () => {},
 }));
 
 vi.mock("../data/durableBootstrap.js", () => ({

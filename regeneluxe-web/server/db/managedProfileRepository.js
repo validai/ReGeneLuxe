@@ -64,8 +64,11 @@ export async function createManagedProfile(ownerOperatorId, partial = {}) {
 
   const existingForOwner = await listProfilesForOperator(owner);
   if (existingForOwner.length > 0) {
-    throw new Error(SECOND_WORKSPACE_MESSAGE);
+    // Idempotent: double-submit returns the existing workspace for this account.
+    return existingForOwner[0];
   }
+  const allBefore = await listManagedProfiles();
+  const firstProfileEver = allBefore.length === 0;
   const slug = await uniqueSlug(partial.slug || displayName);
 
   const record = emptyManagedProfile({
@@ -76,11 +79,16 @@ export async function createManagedProfile(ownerOperatorId, partial = {}) {
     status: PROFILE_STATUSES.includes(partial.status) ? partial.status : "ACTIVE",
     website: normalizeWebsite(partial.website),
     primaryPublicUrl: String(partial.primaryPublicUrl || "").trim(),
+    workspacePurpose: partial.workspacePurpose || partial.purpose || "PRODUCTION",
   });
 
   const saved = await upsert(COLLECTIONS.managed_profiles, record);
   await seedDefaultProfileConnections(saved);
-  await attachUnscopedRecordsToProfile(saved.id);
+  // Only the first profile on this database inherits legacy unscoped rows.
+  // Later TEST/PRODUCTION profiles must start clean.
+  if (firstProfileEver) {
+    await attachUnscopedRecordsToProfile(saved.id);
+  }
   await updateOperator(owner, { activeProfileId: saved.id });
   return saved;
 }

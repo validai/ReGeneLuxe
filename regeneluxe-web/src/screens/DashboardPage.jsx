@@ -7,6 +7,7 @@ import NextBestAction from "../components/app/NextBestAction.jsx";
 import AttentionCenter from "../components/app/AttentionCenter.jsx";
 import MetricCard from "../components/app/MetricCard.jsx";
 import { useAppData } from "../hooks/useAppData.js";
+import { useProfileSession } from "../components/app/ProfileSession.jsx";
 import { setActiveCampaignId } from "../data/campaignRepository.js";
 import { buildAttentionFeed, buildCampaignStateSnapshot, ATTENTION_LEVELS } from "../data/campaignMonitor.js";
 import { listEvents } from "../data/events.js";
@@ -40,6 +41,8 @@ function approvalIdFrom(item, readyContent = []) {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { campaigns, accounts, content, inbox, queue, snapshots, decisions, workingAccountId } = useAppData();
+  const { activeProfile } = useProfileSession();
+  const isTestWorkspace = String(activeProfile?.workspacePurpose || "").toUpperCase() === "TEST";
   const [forceApprovalId, setForceApprovalId] = useState(null);
 
   const scopedContent = filterByWorkingAccount(content, accounts, workingAccountId);
@@ -132,11 +135,28 @@ export default function DashboardPage() {
       />
 
       {campaigns.length === 0 && content.length === 0 ? (
-        <EmptyState
-          title="Nothing in motion yet"
-          body="Create a post or start a campaign."
-          action={<button type="button" onClick={() => navigate("/content/new")} className="rl-btn">Create</button>}
-        />
+        isTestWorkspace ? (
+          <EmptyState
+            title={`Welcome to ${activeProfile?.displayName || "your Test Lab"}`}
+            body="This TEST workspace starts clean. Connect test social accounts, create a campaign, or pair an external agent — nothing is copied from production."
+            action={(
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => navigate("/accounts")} className="rl-btn">
+                  Connect Test Accounts
+                </button>
+                <button type="button" onClick={() => navigate("/settings#certification")} className="rl-btn-ghost">
+                  Connection Certification
+                </button>
+              </div>
+            )}
+          />
+        ) : (
+          <EmptyState
+            title="Nothing in motion yet"
+            body="Create a post or start a campaign."
+            action={<button type="button" onClick={() => navigate("/content/new")} className="rl-btn">Create</button>}
+          />
+        )
       ) : (
         <div className="space-y-8">
           {next && (

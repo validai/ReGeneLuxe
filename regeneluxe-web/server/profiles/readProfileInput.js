@@ -15,6 +15,7 @@ export async function readProfileInput(request) {
       timezone: String(form.get("timezone") || ""),
       shortDescription: String(form.get("shortDescription") || ""),
       status: String(form.get("status") || ""),
+      workspacePurpose: String(form.get("workspacePurpose") || form.get("purpose") || "PRODUCTION"),
       platforms: String(form.get("platforms") || "")
         .split(",")
         .map((item) => item.trim())
@@ -35,6 +36,7 @@ export async function readProfileInput(request) {
     timezone: body.timezone,
     shortDescription: body.shortDescription,
     status: body.status,
+    workspacePurpose: body.workspacePurpose || body.purpose || "PRODUCTION",
     platforms: body.platforms,
     avatarFile: null,
     removeAvatar: Boolean(body.removeAvatar),

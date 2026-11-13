@@ -57,4 +57,19 @@ describe("profile setup field diagnostics", () => {
     expect(result.errors.avatar).toMatch(/png, jpg, or webp/i);
     expect(result.invalidKeys).toEqual(["avatar"]);
   });
+
+  it("accepts a TEST profile with only a brand name", () => {
+    const result = validateProfileSetupFields({
+      displayName: "ReGeneLuxe Test Lab",
+      slug: "",
+      primaryEmail: "",
+      primaryPublicUrl: "",
+      website: "",
+      platforms: [],
+      workspacePurpose: "TEST",
+    }, { purpose: "TEST" });
+    expect(result.count).toBe(0);
+    expect(result.workspacePurpose).toBe("TEST");
+    expect(result.slug).toBe("regeneluxe-test-lab");
+  });
 });

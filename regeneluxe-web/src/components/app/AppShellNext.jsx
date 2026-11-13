@@ -233,8 +233,9 @@ export default function AppShellNext({ children, onOpenCommand }) {
   const { accounts, workingAccountId } = useAppData();
   const collapsed = useSyncExternalStore(subscribeSidebar, getSidebarCollapsed, () => false);
   const chromeReady = useSyncExternalStore(() => () => {}, () => true, () => false);
-  const { operator } = useProfileSession();
+  const { operator, activeProfile } = useProfileSession();
   const accountEmail = displayAccountEmail(operator);
+  const isTestWorkspace = String(activeProfile?.workspacePurpose || "").toUpperCase() === "TEST";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [motionOn, setMotionOn] = useState(false);
 
@@ -411,6 +412,11 @@ export default function AppShellNext({ children, onOpenCommand }) {
             <Link href="/" className="min-w-0 truncate font-display text-sm font-semibold tracking-tight text-rl_text" aria-label="ReGeneLuxe">
               ReGeneLuxe
             </Link>
+            {isTestWorkspace ? (
+              <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700">
+                TEST WORKSPACE
+              </span>
+            ) : null}
           </div>
           <div className="flex items-center gap-2">
             <button type="button" className="rl-btn-icon" onClick={onOpenCommand} aria-label="Search" title="Search">

@@ -8,6 +8,7 @@ import { resetDurableHealthForTests } from "../data/durableBootstrap.js";
 vi.mock("../../app/actions/auth", () => ({
   signInWithGoogle: () => {},
   signOutOperator: () => {},
+  beginCreateAnotherProfile: () => {},
 }));
 
 vi.mock("next/navigation", () => ({

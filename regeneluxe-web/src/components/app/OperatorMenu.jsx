@@ -2,22 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { GearSix, PlugsConnected } from "@phosphor-icons/react";
+import { GearSix, PlugsConnected, SignOut, UserPlus } from "@phosphor-icons/react";
 import { useProfileSession } from "./ProfileSession.jsx";
 import { displayAccountEmail } from "../../data/googleIdentity.js";
+import { beginCreateAnotherProfile, signOutOperator } from "../../../app/actions/auth";
+import { CREATE_ANOTHER_PROFILE_HINT } from "../../data/profileModels.js";
 
 export default function OperatorMenu({ collapsed = false, layout = "stack", showDetail = true }) {
   const { operator } = useProfileSession();
   const [open, setOpen] = useState(false);
+  const [confirmCreate, setConfirmCreate] = useState(false);
   const rootRef = useRef(null);
 
   useEffect(() => {
     if (!open) return undefined;
     const onDoc = (event) => {
-      if (!rootRef.current?.contains(event.target)) setOpen(false);
+      if (!rootRef.current?.contains(event.target)) {
+        setOpen(false);
+        setConfirmCreate(false);
+      }
     };
     const onKey = (event) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        setConfirmCreate(false);
+      }
     };
     document.addEventListener("mousedown", onDoc);
     window.addEventListener("keydown", onKey);
@@ -36,6 +45,68 @@ export default function OperatorMenu({ collapsed = false, layout = "stack", show
     <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-rl_surfaceActive text-xs font-semibold text-rl_text">
       {initial}
     </span>
+  );
+
+  const menuItems = (
+    <>
+      <Link
+        href="/settings#account"
+        role="menuitem"
+        className="flex items-center gap-2 px-3 py-2.5 text-sm text-rl_text hover:bg-rl_surfaceHover"
+        onClick={() => setOpen(false)}
+      >
+        <GearSix size={16} />
+        Account
+      </Link>
+      <Link
+        href="/settings#connections"
+        role="menuitem"
+        className="flex items-center gap-2 px-3 py-2.5 text-sm text-rl_text hover:bg-rl_surfaceHover"
+        onClick={() => setOpen(false)}
+      >
+        <PlugsConnected size={16} />
+        Connections
+      </Link>
+      {confirmCreate ? (
+        <div className="space-y-2 border-t border-rl_border px-3 py-3">
+          <p className="text-xs leading-5 text-rl_muted">{CREATE_ANOTHER_PROFILE_HINT}</p>
+          <div className="flex gap-2">
+            <form action={beginCreateAnotherProfile} className="flex-1">
+              <button type="submit" className="rl-btn w-full px-2 py-1.5 text-xs">
+                Continue
+              </button>
+            </form>
+            <button
+              type="button"
+              className="rl-btn-ghost flex-1 px-2 py-1.5 text-xs"
+              onClick={() => setConfirmCreate(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          role="menuitem"
+          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-rl_text hover:bg-rl_surfaceHover"
+          onClick={() => setConfirmCreate(true)}
+        >
+          <UserPlus size={16} />
+          Create another profile
+        </button>
+      )}
+      <form action={signOutOperator} className="border-t border-rl_border">
+        <button
+          type="submit"
+          role="menuitem"
+          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-rl_text hover:bg-rl_surfaceHover"
+        >
+          <SignOut size={16} />
+          Sign out / Switch account
+        </button>
+      </form>
+    </>
   );
 
   if (layout === "split") {
@@ -61,28 +132,11 @@ export default function OperatorMenu({ collapsed = false, layout = "stack", show
         {open ? (
           <div
             role="menu"
-            className={`absolute bottom-full z-50 mb-2 w-56 overflow-hidden rounded-xl border border-rl_border bg-rl_surfaceRaised shadow-lg ${
+            className={`absolute bottom-full z-50 mb-2 w-64 overflow-hidden rounded-xl border border-rl_border bg-rl_surfaceRaised shadow-lg ${
               showDetail ? "left-[4.5rem]" : "left-full ml-2"
             }`}
           >
-            <Link
-              href="/settings#account"
-              role="menuitem"
-              className="flex items-center gap-2 px-3 py-2.5 text-sm text-rl_text hover:bg-rl_surfaceHover"
-              onClick={() => setOpen(false)}
-            >
-              <GearSix size={16} />
-              Account
-            </Link>
-            <Link
-              href="/settings#connections"
-              role="menuitem"
-              className="flex items-center gap-2 px-3 py-2.5 text-sm text-rl_text hover:bg-rl_surfaceHover"
-              onClick={() => setOpen(false)}
-            >
-              <PlugsConnected size={16} />
-              Connections
-            </Link>
+            {menuItems}
           </div>
         ) : null}
       </div>
@@ -116,27 +170,10 @@ export default function OperatorMenu({ collapsed = false, layout = "stack", show
         <div
           role="menu"
           className={`absolute bottom-full z-50 mb-2 overflow-hidden rounded-xl border border-rl_border bg-rl_surfaceRaised shadow-lg ${
-            collapsed ? "left-2 w-56" : "left-2 right-2"
+            collapsed ? "left-2 w-64" : "left-2 right-2"
           }`}
         >
-          <Link
-            href="/settings#account"
-            role="menuitem"
-            className="flex items-center gap-2 px-3 py-2.5 text-sm text-rl_text hover:bg-rl_surfaceHover"
-            onClick={() => setOpen(false)}
-          >
-            <GearSix size={16} />
-            Account
-          </Link>
-          <Link
-            href="/settings#connections"
-            role="menuitem"
-            className="flex items-center gap-2 px-3 py-2.5 text-sm text-rl_text hover:bg-rl_surfaceHover"
-            onClick={() => setOpen(false)}
-          >
-            <PlugsConnected size={16} />
-            Connections
-          </Link>
+          {menuItems}
         </div>
       ) : null}
     </div>

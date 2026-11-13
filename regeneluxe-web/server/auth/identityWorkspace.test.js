@@ -15,7 +15,7 @@ const {
   getCurrentWorkspace,
   listProfilesForOperator,
 } = await import("../db/managedProfileRepository.js");
-const { publicOperator, resolveWorkspace, SECOND_WORKSPACE_MESSAGE } = await import("../../src/data/profileModels.js");
+const { publicOperator, resolveWorkspace } = await import("../../src/data/profileModels.js");
 const { assertMatchesSignedInGoogleAccount, GOOGLE_ACCOUNT_MISMATCH_MESSAGE } = await import("../../src/data/googleIdentity.js");
 
 describe("one email = one account = one workspace", () => {
@@ -48,14 +48,14 @@ describe("one email = one account = one workspace", () => {
     expect(await listProfilesForOperator(login.operator.id)).toHaveLength(1);
   });
 
-  it("rejects a second brand under the same account", async () => {
+  it("returns the existing workspace on duplicate create under the same account", async () => {
     const account = await upsertOperatorFromGoogle({
       googleSub: "coast-sub",
       email: "djcoast239@gmail.com",
     });
-    await createManagedProfile(account.id, { displayName: "DJ Coast", slug: "dj-coast" });
-    await expect(createManagedProfile(account.id, { displayName: "Profile #2" }))
-      .rejects.toThrow(SECOND_WORKSPACE_MESSAGE);
+    const first = await createManagedProfile(account.id, { displayName: "DJ Coast", slug: "dj-coast" });
+    const second = await createManagedProfile(account.id, { displayName: "Profile #2" });
+    expect(second.id).toBe(first.id);
     expect(await list(COLLECTIONS.managed_profiles)).toHaveLength(1);
   });
 

@@ -11,6 +11,7 @@ const routerPush = vi.hoisted(() => vi.fn());
 vi.mock("../../app/actions/auth", () => ({
   signInWithGoogle: () => {},
   signOutOperator: () => {},
+  beginCreateAnotherProfile: () => {},
 }));
 
 vi.mock("../data/durableBootstrap.js", () => ({

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import BrandTitle from "../components/BrandTitle.jsx";
+import { CREATE_ANOTHER_PROFILE_HINT } from "../data/profileModels.js";
 
 function GoogleMark() {
   return (
@@ -14,7 +15,11 @@ function GoogleMark() {
   );
 }
 
-export default function SignInPage({ errorMessage = "", signedOut = false }) {
+export default function SignInPage({
+  errorMessage = "",
+  signedOut = false,
+  createProfile = false,
+}) {
   const [csrfToken, setCsrfToken] = useState("");
 
   useEffect(() => {
@@ -33,7 +38,25 @@ export default function SignInPage({ errorMessage = "", signedOut = false }) {
         </div>
 
         <div className="rl-panel space-y-5 p-8 text-left">
-          {signedOut ? (
+          {createProfile ? (
+            <div
+              className="space-y-2 rounded-lg border border-rl_border bg-rl_surfaceHover/30 px-4 py-4"
+              role="status"
+            >
+              <h1 className="font-display text-lg font-semibold tracking-tight text-rl_text">
+                Create another profile
+              </h1>
+              <p className="text-sm leading-6 text-rl_textSecondary">
+                {CREATE_ANOTHER_PROFILE_HINT}
+              </p>
+              <p className="text-sm leading-6 text-rl_textSecondary">
+                Choose a different Google account. If that identity has no ReGeneLuxe profile yet, you will create one next.
+              </p>
+              <p className="text-xs leading-5 text-rl_muted">
+                The second Google email must be listed in APP_ALLOWED_GOOGLE_EMAILS before sign-in will succeed.
+              </p>
+            </div>
+          ) : signedOut ? (
             <div
               className="space-y-2 rounded-lg border border-rl_ok/40 bg-rl_ok/10 px-4 py-4"
               role="status"
@@ -56,12 +79,17 @@ export default function SignInPage({ errorMessage = "", signedOut = false }) {
               Sign in to your ReGeneLuxe account.
             </p>
           )}
-          {signedOut ? (
+          {signedOut && !createProfile ? (
             <p className="text-center text-xs text-rl_muted">
               Use the Google account that owns this ReGeneLuxe workspace.
             </p>
           ) : null}
-          {errorMessage && !signedOut ? (
+          {errorMessage && !signedOut && !createProfile ? (
+            <p className="rounded-lg border border-rl_danger/30 bg-rl_danger/10 px-3 py-2 text-sm text-rl_danger" role="alert">
+              {errorMessage}
+            </p>
+          ) : null}
+          {errorMessage && createProfile ? (
             <p className="rounded-lg border border-rl_danger/30 bg-rl_danger/10 px-3 py-2 text-sm text-rl_danger" role="alert">
               {errorMessage}
             </p>
@@ -75,7 +103,7 @@ export default function SignInPage({ errorMessage = "", signedOut = false }) {
               className="flex w-full items-center justify-center gap-3 rounded-lg border border-rl_border bg-white px-4 py-3 text-sm font-semibold text-[#1f1f1f] shadow-sm transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rl_accent/50 disabled:cursor-wait disabled:opacity-70"
             >
               <GoogleMark />
-              Continue with Google
+              {createProfile ? "Continue with a different Google account" : "Continue with Google"}
             </button>
           </form>
         </div>
