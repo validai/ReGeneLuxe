@@ -2,6 +2,8 @@ import { requireWorkspaceApi, deniedJson, jsonPrivate } from "../../../server/au
 import { buildConnectionCertificationMatrix } from "../../../server/certification/connectionMatrix.js";
 import { controlledRealTestsMap } from "../../../server/certification/controlledRealTests.js";
 import { assertProviderWriteAllowed } from "../../../server/certification/productionWriteGuard.js";
+import { buildPublishingCoverageMatrix } from "../../../server/certification/publishingCoverageMatrix.js";
+import { buildYoutubeCredentialTruth } from "../../../server/connectors/youtubeScopeTruth.js";
 import { listForProfile } from "../../../server/db/profileMigration.js";
 import { COLLECTIONS } from "../../../server/db/index.js";
 import { getProfileConnectionByKind } from "../../../server/db/managedProfileRepository.js";
@@ -35,14 +37,28 @@ export async function GET(request: Request) {
     dryRun: false,
   });
 
+  const ytAccount = accounts.find((row: { platform?: string }) => String(row.platform || "").toLowerCase() === "youtube") || null;
+  const ytTruth = buildYoutubeCredentialTruth({
+    account: ytAccount,
+    connection: youtubeConnection,
+    publishImplemented: true,
+  });
+  const publishingCoverage = buildPublishingCoverageMatrix({
+    credentialAuthorizedByProvider: {
+      youtube: Boolean(ytTruth.UPLOAD_SCOPE_PRESENT),
+    },
+    certifiedByKey: {},
+  });
+
   return jsonPrivate({
     ok: true,
     certification: matrix,
+    publishingCoverage,
     providerWriteGate: {
       allowed: writeGate.ok,
       code: writeGate.code,
       error: writeGate.error || null,
     },
-    note: "Read-only certification matrix. No provider writes were performed.",
+    note: "Read-only matrices. Publish capable ≠ code exists. Content-type CERTIFIED requires controlled real tests. No provider writes.",
   });
 }

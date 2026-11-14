@@ -4,9 +4,11 @@
 
 **Mission:** CONNECT → CERTIFY → BREAK → HARDEN → GREEN (release-critical providers only)
 
+**Coverage standard:** `docs/NATIVE_PUBLISHING_COVERAGE.md` — widest practical native surface; content-type aware cert; no artificial ReGeneLuxe restrictions.
+
 **Workspace:** S!xd9 (`de5d366a-393f-4f30-a4f3-5d9b397a4340`) · TEST  
 **DJ Coast:** production write hard-blocked  
-**HEAD at board open:** `b49165e`
+**HEAD at board open:** `b49165e` · board update: coverage standard adopted
 
 ## Mission board
 
@@ -14,10 +16,13 @@
 |---|---|---|---|---|
 | Runtime | LIVE OK · 5174 · ReGeneLuxe | — | Cursor | Keep canonical; no lifecycle polish |
 | S!xd9 | TEST designated | — | — | Stay on this workspace only |
-| YouTube | IDENTITY+READ+ANALYTICS · upload **ABSENT** · CERTIFIED=NO | `youtube.upload` missing | **Operator (ONE OAuth)** then Cursor inspect | Accounts → Connect YouTube → same `@sixd9` → STOP |
-| Facebook | NOT CONNECTED | After YouTube GREEN or hard blocker | — | Do not start yet |
-| Instagram | NOT CONNECTED | After Facebook; public media must be READY first | — | Do not start yet |
-| TikTok | NOT CONNECTED | Identity later; posting may be BLOCKED_EXTERNAL | — | Do not start yet |
+| YouTube | IDENTITY+READ+ANALYTICS · upload **ABSENT** · content-types CERTIFIED=NO | `youtube.upload` missing | **Operator (ONE OAuth)** then Cursor inspect | Accounts → Connect YouTube → then PRIVATE → SCHEDULED → PUBLIC cert |
+| YouTube LONG_VIDEO_PRIVATE | NOT CERTIFIED | Needs upload scope | Cursor after OAuth | First live cert item |
+| YouTube LONG_VIDEO_SCHEDULED | NOT CERTIFIED | Needs upload + schedule proof | Cursor | After private GREEN |
+| YouTube LONG_VIDEO_PUBLIC/UNLISTED | Code accepts; NOT CERTIFIED | Needs upload + operator-approved visibility | Cursor | After scheduled |
+| Facebook | NOT CONNECTED | After YouTube path | — | Then TEXT/IMAGE/VIDEO/REEL by type |
+| Instagram | NOT CONNECTED | After FB; public media READY first | — | REEL → IMAGE → CAROUSEL (carousel = ENG GAP) |
+| TikTok | NOT CONNECTED | Content Posting API may be BLOCKED_EXTERNAL | — | Identity ≠ publish |
 | Draft import | IMPLEMENTED (JSON path OK for war room) | — | Cursor | Use structured JSON only; no remote Grok |
 | Approval | IMPLEMENTED | Needs TEST items | Cursor | After upload scope |
 | Scheduler | IMPLEMENTED | Needs approved scheduled item | Cursor | After upload scope |
