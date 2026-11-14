@@ -26,11 +26,11 @@ Update this file at the end of substantial sprints. Prefer certification state o
 
 ## Active priorities / remains
 
-1. **S!xd9** TEST live: Gmail + YouTube **CONNECTED** (YouTube **READ ONLY**). DJ Coast writes hard-blocked.
-2. Operator: Accounts → YouTube connect to add `youtube.upload` (do **not** Settings-reconnect for identity). Then Instagram → Facebook → TikTok identity.
-3. After upload scope + Meta connects: Cursor runs one harmless `[REGENELUXE CERT]` live post per publish-capable provider + verify/readback.
-4. Layer 2 publishing stack: **IMPLEMENTED — AWAITING REAL PROVIDER CERT** (`docs/LAYERED_BUILD.md`).
-5. External Agent Bridge: local pairing UX certified; remote Grok cannot connect until rendezvous/relay exists.
+**48h war room** (`docs/WAR_ROOM_48H.md`): CONNECT→CERTIFY→BREAK→HARDEN→GREEN only. No side features / agent transport / Campaign Brain.
+
+1. YouTube: ONE Accounts upload OAuth → `npm run cert:youtube-inspect` → PRIVATE cert if upload present.
+2. Facebook → Instagram (public media READY first) → TikTok (identity; posting may be BLOCKED_EXTERNAL).
+3. DJ Coast stays write-blocked; separate production promotion checklist later.
 
 ## Blockers
 
