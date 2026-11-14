@@ -20,19 +20,20 @@ Update this file at the end of substantial sprints. Prefer certification state o
 | Agent continuity protocol | Adopted | `docs/AGENT_CONTINUITY.md` |
 | External agent pairing UX / transport truth | **CERTIFIED (local)** | Wizard + WAITING_FOR_AGENT + remote refuse; E2E×3 `test:e2e-agent-pairing`. Remote Grok **cannot** connect. |
 | DJ Coast / non-TEST provider write guard | **IN PLACE** | `productionWriteGuard.js` — DJ Coast always blocked; non-TEST blocked unless `REGENELUXE_ALLOW_PRODUCTION_PROVIDER_WRITES=1`. |
-| Provider live certification (Layer 2) | **BLOCKED** | Awaiting Six D TEST OAuth connects. Dry-run mission: `npm run cert:mission`. |
+| Provider live certification (Layer 2) | **BLOCKED** | YouTube identity/read OK; awaiting upload scope + IG/FB connects. See `docs/CERTIFICATION_MISSION.md`. |
 
 ## Active priorities / remains
 
-1. **S!xd9** (`de5d366a-…`) designated **TEST** workspace for alternate artist (`sixd9music@gmail.com`). DJ Coast writes hard-blocked.
-2. Operator must OAuth-connect Six D TEST social accounts (Meta/Google/etc browser security — Cursor cannot automate).
-3. After TEST accounts connect: Cursor runs one harmless `[REGENELUXE CERT]` live post per publish-capable provider + verify/readback.
+1. **S!xd9** TEST live: Gmail + YouTube **CONNECTED** (YouTube **READ ONLY**). DJ Coast writes hard-blocked.
+2. Operator: Accounts → YouTube connect to add `youtube.upload` (do **not** Settings-reconnect for identity). Then Instagram → Facebook → TikTok identity.
+3. After upload scope + Meta connects: Cursor runs one harmless `[REGENELUXE CERT]` live post per publish-capable provider + verify/readback.
 4. Layer 2 publishing stack: **IMPLEMENTED — AWAITING REAL PROVIDER CERT** (`docs/LAYERED_BUILD.md`).
 5. External Agent Bridge: local pairing UX certified; remote Grok cannot connect until rendezvous/relay exists.
 
 ## Blockers
 
-- **S!xd9 TEST has zero connected social accounts** → live provider cert blocked (`REGENELUXE_PROVIDER_CERT_BLOCKED_AWAITING_TEST_OAUTH`).
+- YouTube: `IDENTITY_CONNECTED` + `READ_CONNECTED`; **missing** `youtube.upload` → not `PUBLISH_CAPABLE` / not `CERTIFIED`.
+- Instagram / Facebook / TikTok / LinkedIn: not connected in S!xd9 TEST.
 - Provider GREEN requires controlled real test evidence in TEST — not unit tests alone.
 - Remote external agents (Grok) blocked by local-only transport — do not tunnel 5174.
 - Provider post delete teardown not implemented (archive/manual where needed).

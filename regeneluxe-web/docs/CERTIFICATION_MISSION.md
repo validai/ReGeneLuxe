@@ -8,37 +8,88 @@ Controlled real provider testing is authorized **only** in the alternate-artist 
 - **DJ Coast** (`ffaed2b8-…` / `dj-coast`) provider writes are **hard-blocked**
 - Non-TEST writes blocked unless `REGENELUXE_ALLOW_PRODUCTION_PROVIDER_WRITES=1` after explicit promotion
 
-## What Cursor can self-run
+## Live TEST connection truth (inspected)
+
+Do **not** treat older “zero connected accounts” / YouTube `MISSING_DESTINATION` notes as current.
+
+| Surface | State |
+|---------|--------|
+| Gmail | CONNECTED (Settings profile connection) |
+| YouTube | CONNECTED + READ ONLY (Settings profile connection) |
+| Authorized Google identity | Six D (`sixd9music@gmail.com`) |
+| Instagram | NOT CONNECTED |
+| Facebook | NOT CONNECTED |
+| TikTok | NOT CONNECTED |
+| LinkedIn | NOT CONNECTED |
+
+Social publish destinations in S!xd9: YouTube account row `@sixd9` / `UCYidjTSc8KzJYRnB3PvVDdQ` is present and `CONNECTED`. That is **identity**, not upload certification.
+
+## YouTube classification (current)
+
+| Class | State | Evidence |
+|-------|-------|----------|
+| `IDENTITY_CONNECTED` | **YES** | Channel `UCYidjTSc8KzJYRnB3PvVDdQ`, handle `@sixd9`, account + profile connection `CONNECTED` |
+| `READ_CONNECTED` | **YES** | Vault grant on Settings connection id; Settings permission `readonly` |
+| `UPLOAD_SCOPE_PRESENT` | **NO** | Live scopes do **not** include `youtube.upload` |
+| `PUBLISH_CAPABLE` | **NO** | Upload scope absent; publish path needs account-bound tokens with upload |
+| `SCHEDULE_CAPABLE` | **NO** | Code can pass `publishAt` for private→public schedule once upload works; not usable yet |
+| `CERTIFIED` | **NO** | No controlled real upload/readback recorded |
+
+### Exact scopes currently granted (S!xd9 YouTube Settings grant)
+
+Vault key: `youtube::11e3e906-d6bb-46cd-a50b-671bcce00c08` (profile connection id — **not** the social account row id)
+
+- `openid`
+- `https://www.googleapis.com/auth/userinfo.email`
+- `https://www.googleapis.com/auth/userinfo.profile`
+- `https://www.googleapis.com/auth/youtube.readonly`
+- `https://www.googleapis.com/auth/yt-analytics.readonly`
+
+**Missing for publish:** `https://www.googleapis.com/auth/youtube.upload`
+
+Do **not** reconnect YouTube from **Settings** merely to re-establish identity. Settings YouTube OAuth requests **readonly + analytics only** and will not add upload.
+
+### Smallest safe upgrade path (upload only)
+
+1. Stay signed in as **sixd9music@gmail.com** on S!xd9 TEST.
+2. Open **Accounts** (not Settings → Reconnect YouTube).
+3. Start **YouTube** connect from Accounts — that path requests pilot scopes including `youtube.upload` (`includeUpload: true`).
+4. Complete Google consent for upload on the **same** Six D Google identity.
+5. Confirm the **same** channel `@sixd9` / `UCYidjTSc8KzJYRnB3PvVDdQ` if prompted — do not pick a different channel.
+6. Stop. No provider write yet. Tell Cursor when vault shows `youtube.upload` on the TEST YouTube destination.
+
+Expected after success: `UPLOAD_SCOPE_PRESENT=YES`. Publish/schedule/cert still require a later controlled private cert upload (not this step).
+
+## Remaining TEST providers (order)
+
+1. **Instagram** — connect next (Meta / Facebook Login for Business as required).
+2. **Facebook** — connect after Instagram or as the same Meta flow requires (operator picks Page; never auto-first).
+3. **TikTok** — connect identity when ready; posting capability stays separate until publish support is true.
+
+## What Cursor can self-run (so far)
 
 | Step | Status |
 |------|--------|
-| Designate S!xd9 as TEST | Done (`npm run cert:mission`) |
-| Synthetic cert campaign + drafts | Done |
-| Synthetic media asset | Done (local `/api/media/…`) |
-| Dry-run scheduled dispatch | Done — blocked on missing TEST destinations (expected) |
-| DJ Coast write guard proof | Done |
-| Live OAuth connect | **Operator** (Google/Meta/etc browser security) |
-| One harmless live post per provider | Cursor after TEST accounts connect |
+| Designate S!xd9 as TEST | Done |
+| Synthetic cert campaign / assets | Done |
+| DJ Coast write guard | Done |
+| YouTube live scope inspection | Done (this update) |
+| YouTube upload-scope upgrade | **Operator** — Accounts YouTube connect only |
+| Instagram / Facebook / TikTok connect | **Operator** |
+| One harmless live post per provider | Cursor **after** upload/connect + explicit go |
 | Verify/readback | Cursor after live post |
 | Delete/archive provider post | Manual / provider tools until DELETE_CONTENT exists |
 
-## Operator-only steps (cannot automate)
-
-1. Sign in at http://localhost:5174 as **sixd9music@gmail.com** (S!xd9).
-2. Open **Settings → Connections**.
-3. Connect Instagram / Facebook / YouTube (and any other publish targets) for **this artist only**.
-4. Complete Google/Meta (etc.) passkeys, 2FA, and consent screens.
-5. Do **not** connect or publish using DJ Coast destinations for this mission.
-6. Tell Cursor when TEST accounts show `CONNECTED`.
-
-## Cursor resume command
+## Cursor resume
 
 ```bash
 npm run cert:mission
 ```
 
-Then continue live slice: one `[REGENELUXE CERT]` post per connected publish-capable provider → verify → record controlled real test → cleanup where safe.
+Re-inspect vault scopes before any write. Do not invent GREEN.
 
 ## Honest certification state
 
-Current: `REGENELUXE_PROVIDER_CERT_BLOCKED_AWAITING_TEST_OAUTH`
+`REGENELUXE_PROVIDER_CERT_BLOCKED_AWAITING_YOUTUBE_UPLOAD_SCOPE`
+
+(and Meta/TikTok connects still pending)
