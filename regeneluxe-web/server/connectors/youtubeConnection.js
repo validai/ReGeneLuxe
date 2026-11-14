@@ -17,6 +17,10 @@ import { buildMetricSnapshotRecord } from "./normalizeMetrics.js";
 import { friendlyGoogleApiError } from "../auth/googleErrors.js";
 import { YOUTUBE_CONNECTION_SCOPE_STRING } from "../auth/googleScopes.js";
 import { assertMatchesSignedInGoogleAccount } from "../../src/data/googleIdentity.js";
+import {
+  buildYoutubeCredentialTruth,
+  permissionFromScopes,
+} from "./youtubeScopeTruth.js";
 
 function settingsRedirect(params = {}) {
   const url = new URL("/settings", getCanonicalOrigin());
@@ -185,13 +189,18 @@ export async function completeYoutubeAuth({ code, state, error, errorDescription
   }
   const channels = result.profile.channels || [];
   const selected = channels.length === 1 ? channels[0] : null;
+  const truth = buildYoutubeCredentialTruth({
+    connection: { id: connection.id },
+    publishImplemented: true,
+  });
   const saved = await upsertProfileConnection({
     ...connection,
     provider: "youtube",
     service: "GOOGLE_YOUTUBE",
     status: selected ? PROFILE_CONNECTION_STATES.CONNECTED : PROFILE_CONNECTION_STATES.CONNECTED,
     connectionState: PROFILE_CONNECTION_STATES.CONNECTED,
-    permission: "readonly",
+    permission: truth.permission || permissionFromScopes(truth.scopes),
+    grantedScopes: truth.scopes,
     email: result.profile.email || "",
     externalEmail: result.profile.email || "",
     googleAccountSub: result.profile.googleAccountSub || "",
@@ -271,6 +280,10 @@ export async function reconcileYoutubeAccount(profile, channel) {
     handle: channel.handle || match?.handle || "",
     profileUrl: channel.profileUrl || match?.profileUrl || `https://www.youtube.com/channel/${channel.id}`,
     providerAccountId: channel.id,
+    externalAccountId: channel.id,
+    channelId: channel.id,
+    channelTitle: channel.title || match?.channelTitle || "",
+    channelHandle: channel.handle || match?.channelHandle || "",
     connectionMethod: "OAUTH",
     connectionState: PROFILE_CONNECTION_STATES.CONNECTED,
     followerCount: channel.subscriberCount ?? match?.followerCount ?? "",
@@ -279,6 +292,23 @@ export async function reconcileYoutubeAccount(profile, channel) {
     lastSync: nowIso(),
   });
   return upsert(COLLECTIONS.accounts, next);
+}
+
+/** Refresh connection.permission / grantedScopes from vault without a new OAuth round-trip. */
+export async function refreshYoutubePermissionFromVault(connection) {
+  if (!connection?.id) return connection;
+  const truth = buildYoutubeCredentialTruth({
+    connection,
+    publishImplemented: true,
+  });
+  if (!truth.scopes.length && connection.permission) return connection;
+  return upsertProfileConnection({
+    ...connection,
+    permission: truth.permission,
+    grantedScopes: truth.scopes,
+    notes: connection.notes || "",
+    updatedAt: nowIso(),
+  });
 }
 
 async function youtubeGet(url, accessToken, service = "youtube") {
@@ -425,15 +455,30 @@ export async function disconnectYoutubeConnection({ operator, activeProfile } = 
 }
 
 export async function publicYoutubeForProfile(managedProfileId) {
-  const row = managedProfileId
+  let row = managedProfileId
     ? await getProfileConnectionByKind(managedProfileId, PROFILE_CONNECTION_KINDS.YOUTUBE)
     : null;
-  return publicProfileConnection(row) || publicProfileConnection({
+  if (row?.id) {
+    row = await refreshYoutubePermissionFromVault(row);
+  }
+  const publicRow = publicProfileConnection(row);
+  if (publicRow) {
+    const truth = buildYoutubeCredentialTruth({ connection: row, publishImplemented: true });
+    return {
+      ...publicRow,
+      permission: truth.permission || publicRow.permission,
+      permissionLabel: truth.permissionLabel,
+      grantedScopes: truth.scopes,
+      UPLOAD_SCOPE_PRESENT: truth.UPLOAD_SCOPE_PRESENT,
+      PUBLISH_CAPABLE: truth.PUBLISH_CAPABLE,
+    };
+  }
+  return publicProfileConnection({
     kind: PROFILE_CONNECTION_KINDS.YOUTUBE,
     provider: "youtube",
     status: PROFILE_CONNECTION_STATES.NOT_CONNECTED,
     displayLabel: "YouTube",
-    permission: "readonly",
+    permission: "none",
   });
 }
 

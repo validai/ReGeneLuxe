@@ -1,0 +1,18 @@
+---
+description: Never send the operator through OAuth or click-paths until Cursor self-certifies the controlled path.
+alwaysApply: true
+---
+
+# Operator path self-certification
+
+`OPERATOR_PATH_SELF_CERTIFIED = YES|NO`
+
+No operator OAuth / click-path instructions when **NO**.
+
+Before any operator-only Google/Meta/etc step, Cursor must certify what it controls: route · requested scopes · incremental merge · callback · vault persistence · identity retention · capability derivation · Settings UI · Certification UI · reload · restart.
+
+Use fixtures/mocks. Simulate READONLY → UPGRADE → CALLBACK → STORE → RELOAD → BOTH UIS AGREE (×N).
+
+After the operator completes the one external step, Cursor inspects the real credential immediately. On failure Cursor diagnoses — the operator does not retry blindly.
+
+The operator is never the first tester.

@@ -384,7 +384,14 @@ export default function SettingsPage({ initialDbHealth = null } = {}) {
             {youtubeView.code === "CONNECTED" && youtubeConnection.channelId ? (
               <ul className="mt-2 space-y-1 text-xs text-rl_muted">
                 <li>Authorized account: {youtubeConnection.email || youtubeConnection.externalEmail || "—"}</li>
-                <li>Permission: Read only</li>
+                <li>
+                  Permission:{" "}
+                  {youtubeConnection.permission === "upload"
+                    ? "Upload + read"
+                    : youtubeConnection.permission === "readonly"
+                      ? "Read only"
+                      : youtubeConnection.permissionLabel || youtubeConnection.permission || "Unknown"}
+                </li>
                 <li>Channel ID: {youtubeConnection.channelId}</li>
                 <li>Last sync: {formatWhen(youtubeConnection.lastSuccessfulSyncAt || youtubeConnection.lastSyncAt)}</li>
               </ul>

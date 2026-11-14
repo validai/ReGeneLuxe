@@ -10,6 +10,7 @@ import { hasAccountTokens, publicProviderVaultStatus } from "../secrets/provider
 import { normalizeWorkspacePurpose } from "../../src/data/profileModels.js";
 import { facebookPagePostGrant } from "../connectors/providers/metaGraph.js";
 import { publicMediaReadiness } from "../media/publicProvider.js";
+import { buildYoutubeCredentialTruth } from "../connectors/youtubeScopeTruth.js";
 
 export const CERT_STATUSES = Object.freeze(["GREEN", "YELLOW", "RED", "UNKNOWN"]);
 
@@ -37,11 +38,31 @@ function identityFromAccount(account) {
     };
   }
   return {
-    externalAccountId: String(account.externalAccountId || account.channelId || account.pageId || ""),
+    externalAccountId: String(
+      account.externalAccountId
+      || account.providerAccountId
+      || account.channelId
+      || account.pageId
+      || "",
+    ),
     displayName: String(account.displayName || account.channelTitle || account.pageName || ""),
     handle: String(account.handle || account.channelHandle || account.username || ""),
     workspaceAssociation: String(account.managedProfileId || account.workspaceId || ""),
   };
+}
+
+function vaultHealthyForAccount(provider, account, { youtubeConnection = null } = {}) {
+  if (!account) return false;
+  if (hasAccountTokens(provider, account.id)) return true;
+  if (provider === "youtube") {
+    const truth = buildYoutubeCredentialTruth({
+      account,
+      connection: youtubeConnection,
+      publishImplemented: true,
+    });
+    return truth.vaultHealthy;
+  }
+  return Boolean(vaultRowForAccount(provider, account.id));
 }
 
 /**
@@ -55,6 +76,7 @@ export function buildProviderCertificationRow({
   account = null,
   definition = null,
   controlledRealTestPassed = false,
+  youtubeConnection = null,
 } = {}) {
   const providerId = normalizeProviderId(provider);
   const purpose = normalizeWorkspacePurpose(workspace?.workspacePurpose);
@@ -66,7 +88,19 @@ export function buildProviderCertificationRow({
     && (!identity.workspaceAssociation || identity.workspaceAssociation === workspace?.id),
   );
   const vault = account ? vaultRowForAccount(providerId, account.id) : null;
-  const vaultHealthy = Boolean(connected && account && hasAccountTokens(providerId, account.id));
+  const youtubeTruth = providerId === "youtube"
+    ? buildYoutubeCredentialTruth({
+      account,
+      connection: youtubeConnection,
+      publishImplemented: Boolean(definition?.publishingSupport),
+      controlledRealTestPassed,
+    })
+    : null;
+  const vaultHealthy = Boolean(
+    connected
+    && account
+    && vaultHealthyForAccount(providerId, account, { youtubeConnection }),
+  );
   const caps = definition?.capabilities || [];
   const canRead = connected && (
     hasCapabilityIn(caps, CAPABILITY.READ_PROFILE)
@@ -77,8 +111,12 @@ export function buildProviderCertificationRow({
     || hasCapabilityIn(caps, CAPABILITY.READ_CONTENT_METRICS)
   );
   const publishImplemented = Boolean(definition?.publishingSupport);
+  const uploadScopePresent = providerId === "youtube"
+    ? Boolean(youtubeTruth?.UPLOAD_SCOPE_PRESENT)
+    : null;
   const readiness = definition?.readiness || "UNSUPPORTED";
-  const providerReady = readiness === "IMPLEMENTED" && connected && vaultHealthy && identityVerified;
+  const providerReady = readiness === "IMPLEMENTED" && connected && vaultHealthy && identityVerified
+    && (providerId !== "youtube" || uploadScopePresent);
 
   const blockers = [];
   if (purpose !== "TEST" && purpose !== "PRODUCTION") {
@@ -91,6 +129,9 @@ export function buildProviderCertificationRow({
   }
   if (connected && !vaultHealthy) blockers.push("CREDENTIAL_VAULT_MISSING");
   if (!publishImplemented) blockers.push("PUBLISH_NOT_IMPLEMENTED");
+  if (providerId === "youtube" && connected && publishImplemented && !uploadScopePresent) {
+    blockers.push("YOUTUBE_UPLOAD_SCOPE_MISSING");
+  }
   if (readiness === "UNSUPPORTED") blockers.push("PROVIDER_UNSUPPORTED");
   if (readiness === "PROVIDER_REVIEW_REQUIRED") blockers.push("PROVIDER_REVIEW_REQUIRED");
   if (readiness === "SETUP_REQUIRED") blockers.push("SETUP_REQUIRED");
@@ -105,7 +146,8 @@ export function buildProviderCertificationRow({
   if (!controlledRealTestPassed) blockers.push("CONTROLLED_REAL_TEST_PENDING");
 
   let status = "RED";
-  if (connected && identityVerified && vaultHealthy && publishImplemented && readiness === "IMPLEMENTED" && controlledRealTestPassed) {
+  if (connected && identityVerified && vaultHealthy && publishImplemented && readiness === "IMPLEMENTED" && controlledRealTestPassed
+    && (providerId !== "youtube" || uploadScopePresent)) {
     status = "GREEN";
   } else if (connected || readiness === "IMPLEMENTED" || readiness === "SETUP_REQUIRED") {
     status = "YELLOW";
@@ -120,6 +162,10 @@ export function buildProviderCertificationRow({
     status = "YELLOW";
   }
 
+  const publishCapable = providerId === "youtube"
+    ? Boolean(youtubeTruth?.PUBLISH_CAPABLE)
+    : Boolean(publishImplemented && providerReady && !blockers.includes("pages_manage_posts_MISSING"));
+
   return {
     provider: providerId,
     displayName: displayName || definition?.displayName || providerId,
@@ -129,8 +175,14 @@ export function buildProviderCertificationRow({
     identityVerified,
     canRead: Boolean(canRead),
     canAnalyze: Boolean(canAnalyze),
-    canPublish: publishImplemented && providerReady && !blockers.includes("pages_manage_posts_MISSING"),
+    /** Credential + implementation + destination — NOT implementation alone. */
+    canPublish: publishCapable,
+    publishCapable,
     publishImplemented,
+    uploadScopePresent,
+    youtubePermission: youtubeTruth?.permission || null,
+    youtubePermissionLabel: youtubeTruth?.permissionLabel || null,
+    youtubeScopes: youtubeTruth?.scopes || null,
     readyForControlledPublish: providerReady && blockers.every((b) => b === "CONTROLLED_REAL_TEST_PENDING"),
     readiness,
     vaultHealthy,
@@ -139,7 +191,7 @@ export function buildProviderCertificationRow({
     blocker: blockers[0] || null,
     blockers,
     dryRunOnly: true,
-    note: "No provider writes during automated certification. Controlled real tests require explicit operator authorization.",
+    note: "Publish column is credential publish-capable, not code-exists. Controlled real tests require explicit operator authorization.",
   };
 }
 
@@ -147,6 +199,7 @@ export function buildConnectionCertificationMatrix({
   workspace = null,
   accounts = [],
   controlledRealTests = {},
+  youtubeConnection = null,
 } = {}) {
   const defs = listProviderDefinitions().filter((row) => row.provider !== "mock");
   const wanted = [...RELEASE_CRITICAL, ...REPORT_ONLY];
@@ -160,6 +213,7 @@ export function buildConnectionCertificationMatrix({
       account,
       definition,
       controlledRealTestPassed: Boolean(controlledRealTests[providerId]),
+      youtubeConnection: providerId === "youtube" ? youtubeConnection : null,
     });
   });
 

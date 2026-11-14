@@ -7,6 +7,7 @@ import { readSecrets, writeSecrets } from "../../secrets.js";
 import { youtubeCallbackUrl } from "../../auth/origin.js";
 import { YOUTUBE_CONNECTION_SCOPE_STRING, YOUTUBE_PILOT_SCOPE_STRING } from "../../auth/googleScopes.js";
 import { friendlyGoogleApiError } from "../../auth/googleErrors.js";
+import { mergeScopeLists } from "../youtubeScopeTruth.js";
 
 export const youtubeConnector = baseConnector({
   provider: "youtube",
@@ -158,12 +159,18 @@ youtubeConnector._completeAuth = async ({ code, stateMeta, error, errorDescripti
   });
   const userinfo = await userinfoRes.json().catch(() => ({}));
 
-  setAccountTokens("youtube", stateMeta?.connectionId || stateMeta?.accountId, {
+  const tokenKey = stateMeta?.connectionId || stateMeta?.accountId;
+  const prior = tokenKey ? getAccountTokens("youtube", tokenKey) : null;
+  const granted = mergeScopeLists(
+    prior?.scopes || [],
+    String(tokenJson.scope || YOUTUBE_CONNECTION_SCOPE_STRING).split(/\s+/),
+  );
+  setAccountTokens("youtube", tokenKey, {
     accessToken: tokenJson.access_token,
-    refreshToken: tokenJson.refresh_token || null,
+    refreshToken: tokenJson.refresh_token || prior?.refreshToken || null,
     expiresAt,
-    scopes: String(tokenJson.scope || YOUTUBE_CONNECTION_SCOPE_STRING).split(/\s+/),
-    providerAccountId: channel?.id || null,
+    scopes: granted,
+    providerAccountId: channel?.id || prior?.providerAccountId || null,
   });
 
   return {
@@ -241,7 +248,7 @@ async function refreshYoutubeTokensOnce(account, tokens) {
   const expiresAt = tokenJson.expires_in
     ? new Date(Date.now() + Number(tokenJson.expires_in) * 1000).toISOString()
     : tokens.expiresAt;
-  const scopes = String(tokenJson.scope || (tokens.scopes || []).join(" ")).split(/\s+/).filter(Boolean);
+  const scopes = mergeScopeLists(tokens.scopes || [], String(tokenJson.scope || "").split(/\s+/));
   const refreshToken = tokenJson.refresh_token || tokens.refreshToken;
   setAccountTokens("youtube", account.id, {
     accessToken: tokenJson.access_token,

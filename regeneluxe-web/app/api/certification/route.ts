@@ -4,6 +4,9 @@ import { controlledRealTestsMap } from "../../../server/certification/controlled
 import { assertProviderWriteAllowed } from "../../../server/certification/productionWriteGuard.js";
 import { listForProfile } from "../../../server/db/profileMigration.js";
 import { COLLECTIONS } from "../../../server/db/index.js";
+import { getProfileConnectionByKind } from "../../../server/db/managedProfileRepository.js";
+import { refreshYoutubePermissionFromVault } from "../../../server/connectors/youtubeConnection.js";
+import { PROFILE_CONNECTION_KINDS } from "../../../src/data/profileModels.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,10 +20,15 @@ export async function GET(request: Request) {
 
   const accounts = await listForProfile(COLLECTIONS.accounts, result.workspace.id);
   const controlledRealTests = controlledRealTestsMap(result.workspace.id);
+  let youtubeConnection = await getProfileConnectionByKind(result.workspace.id, PROFILE_CONNECTION_KINDS.YOUTUBE);
+  if (youtubeConnection) {
+    youtubeConnection = await refreshYoutubePermissionFromVault(youtubeConnection);
+  }
   const matrix = buildConnectionCertificationMatrix({
     workspace: result.workspace,
     accounts,
     controlledRealTests,
+    youtubeConnection,
   });
   const writeGate = assertProviderWriteAllowed({
     workspace: result.workspace,

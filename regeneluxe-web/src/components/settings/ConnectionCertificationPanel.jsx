@@ -84,7 +84,8 @@ export default function ConnectionCertificationPanel() {
                   <th className="px-2 py-2 font-medium">Connected</th>
                   <th className="px-2 py-2 font-medium">Read</th>
                   <th className="px-2 py-2 font-medium">Analytics</th>
-                  <th className="px-2 py-2 font-medium">Publish</th>
+                  <th className="px-2 py-2 font-medium">Publish capable</th>
+                  <th className="px-2 py-2 font-medium">Code publish</th>
                   <th className="px-2 py-2 font-medium">Ready</th>
                   <th className="px-2 py-2 font-medium">Last Test</th>
                   <th className="px-2 py-2 font-medium">Status</th>
@@ -104,7 +105,8 @@ export default function ConnectionCertificationPanel() {
                     <td className="px-2 py-2">{boolLabel(row.connected)}</td>
                     <td className="px-2 py-2">{boolLabel(row.canRead)}</td>
                     <td className="px-2 py-2">{boolLabel(row.canAnalyze)}</td>
-                    <td className="px-2 py-2">{boolLabel(row.publishImplemented)}</td>
+                    <td className="px-2 py-2">{boolLabel(row.publishCapable ?? row.canPublish)}</td>
+                    <td className="px-2 py-2 text-rl_muted">{boolLabel(row.publishImplemented)}</td>
                     <td className="px-2 py-2">{boolLabel(row.readyForControlledPublish)}</td>
                     <td className="px-2 py-2 text-rl_muted">
                       {row.lastTestAt ? new Date(row.lastTestAt).toLocaleString("en-US") : "—"}

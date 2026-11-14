@@ -20,7 +20,9 @@ Update this file at the end of substantial sprints. Prefer certification state o
 | Agent continuity protocol | Adopted | `docs/AGENT_CONTINUITY.md` |
 | External agent pairing UX / transport truth | **CERTIFIED (local)** | Wizard + WAITING_FOR_AGENT + remote refuse; E2E×3 `test:e2e-agent-pairing`. Remote Grok **cannot** connect. |
 | DJ Coast / non-TEST provider write guard | **IN PLACE** | `productionWriteGuard.js` — DJ Coast always blocked; non-TEST blocked unless `REGENELUXE_ALLOW_PRODUCTION_PROVIDER_WRITES=1`. |
-| Provider live certification (Layer 2) | **BLOCKED** | YouTube identity/read OK; awaiting upload scope + IG/FB connects. See `docs/CERTIFICATION_MISSION.md`. |
+| Provider live certification (Layer 2) | **BLOCKED** | YouTube identity/read OK; `youtube.upload` still absent. Scope-truth UI fixed; upgrade path self-certified. |
+| YouTube scope truth / UI consistency | **RESOLVED** | Settings + Certification derive from vault scopes. `test:e2e-youtube-scope` ×3. |
+| YouTube Accounts upload operator path | `OPERATOR_PATH_SELF_CERTIFIED=YES` | Mocked upgrade path certified; live grant still readonly until one Accounts consent. |
 
 ## Active priorities / remains
 
